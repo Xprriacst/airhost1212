@@ -1,0 +1,94 @@
+{
+  "tables": {
+    "Properties": {
+      "name": "Properties",
+      "description": "Informations sur les logements",
+      "fields": [
+        { "name": "Name", "type": "singleLineText", "required": true },
+        { "name": "Address", "type": "singleLineText", "required": true },
+        { "name": "Description", "type": "longText" },
+        { "name": "WiFi Name", "type": "singleLineText" },
+        { "name": "WiFi Password", "type": "singleLineText" },
+        { "name": "Door Code", "type": "singleLineText" },
+        { "name": "Check-in Time", "type": "singleLineText", "required": true },
+        { "name": "Check-out Time", "type": "singleLineText", "required": true },
+        { "name": "Max Guests", "type": "number", "required": true },
+        { "name": "House Rules", "type": "multilineText" },
+        { "name": "Access Instructions", "type": "longText" },
+        { "name": "Departure Instructions", "type": "longText" },
+        { "name": "Parking Info", "type": "longText" },
+        { "name": "Restaurants", "type": "multilineText" },
+        { "name": "Fast Food", "type": "multilineText" },
+        { "name": "Emergency Contacts", "type": "multilineText" },
+        { "name": "Photos", "type": "multipleAttachments" },
+        { "name": "Auto Pilot", "type": "checkbox" }
+      ]
+    },
+    "Bookings": {
+      "name": "Bookings",
+      "description": "Réservations des voyageurs",
+      "fields": [
+        { "name": "Property", "type": "foreignKey", "references": "Properties" },
+        { "name": "Guest Name", "type": "singleLineText", "required": true },
+        { "name": "Guest Email", "type": "email", "required": true },
+        { "name": "Guest Phone", "type": "phoneNumber" },
+        { "name": "Check-in Date", "type": "date", "required": true },
+        { "name": "Check-out Date", "type": "date", "required": true },
+        { "name": "Number of Guests", "type": "number", "required": true },
+        { "name": "Status", "type": "singleSelect", "options": ["Confirmed", "Pending", "Cancelled"] },
+        { "name": "Platform", "type": "singleSelect", "options": ["Airbnb", "Booking.com", "Direct"] },
+        { "name": "Booking Reference", "type": "singleLineText" }
+      ]
+    },
+    "Messages": {
+      "name": "Messages",
+      "description": "Historique des conversations",
+      "fields": [
+        { "name": "Booking", "type": "foreignKey", "references": "Bookings" },
+        { "name": "Timestamp", "type": "dateTime", "required": true },
+        { "name": "Sender", "type": "singleSelect", "options": ["Guest", "Host", "AI"] },
+        { "name": "Message", "type": "longText", "required": true },
+        { "name": "AI Generated", "type": "checkbox" },
+        { "name": "Template Used", "type": "foreignKey", "references": "Response Templates" }
+      ]
+    },
+    "Response Templates": {
+      "name": "Response Templates",
+      "description": "Modèles de réponses automatiques",
+      "fields": [
+        { "name": "Name", "type": "singleLineText", "required": true },
+        { "name": "Property", "type": "foreignKey", "references": "Properties" },
+        { "name": "Category", "type": "singleSelect", "options": ["Check-in", "Check-out", "WiFi", "Parking", "House Rules", "General"] },
+        { "name": "Keywords", "type": "multilineText", "description": "Mots-clés déclencheurs" },
+        { "name": "Template", "type": "longText", "required": true },
+        { "name": "Language", "type": "singleSelect", "options": ["French", "English"] },
+        { "name": "Active", "type": "checkbox" }
+      ]
+    },
+    "AI Configuration": {
+      "name": "AI Configuration",
+      "description": "Configuration du comportement de l'IA",
+      "fields": [
+        { "name": "Name", "type": "singleLineText", "required": true },
+        { "name": "Property", "type": "foreignKey", "references": "Properties" },
+        { "name": "Type", "type": "singleSelect", "options": ["Tone", "Knowledge", "Rules"] },
+        { "name": "Content", "type": "longText", "required": true },
+        { "name": "Language", "type": "singleSelect", "options": ["French", "English"] },
+        { "name": "Active", "type": "checkbox" }
+      ]
+    },
+    "Platform Integration": {
+      "name": "Platform Integration",
+      "description": "Configuration des intégrations",
+      "fields": [
+        { "name": "Platform", "type": "singleSelect", "options": ["Airbnb", "Booking.com", "Lodgify", "Smoobu"], "required": true },
+        { "name": "Property", "type": "foreignKey", "references": "Properties" },
+        { "name": "API Key", "type": "singleLineText" },
+        { "name": "Property ID", "type": "singleLineText", "description": "ID du logement sur la plateforme" },
+        { "name": "Sync Enabled", "type": "checkbox" },
+        { "name": "Last Sync", "type": "dateTime" },
+        { "name": "Status", "type": "singleSelect", "options": ["Active", "Error", "Disabled"] }
+      ]
+    }
+  }
+}

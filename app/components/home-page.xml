@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Page xmlns="http://schemas.nativescript.org/tns.xsd">
+    <ActionBar title="AirHost" />
+    <TabView androidTabsPosition="bottom">
+        <TabViewItem title="Properties">
+            <GridLayout>
+                <Label text="Properties" class="h2 text-center" />
+            </GridLayout>
+        </TabViewItem>
+        <TabViewItem title="Messages">
+            <GridLayout>
+                <Label text="Messages" class="h2 text-center" />
+            </GridLayout>
+        </TabViewItem>
+        <TabViewItem title="Settings">
+            <GridLayout>
+                <Label text="Settings" class="h2 text-center" />
+            </GridLayout>
+        </TabViewItem>
+    </TabView>
+</Page>

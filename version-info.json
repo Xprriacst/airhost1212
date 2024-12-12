@@ -1,0 +1,25 @@
+{
+  "version": "airhost-desktop-2311",
+  "date": "2024-02-23",
+  "features": [
+    "Desktop and mobile responsive layouts",
+    "Property management with detailed information",
+    "Conversation management per property",
+    "AI-powered response suggestions using GPT-4",
+    "Drawer navigation for mobile",
+    "Sidebar navigation for desktop",
+    "Real-time chat interface",
+    "Property-specific auto-responses"
+  ],
+  "components": [
+    "DesktopLayout",
+    "MobileLayout",
+    "Properties",
+    "Conversations",
+    "MobileChat",
+    "ResponseSuggestion",
+    "ChatMessage",
+    "Sidebar",
+    "DrawerMenu"
+  ]
+}
