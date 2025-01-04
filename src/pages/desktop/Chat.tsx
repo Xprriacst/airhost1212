@@ -101,44 +101,69 @@ const Chat: React.FC = () => {
       timestamp: new Date(),
       sender: 'Host'
     };
-
-    // Mettre à jour l'état local
-    const updatedMessages = [...messages, newMessage];
-    setMessages(updatedMessages);
-    setNewMessage('');
-    setIsEditing(false);
-    setCustomResponse('');
-    setSuggestedResponse('');
+    console.log('📝 Created new message:', newMessage);
 
     try {
+      // Mettre à jour l'état local
+      console.log('🔄 Updating local state...');
+      const updatedMessages = [...messages, newMessage];
+      setMessages(updatedMessages);
+      setNewMessage('');
+      setIsEditing(false);
+      setCustomResponse('');
+      setSuggestedResponse('');
+
       // Sauvegarder le message dans Airtable
-      console.log('💾 Saving message to Airtable...');
+      console.log('💾 Saving message to Airtable...', {
+        conversationId: conversation.id,
+        messageCount: updatedMessages.length
+      });
+      
       const updatedConversation = await conversationService.updateConversation(conversation.id, {
         Messages: JSON.stringify(updatedMessages)
       });
+      
       console.log('✅ Message saved to Airtable, updated conversation:', {
         id: updatedConversation.id,
         guestEmail: updatedConversation.guestEmail,
         propertyId: updatedConversation.propertyId,
         messageCount: updatedConversation.messages?.length || 0
       });
+      
       setConversation(updatedConversation);
 
-      // Envoyer le message à Make.com
-      if (!updatedConversation.guestEmail || !updatedConversation.propertyId) {
-        console.error('❌ Missing required conversation data:', {
-          hasGuestEmail: Boolean(updatedConversation.guestEmail),
-          hasPropertyId: Boolean(updatedConversation.propertyId),
-          conversation: updatedConversation
-        });
-        return;
+      // Vérifier les données nécessaires pour Make.com
+      if (!updatedConversation.guestEmail) {
+        console.error('❌ Missing guest email in conversation:', updatedConversation);
+        throw new Error('Guest email is required to send message to Make.com');
       }
 
-      console.log('📤 Sending message to Make.com...');
-      await messageService.sendMessage(newMessage, updatedConversation.guestEmail, updatedConversation.propertyId);
-      console.log('✅ Message sent to Make.com');
+      if (!updatedConversation.propertyId) {
+        console.error('❌ Missing property ID in conversation:', updatedConversation);
+        throw new Error('Property ID is required to send message to Make.com');
+      }
+
+      // Envoyer le message à Make.com
+      console.log('📤 Preparing to send message to Make.com:', {
+        messageText: newMessage.text,
+        guestEmail: updatedConversation.guestEmail,
+        propertyId: updatedConversation.propertyId
+      });
+
+      try {
+        await messageService.sendMessage(
+          newMessage,
+          updatedConversation.guestEmail,
+          updatedConversation.propertyId
+        );
+        console.log('✅ Message successfully sent to Make.com');
+      } catch (makeError) {
+        console.error('❌ Failed to send message to Make.com:', makeError);
+        throw makeError;
+      }
     } catch (error) {
-      console.error('❌ Error:', error);
+      console.error('❌ Error in handleSendMessage:', error);
+      // Optionnel : Afficher une notification d'erreur à l'utilisateur
     }
 
     if (isAutoPilot) {
