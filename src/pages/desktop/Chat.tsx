@@ -63,8 +63,15 @@ const Chat: React.FC = () => {
     setCustomResponse('');
     setSuggestedResponse('');
 
-    // Envoyer le message à Make.com
     try {
+      // Sauvegarder le message dans Airtable
+      console.log('💾 Saving message to Airtable...');
+      await conversationService.updateConversation(conversation.id, {
+        Messages: JSON.stringify([...messages, newMessage])
+      });
+      console.log('✅ Message saved to Airtable');
+
+      // Envoyer le message à Make.com
       console.log('📝 Conversation details:', {
         guestEmail: conversation?.guestEmail,
         propertyId: conversation?.propertyId,
@@ -79,9 +86,11 @@ const Chat: React.FC = () => {
         return;
       }
 
+      console.log('📤 Sending message to Make.com...');
       await messageService.sendMessage(newMessage, conversation.guestEmail, conversation.propertyId);
+      console.log('✅ Message sent to Make.com');
     } catch (error) {
-      console.error('Error sending message to Make.com:', error);
+      console.error('❌ Error:', error);
     }
 
     if (isAutoPilot) {
