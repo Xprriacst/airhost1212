@@ -7,16 +7,33 @@ const RETRY_DELAY = 1000;
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'Content-Type, Accept',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+};
+
 export const handler: Handler = async (event) => {
   console.log('🚀 Send Message Function Called');
   console.log('Method:', event.httpMethod);
   console.log('Headers:', event.headers);
   console.log('Body:', event.body);
 
+  // Gérer les requêtes OPTIONS (CORS preflight)
+  if (event.httpMethod === 'OPTIONS') {
+    console.log('👋 Handling OPTIONS request');
+    return {
+      statusCode: 204,
+      headers: corsHeaders,
+      body: ''
+    };
+  }
+
   if (event.httpMethod !== 'POST') {
     console.warn('❌ Method not allowed:', event.httpMethod);
     return {
       statusCode: 405,
+      headers: corsHeaders,
       body: JSON.stringify({ error: 'Method not allowed' }),
     };
   }
@@ -34,6 +51,7 @@ export const handler: Handler = async (event) => {
       });
       return {
         statusCode: 400,
+        headers: corsHeaders,
         body: JSON.stringify({ 
           error: 'Missing required fields',
           details: {
@@ -49,58 +67,50 @@ export const handler: Handler = async (event) => {
     for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
       try {
         console.log(`📤 Attempt ${attempt}/${MAX_RETRIES} to send message to Make.com`);
+        console.log('Sending to URL:', MAKE_WEBHOOK_URL);
+        
         const response = await axios.post(MAKE_WEBHOOK_URL, payload, {
           headers: {
             'Content-Type': 'application/json'
-          },
-          timeout: 10000
+          }
         });
 
-        console.log('✅ Make.com response:', response.data);
+        console.log('✅ Message sent successfully to Make.com:', {
+          status: response.status,
+          data: response.data
+        });
+
         return {
           statusCode: 200,
+          headers: corsHeaders,
           body: JSON.stringify({ 
             success: true,
-            makeResponse: response.data 
-          }),
+            message: 'Message sent successfully'
+          })
         };
       } catch (error) {
-        console.error(`❌ Attempt ${attempt}/${MAX_RETRIES} failed:`, error);
+        console.error(`❌ Attempt ${attempt} failed:`, error);
         
-        if (axios.isAxiosError(error)) {
-          console.error('Error details:', {
-            status: error.response?.status,
-            statusText: error.response?.statusText,
-            data: error.response?.data,
-            headers: error.response?.headers,
-            config: {
-              url: error.config?.url,
-              method: error.config?.method,
-              headers: error.config?.headers,
-              data: error.config?.data
-            }
-          });
-        }
-        
-        if (attempt === MAX_RETRIES) {
+        if (attempt < MAX_RETRIES) {
+          const delay = RETRY_DELAY * Math.pow(2, attempt - 1);
+          console.log(`⏳ Waiting ${delay}ms before next attempt...`);
+          await sleep(delay);
+        } else {
           throw error;
         }
-        
-        const delay = RETRY_DELAY * attempt;
-        console.log(`⏳ Waiting ${delay}ms before retry...`);
-        await sleep(delay);
       }
     }
 
-    throw new Error('All retry attempts failed');
+    throw new Error('Failed to send message after all retries');
   } catch (error) {
-    console.error('❌ Error processing message:', error);
+    console.error('❌ Error in send-message function:', error);
     return {
       statusCode: 500,
+      headers: corsHeaders,
       body: JSON.stringify({ 
         error: 'Failed to send message',
-        details: error instanceof Error ? error.message : 'Unknown error'
-      }),
+        details: error.message
+      })
     };
   }
 };

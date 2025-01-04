@@ -1,7 +1,8 @@
 import axios from 'axios';
 import type { Message } from '../types';
 
-const NETLIFY_URL = 'https://whimsical-beignet-91329f.netlify.app';
+// L'URL complète de l'application
+const BASE_URL = 'https://whimsical-beignet-91329f.netlify.app';
 
 export const messageService = {
   async sendMessage(message: Message, guestEmail: string, propertyId: string): Promise<void> {
@@ -39,21 +40,21 @@ export const messageService = {
         sender: message.sender
       };
 
-      console.log('📦 Request payload:', payload);
-
-      // Préparer la requête
-      const url = '/.netlify/functions/send-message';
+      // Utiliser l'URL complète
+      const url = `${BASE_URL}/.netlify/functions/send-message`;
       const config = {
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
         },
         timeout: 10000
       };
 
-      console.log('🔍 Request details:', {
+      console.log('📦 Request details:', {
         url,
         method: 'POST',
         headers: config.headers,
+        payload,
         timeout: config.timeout
       });
 
@@ -83,8 +84,10 @@ export const messageService = {
             config: {
               url: axiosError.config?.url,
               method: axiosError.config?.method,
-              headers: axiosError.config?.headers
-            }
+              headers: axiosError.config?.headers,
+              data: axiosError.config?.data
+            },
+            message: axiosError.message
           });
         }
         throw new Error('Failed to send message to webhook');
