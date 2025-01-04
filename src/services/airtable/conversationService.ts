@@ -24,7 +24,30 @@ const mapAirtableToConversation = (record: any): Conversation => {
   };
 };
 
-export const conversationService = {
+export const airtableConversationService = {
+  async fetchAllConversations(): Promise<Conversation[]> {
+    try {
+      if (!base) throw new Error('Airtable is not configured');
+
+      const records = await base('Conversations')
+        .select({
+          fields: [
+            'Properties',
+            'Guest Name',
+            'Messages',
+            'Check-in Date',
+            'Check-out Date'
+          ],
+        })
+        .all();
+
+      return records.map(mapAirtableToConversation);
+    } catch (error) {
+      console.error('Error fetching all conversations:', error);
+      throw error;
+    }
+  },
+
   async fetchConversationById(conversationId: string): Promise<Conversation> {
     try {
       if (!base) throw new Error('Airtable is not configured');
@@ -83,6 +106,32 @@ export const conversationService = {
       return mapAirtableToConversation(updatedRecord);
     } catch (error) {
       console.error('Error updating conversation:', error);
+      throw error;
+    }
+  },
+
+  async addConversation(data: Record<string, any>): Promise<Conversation> {
+    try {
+      if (!base) throw new Error('Airtable is not configured');
+
+      console.log('Adding new conversation');
+      const record = await base('Conversations').create(data);
+      return mapAirtableToConversation(record);
+    } catch (error) {
+      console.error('Error adding conversation:', error);
+      throw error;
+    }
+  },
+
+  async deleteConversation(conversationId: string): Promise<boolean> {
+    try {
+      if (!base) throw new Error('Airtable is not configured');
+      if (!conversationId) throw new Error('Conversation ID is required');
+
+      await base('Conversations').destroy(conversationId);
+      return true;
+    } catch (error) {
+      console.error('Error deleting conversation:', error);
       throw error;
     }
   }
