@@ -80,6 +80,8 @@ const Chat: React.FC = () => {
   };
 
   const handleSendMessage = async (text: string) => {
+    console.log('🎯 handleSendMessage called with text:', text);
+
     if (!text.trim() || !conversation) {
       console.warn('❌ Cannot send message:', {
         hasText: Boolean(text.trim()),
@@ -88,10 +90,11 @@ const Chat: React.FC = () => {
       return;
     }
 
-    console.log('🔍 Sending new message in conversation:', {
-      conversationId: conversation.id,
+    console.log('🔍 Current conversation state:', {
+      id: conversation.id,
       guestEmail: conversation.guestEmail,
-      propertyId: conversation.propertyId
+      propertyId: conversation.propertyId,
+      messageCount: conversation.messages?.length || 0
     });
 
     const newMessage: Message = {
@@ -202,6 +205,14 @@ const Chat: React.FC = () => {
     }
   };
 
+  const onKeyDown = (e: React.KeyboardEvent) => {
+    console.log('⌨️ Key pressed:', e.key);
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage(newMessage);
+    }
+  };
+
   return (
     <div className="flex flex-col h-full bg-gray-50">
       {/* Header */}
@@ -274,49 +285,22 @@ const Chat: React.FC = () => {
       )}
 
       {/* Input Area */}
-      <div className="bg-white border-t p-6">
-        {isEditing ? (
-          <div className="space-y-3">
-            <textarea
-              value={customResponse}
-              onChange={(e) => setCustomResponse(e.target.value)}
-              className="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-              rows={3}
-              placeholder="Edit your response..."
-            />
-            <div className="flex justify-end gap-2">
-              <button
-                onClick={() => setIsEditing(false)}
-                className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => handleSendMessage(customResponse)}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700"
-              >
-                Send
-              </button>
-            </div>
-          </div>
-        ) : (
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={newMessage}
-              onChange={(e) => setNewMessage(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && handleSendMessage(newMessage)}
-              placeholder="Type a message..."
-              className="flex-1 rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-            />
-            <button
-              onClick={() => handleSendMessage(newMessage)}
-              className="px-6 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700"
-            >
-              Send
-            </button>
-          </div>
-        )}
+      <div className="flex items-center space-x-2 p-4 bg-white border-t">
+        <textarea
+          value={newMessage}
+          onChange={(e) => setNewMessage(e.target.value)}
+          onKeyDown={onKeyDown}
+          placeholder="Type a message..."
+          className="flex-1 rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 resize-none"
+          rows={1}
+        />
+        <button
+          onClick={() => handleSendMessage(newMessage)}
+          disabled={!newMessage.trim()}
+          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          Send
+        </button>
       </div>
     </div>
   );
