@@ -34,7 +34,8 @@ export const messageService = {
       sender: message.sender
     };
 
-    const url = `${NETLIFY_URL}/.netlify/functions/send-message`;
+    // L'URL doit être relative car nous sommes déjà sur le domaine Netlify
+    const url = '/.netlify/functions/send-message';
     console.log('📦 Request payload:', payload);
     console.log('🔍 Request URL:', url);
 
