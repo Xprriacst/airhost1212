@@ -63,6 +63,11 @@ const Chat: React.FC = () => {
 
     // Envoyer le message à Make.com
     try {
+      console.log('📝 Conversation details:', {
+        guestEmail: conversation.guestEmail,
+        propertyId: conversation.properties[0],
+        message: newMessage
+      });
       await messageService.sendMessage(newMessage, conversation.guestEmail, conversation.properties[0]);
     } catch (error) {
       console.error('Error sending message to Make.com:', error);
