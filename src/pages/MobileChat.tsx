@@ -80,7 +80,21 @@ const MobileChat: React.FC = () => {
 
     // Envoyer le message à Make.com
     try {
-      await messageService.sendMessage(newMessage, conversation.guestEmail, conversation.properties[0]);
+      console.log('📝 Conversation details:', {
+        guestEmail: conversation?.guestEmail,
+        propertyId: conversation?.propertyId,
+        rawConversation: conversation
+      });
+      
+      if (!conversation?.guestEmail || !conversation?.propertyId) {
+        console.error('❌ Missing required conversation data:', {
+          hasGuestEmail: Boolean(conversation?.guestEmail),
+          hasPropertyId: Boolean(conversation?.propertyId)
+        });
+        return;
+      }
+
+      await messageService.sendMessage(newMessage, conversation.guestEmail, conversation.propertyId);
     } catch (error) {
       console.error('Error sending message to Make.com:', error);
     }
