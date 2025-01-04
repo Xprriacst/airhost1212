@@ -1,4 +1,4 @@
-import { airtableConversationService } from './airtable/conversationService';
+import { conversationService as airtableConversationService } from './airtable/conversationService';
 import type { Conversation } from '../types';
 
 export const conversationService = {
