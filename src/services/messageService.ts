@@ -1,7 +1,7 @@
 import axios from 'axios';
 import type { Message } from '../types';
 
-const MAKE_WEBHOOK_URL = 'https://hook.eu1.make.com/5hgt3th8jxpqg5dcfp54a5c139q7ys73';
+const MAKE_WEBHOOK_URL = 'https://hook.eu1.make.com/6nnd7wwqw2srqyar2jwwtqqliyn83gda';
 
 export const messageService = {
   async sendMessage(message: Message, guestEmail: string, propertyId: string): Promise<void> {
