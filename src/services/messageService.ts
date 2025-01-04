@@ -1,6 +1,8 @@
 import axios from 'axios';
 import type { Message } from '../types';
 
+const NETLIFY_URL = 'https://whimsical-beignet-91329f.netlify.app';
+
 export const messageService = {
   async sendMessage(message: Message, guestEmail: string, propertyId: string): Promise<void> {
     console.log('🚀 messageService.sendMessage called with:', {
@@ -32,12 +34,13 @@ export const messageService = {
       sender: message.sender
     };
 
+    const url = `${NETLIFY_URL}/.netlify/functions/send-message`;
     console.log('📦 Request payload:', payload);
-    console.log('🔍 Request URL:', '/.netlify/functions/send-message');
+    console.log('🔍 Request URL:', url);
 
     try {
       console.log('📤 Sending POST request to Netlify function...');
-      const response = await axios.post('/.netlify/functions/send-message', payload, {
+      const response = await axios.post(url, payload, {
         headers: {
           'Content-Type': 'application/json'
         },
