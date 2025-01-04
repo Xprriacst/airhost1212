@@ -105,7 +105,10 @@ export const conversationService = {
       if (!conversationId) throw new Error('Conversation ID is required');
 
       console.log('Updating conversation:', conversationId);
-      const updatedRecord = await base('Conversations').update(conversationId, data);
+      const record = await base('Conversations').update(conversationId, data);
+      
+      // Récupérer la conversation mise à jour avec tous les champs
+      const updatedRecord = await base('Conversations').find(conversationId);
       return mapAirtableToConversation(updatedRecord);
     } catch (error) {
       console.error('Error updating conversation:', error);

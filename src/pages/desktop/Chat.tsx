@@ -28,11 +28,19 @@ const Chat: React.FC = () => {
     const loadConversation = async () => {
       if (conversationId) {
         try {
+          console.log('🔄 Loading conversation:', conversationId);
           const loadedConversation = await conversationService.fetchConversationById(conversationId);
+          console.log('📥 Loaded conversation:', {
+            id: loadedConversation.id,
+            guestEmail: loadedConversation.guestEmail,
+            propertyId: loadedConversation.propertyId,
+            messageCount: loadedConversation.messages?.length || 0,
+            fullConversation: loadedConversation
+          });
           setConversation(loadedConversation);
           setMessages(loadedConversation.messages || []);
         } catch (error) {
-          console.error('Error loading conversation:', error);
+          console.error('❌ Error loading conversation:', error);
         }
       }
     };
@@ -40,6 +48,12 @@ const Chat: React.FC = () => {
     if (!conversation && conversationId) {
       loadConversation();
     } else if (conversation) {
+      console.log('📦 Using existing conversation:', {
+        id: conversation.id,
+        guestEmail: conversation.guestEmail,
+        propertyId: conversation.propertyId,
+        messageCount: conversation.messages?.length || 0
+      });
       setMessages(conversation.messages || []);
     }
   }, [conversationId, conversation]);
@@ -66,9 +80,19 @@ const Chat: React.FC = () => {
   };
 
   const handleSendMessage = async (text: string) => {
-    if (!text.trim() || !conversation) return;
+    if (!text.trim() || !conversation) {
+      console.warn('❌ Cannot send message:', {
+        hasText: Boolean(text.trim()),
+        hasConversation: Boolean(conversation)
+      });
+      return;
+    }
 
-    console.log('🔍 Full conversation object:', conversation);
+    console.log('🔍 Sending new message in conversation:', {
+      conversationId: conversation.id,
+      guestEmail: conversation.guestEmail,
+      propertyId: conversation.propertyId
+    });
 
     const newMessage: Message = {
       id: Date.now().toString(),
@@ -92,26 +116,26 @@ const Chat: React.FC = () => {
       const updatedConversation = await conversationService.updateConversation(conversation.id, {
         Messages: JSON.stringify(updatedMessages)
       });
+      console.log('✅ Message saved to Airtable, updated conversation:', {
+        id: updatedConversation.id,
+        guestEmail: updatedConversation.guestEmail,
+        propertyId: updatedConversation.propertyId,
+        messageCount: updatedConversation.messages?.length || 0
+      });
       setConversation(updatedConversation);
-      console.log('✅ Message saved to Airtable');
 
       // Envoyer le message à Make.com
-      console.log('📝 Conversation details:', {
-        guestEmail: conversation.guestEmail,
-        propertyId: conversation.propertyId,
-        rawConversation: conversation
-      });
-      
-      if (!conversation.guestEmail || !conversation.propertyId) {
+      if (!updatedConversation.guestEmail || !updatedConversation.propertyId) {
         console.error('❌ Missing required conversation data:', {
-          hasGuestEmail: Boolean(conversation.guestEmail),
-          hasPropertyId: Boolean(conversation.propertyId)
+          hasGuestEmail: Boolean(updatedConversation.guestEmail),
+          hasPropertyId: Boolean(updatedConversation.propertyId),
+          conversation: updatedConversation
         });
         return;
       }
 
       console.log('📤 Sending message to Make.com...');
-      await messageService.sendMessage(newMessage, conversation.guestEmail, conversation.propertyId);
+      await messageService.sendMessage(newMessage, updatedConversation.guestEmail, updatedConversation.propertyId);
       console.log('✅ Message sent to Make.com');
     } catch (error) {
       console.error('❌ Error:', error);
