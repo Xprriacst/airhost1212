@@ -12,16 +12,37 @@ const Chat: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { conversationId } = useParams();
-  const conversation = location.state?.conversation as Conversation;
+  const [conversation, setConversation] = useState<Conversation | null>(location.state?.conversation || null);
   const propertyAutoPilot = location.state?.propertyAutoPilot as boolean;
   
-  const [messages, setMessages] = useState<Message[]>(conversation?.messages || []);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [suggestedResponse, setSuggestedResponse] = useState<string>('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [customResponse, setCustomResponse] = useState('');
   const [isAutoPilot, setIsAutoPilot] = useState(propertyAutoPilot || false);
+
+  // Charger la conversation
+  useEffect(() => {
+    const loadConversation = async () => {
+      if (conversationId) {
+        try {
+          const loadedConversation = await conversationService.fetchConversationById(conversationId);
+          setConversation(loadedConversation);
+          setMessages(loadedConversation.messages || []);
+        } catch (error) {
+          console.error('Error loading conversation:', error);
+        }
+      }
+    };
+    
+    if (!conversation && conversationId) {
+      loadConversation();
+    } else if (conversation) {
+      setMessages(conversation.messages || []);
+    }
+  }, [conversationId, conversation]);
 
   useEffect(() => {
     if (messages.length > 0 && !isAutoPilot) {
@@ -45,7 +66,7 @@ const Chat: React.FC = () => {
   };
 
   const handleSendMessage = async (text: string) => {
-    if (!text.trim()) return;
+    if (!text.trim() || !conversation) return;
 
     console.log('🔍 Full conversation object:', conversation);
 
@@ -57,7 +78,9 @@ const Chat: React.FC = () => {
       sender: 'Host'
     };
 
-    setMessages(prev => [...prev, newMessage]);
+    // Mettre à jour l'état local
+    const updatedMessages = [...messages, newMessage];
+    setMessages(updatedMessages);
     setNewMessage('');
     setIsEditing(false);
     setCustomResponse('');
@@ -66,22 +89,23 @@ const Chat: React.FC = () => {
     try {
       // Sauvegarder le message dans Airtable
       console.log('💾 Saving message to Airtable...');
-      await conversationService.updateConversation(conversation.id, {
-        Messages: JSON.stringify([...messages, newMessage])
+      const updatedConversation = await conversationService.updateConversation(conversation.id, {
+        Messages: JSON.stringify(updatedMessages)
       });
+      setConversation(updatedConversation);
       console.log('✅ Message saved to Airtable');
 
       // Envoyer le message à Make.com
       console.log('📝 Conversation details:', {
-        guestEmail: conversation?.guestEmail,
-        propertyId: conversation?.propertyId,
+        guestEmail: conversation.guestEmail,
+        propertyId: conversation.propertyId,
         rawConversation: conversation
       });
       
-      if (!conversation?.guestEmail || !conversation?.propertyId) {
+      if (!conversation.guestEmail || !conversation.propertyId) {
         console.error('❌ Missing required conversation data:', {
-          hasGuestEmail: Boolean(conversation?.guestEmail),
-          hasPropertyId: Boolean(conversation?.propertyId)
+          hasGuestEmail: Boolean(conversation.guestEmail),
+          hasPropertyId: Boolean(conversation.propertyId)
         });
         return;
       }
