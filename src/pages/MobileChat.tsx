@@ -4,6 +4,7 @@ import { ArrowLeft, Zap, AlertTriangle, Wrench, Package, HelpCircle, AlertOctago
 import type { Message, Conversation, Property, EmergencyTag } from '../types';
 import { aiService } from '../services/aiService';
 import { conversationService } from '../services/conversationService';
+import { messageService } from '../services/messageService';
 import ChatMessage from '../components/ChatMessage';
 import ResponseSuggestion from '../components/ResponseSuggestion';
 
@@ -76,6 +77,36 @@ const MobileChat: React.FC = () => {
     setIsEditing(false);
     setCustomResponse('');
     setSuggestedResponse('');
+
+    try {
+      // Sauvegarder le message dans Airtable
+      console.log('💾 Saving message to Airtable...');
+      await conversationService.updateConversation(conversation.id, {
+        Messages: JSON.stringify([...messages, newMessage])
+      });
+      console.log('✅ Message saved to Airtable');
+
+      // Envoyer le message à Make.com
+      console.log('📝 Conversation details:', {
+        guestEmail: conversation?.guestEmail,
+        propertyId: conversation?.propertyId,
+        rawConversation: conversation
+      });
+      
+      if (!conversation?.guestEmail || !conversation?.propertyId) {
+        console.error('❌ Missing required conversation data:', {
+          hasGuestEmail: Boolean(conversation?.guestEmail),
+          hasPropertyId: Boolean(conversation?.propertyId)
+        });
+        return;
+      }
+
+      console.log('📤 Sending message to Make.com...');
+      await messageService.sendMessage(newMessage, conversation.guestEmail, conversation.propertyId);
+      console.log('✅ Message sent to Make.com');
+    } catch (error) {
+      console.error('❌ Error:', error);
+    }
 
     if (isAutoPilot) {
       setIsGenerating(true);

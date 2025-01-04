@@ -1,50 +1,57 @@
 import React, { useState, useEffect } from 'react';
-import { useLocation, useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Zap } from 'lucide-react';
-import type { Message, Conversation, Property } from '../../types';
-import { aiService } from '../../services/aiService';
+import { useParams } from 'react-router-dom';
+import { Message, Property } from '../../types';
+import { messageService } from '../../services/messageService';
 import { conversationService } from '../../services/conversationService';
-import ChatMessage from '../../components/ChatMessage';
-import ResponseSuggestion from '../../components/ResponseSuggestion';
+import { aiService } from '../../services/aiService';
 
-const Chat: React.FC = () => {
-  const location = useLocation();
-  const navigate = useNavigate();
-  const { conversationId } = useParams();
-  const conversation = location.state?.conversation as Conversation;
-  const propertyAutoPilot = location.state?.propertyAutoPilot as boolean;
-  
-  const [messages, setMessages] = useState<Message[]>(conversation?.messages || []);
+export default function Chat() {
+  const { conversationId } = useParams<{ conversationId: string }>();
+  const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
-  const [suggestedResponse, setSuggestedResponse] = useState<string>('');
+  const [conversation, setConversation] = useState<any>(null);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
+  const [suggestedResponse, setSuggestedResponse] = useState('');
   const [customResponse, setCustomResponse] = useState('');
-  const [isAutoPilot, setIsAutoPilot] = useState(propertyAutoPilot || false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [isAutoPilot, setIsAutoPilot] = useState(false);
 
   useEffect(() => {
-    if (messages.length > 0 && !isAutoPilot) {
-      const lastMessage = messages[messages.length - 1];
-      if (!lastMessage.isUser) {
-        generateAiResponse(lastMessage);
-      }
+    if (conversationId) {
+      fetchConversation(conversationId);
     }
-  }, [messages, isAutoPilot]);
+  }, [conversationId]);
 
-  const generateAiResponse = async (message: Message) => {
-    setIsGenerating(true);
+  const fetchConversation = async (id: string) => {
+    console.log('Fetching conversation:', id);
     try {
-      const response = await aiService.generateResponse(message, {} as Property);
-      setSuggestedResponse(response);
+      const conv = await conversationService.getConversation(id);
+      console.log('Fetched conversation:', conv);
+      setConversation(conv);
+      if (conv.messages) {
+        setMessages(conv.messages);
+      }
     } catch (error) {
-      console.error('Error generating AI response:', error);
-    } finally {
-      setIsGenerating(false);
+      console.error('Error fetching conversation:', error);
     }
   };
 
+  // Fonction simplifiée pour le debugging
   const handleSendMessage = async (text: string) => {
-    if (!text.trim()) return;
+    console.log('🎯 handleSendMessage called with:', {
+      text,
+      conversationId,
+      conversation
+    });
+
+    if (!text.trim() || !conversation) {
+      console.warn('❌ Cannot send message:', {
+        hasText: Boolean(text.trim()),
+        hasConversation: Boolean(conversation),
+        conversationDetails: conversation
+      });
+      return;
+    }
 
     const newMessage: Message = {
       id: Date.now().toString(),
@@ -54,166 +61,122 @@ const Chat: React.FC = () => {
       sender: 'Host'
     };
 
-    setMessages(prev => [...prev, newMessage]);
-    setNewMessage('');
-    setIsEditing(false);
-    setCustomResponse('');
-    setSuggestedResponse('');
+    try {
+      // 1. Envoyer à Make.com
+      console.log('📤 Sending message to Make.com:', {
+        message: newMessage,
+        guestEmail: conversation.guestEmail,
+        propertyId: conversation.propertyId
+      });
 
-    if (isAutoPilot) {
-      setIsGenerating(true);
       try {
-        const response = await aiService.generateResponse(newMessage, {} as Property);
-        const aiMessage: Message = {
-          id: Date.now().toString(),
-          text: response,
-          isUser: true,
-          timestamp: new Date(),
-          sender: 'AI Assistant'
-        };
-        setMessages(prev => [...prev, aiMessage]);
-      } catch (error) {
-        console.error('Error generating AI response:', error);
-      } finally {
-        setIsGenerating(false);
+        await messageService.sendMessage(
+          newMessage,
+          conversation.guestEmail,
+          conversation.propertyId
+        );
+        console.log('✅ Message sent to Make.com successfully');
+      } catch (makeError) {
+        console.error('❌ Failed to send message to Make.com:', makeError);
+        throw makeError;
       }
+
+      // 2. Mettre à jour l'état local
+      console.log('🔄 Updating local state...');
+      const updatedMessages = [...messages, newMessage];
+      setMessages(updatedMessages);
+      setNewMessage('');
+
+      // 3. Sauvegarder dans Airtable
+      console.log('💾 Saving to Airtable...', {
+        conversationId: conversation.id,
+        messageCount: updatedMessages.length
+      });
+
+      try {
+        const updatedConversation = await conversationService.updateConversation(
+          conversation.id,
+          { Messages: JSON.stringify(updatedMessages) }
+        );
+        console.log('✅ Saved to Airtable successfully:', {
+          id: updatedConversation.id,
+          messageCount: updatedConversation.messages?.length || 0
+        });
+        setConversation(updatedConversation);
+      } catch (airtableError) {
+        console.error('❌ Failed to save to Airtable:', airtableError);
+        throw airtableError;
+      }
+    } catch (error) {
+      console.error('❌ Error in handleSendMessage:', error);
+      // Optionally: show error to user
     }
   };
 
-  const handleAcceptSuggestion = (text: string) => {
-    handleSendMessage(text);
-  };
-
-  const handleEditSuggestion = (text: string) => {
-    setCustomResponse(text);
-    setIsEditing(true);
-  };
-
-  const handleRefreshSuggestion = async () => {
-    if (messages.length > 0) {
-      const lastMessage = messages[messages.length - 1];
-      await generateAiResponse(lastMessage);
-    }
-  };
-
+  // Interface simplifiée pour le debugging
   return (
-    <div className="flex flex-col h-full bg-gray-50">
-      {/* Header */}
-      <div className="bg-white border-b px-6 py-4">
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-4">
-            <button
-              onClick={() => navigate(-1)}
-              className="p-2 hover:bg-gray-100 rounded-lg"
-            >
-              <ArrowLeft className="w-5 h-5 text-gray-600" />
-            </button>
-            <div>
-              <h1 className="text-xl font-semibold text-gray-900">{conversation?.propertyId}</h1>
-              <p className="text-sm text-gray-500">Guest: {conversation?.guestName}</p>
-            </div>
-          </div>
-          <button
-            onClick={() => setIsAutoPilot(!isAutoPilot)}
-            disabled={!propertyAutoPilot}
-            className={`flex items-center gap-2 px-4 py-2 rounded-full transition-colors ${
-              !propertyAutoPilot 
-                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                : isAutoPilot
-                  ? 'bg-blue-100 text-blue-700'
-                  : 'bg-gray-100 text-gray-600'
-            }`}
-          >
-            <Zap className={`w-4 h-4 ${
-              !propertyAutoPilot 
-                ? 'text-gray-400'
-                : isAutoPilot 
-                  ? 'text-blue-500' 
-                  : 'text-gray-400'
-            }`} />
-            <span className="text-sm font-medium">
-              {isAutoPilot ? 'Auto-pilot ON' : 'Auto-pilot OFF'}
-            </span>
-          </button>
-        </div>
-        {!propertyAutoPilot && (
-          <div className="bg-gray-50 text-gray-600 text-sm px-3 py-1 rounded-md">
-            Auto-pilot is disabled for this property
-          </div>
-        )}
+    <div className="p-4">
+      <div className="mb-4">
+        <h2 className="text-xl font-bold">Debug Chat Interface</h2>
+        <p>Conversation ID: {conversationId}</p>
+        <p>Guest Email: {conversation?.guestEmail}</p>
+        <p>Property ID: {conversation?.propertyId}</p>
       </div>
 
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-6 space-y-4">
-        {messages.map((message) => (
-          <ChatMessage key={message.id} message={message} />
+      <div className="mb-4">
+        <h3 className="font-bold">Messages:</h3>
+        {messages.map((msg, index) => (
+          <div key={index} className="mb-2 p-2 border rounded">
+            <p>Text: {msg.text}</p>
+            <p>Sender: {msg.sender}</p>
+            <p>Time: {msg.timestamp?.toString()}</p>
+          </div>
         ))}
-        {isGenerating && (
-          <div className="flex items-center gap-2 text-gray-500 text-sm">
-            <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
-            AI is typing...
-          </div>
-        )}
       </div>
 
-      {/* Response Suggestion */}
-      {!isAutoPilot && suggestedResponse && (
-        <ResponseSuggestion
-          text={suggestedResponse}
-          onAccept={handleAcceptSuggestion}
-          onEdit={handleEditSuggestion}
-          onRefresh={handleRefreshSuggestion}
-          isLoading={isGenerating}
+      <div className="flex items-center p-4 border-t">
+        <input
+          type="text"
+          value={newMessage}
+          onChange={(e) => {
+            console.log('💬 Input changed:', e.target.value);
+            setNewMessage(e.target.value);
+          }}
+          onKeyPress={(e) => {
+            console.log('⌨️ Key pressed:', e.key);
+            if (e.key === 'Enter') {
+              console.log('↩️ Enter key pressed, sending message...');
+              handleSendMessage(newMessage);
+            }
+          }}
+          placeholder="Type a message..."
+          className="flex-1 p-2 border rounded-l"
         />
-      )}
-
-      {/* Input Area */}
-      <div className="bg-white border-t p-6">
-        {isEditing ? (
-          <div className="space-y-3">
-            <textarea
-              value={customResponse}
-              onChange={(e) => setCustomResponse(e.target.value)}
-              className="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-              rows={3}
-              placeholder="Edit your response..."
-            />
-            <div className="flex justify-end gap-2">
-              <button
-                onClick={() => setIsEditing(false)}
-                className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => handleSendMessage(customResponse)}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700"
-              >
-                Send
-              </button>
-            </div>
-          </div>
-        ) : (
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={newMessage}
-              onChange={(e) => setNewMessage(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && handleSendMessage(newMessage)}
-              placeholder="Type a message..."
-              className="flex-1 rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-            />
-            <button
-              onClick={() => handleSendMessage(newMessage)}
-              className="px-6 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700"
+        <button
+          onClick={() => {
+            console.log('🔘 Send button clicked');
+            console.log('Message to send:', newMessage);
+            console.log('Conversation:', conversation);
+            handleSendMessage(newMessage);
+          }}
+          className="bg-blue-500 text-white p-2 rounded-r"
+        >
+          <span className="flex items-center">
+            Send
+            <svg
+              className="w-4 h-4 ml-2"
+              fill="none"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="2"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
             >
-              Send
-            </button>
-          </div>
-        )}
+              <path d="M14 5l7 7m0 0l-7 7m7-7H3"></path>
+            </svg>
+          </span>
+        </button>
       </div>
     </div>
   );
-};
-
-export default Chat;
+}

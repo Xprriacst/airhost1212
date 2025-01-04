@@ -18,6 +18,7 @@ const mapAirtableToConversation = (record: any): Conversation => {
     id: record.id,
     propertyId: Array.isArray(propertyIds) ? propertyIds[0] : propertyIds,
     guestName: record.get('Guest Name') || '',
+    guestEmail: record.get('Guest Email') || '',
     checkIn: record.get('Check-in Date') || '',
     checkOut: record.get('Check-out Date') || '',
     messages: parseMessages(record.get('Messages'))
@@ -34,6 +35,7 @@ export const conversationService = {
           fields: [
             'Properties',
             'Guest Name',
+            'Guest Email',
             'Messages',
             'Check-in Date',
             'Check-out Date'
@@ -79,6 +81,7 @@ export const conversationService = {
           fields: [
             'Properties',
             'Guest Name',
+            'Guest Email',
             'Messages',
             'Check-in Date',
             'Check-out Date'
@@ -102,7 +105,10 @@ export const conversationService = {
       if (!conversationId) throw new Error('Conversation ID is required');
 
       console.log('Updating conversation:', conversationId);
-      const updatedRecord = await base('Conversations').update(conversationId, data);
+      const record = await base('Conversations').update(conversationId, data);
+      
+      // Récupérer la conversation mise à jour avec tous les champs
+      const updatedRecord = await base('Conversations').find(conversationId);
       return mapAirtableToConversation(updatedRecord);
     } catch (error) {
       console.error('Error updating conversation:', error);

@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Send, Zap } from 'lucide-react';
 import { conversationService } from '../services';
+import { messageService } from '../services/messageService';
 import { aiService } from '../services/ai/aiService';
 import { propertyService } from '../services/airtable/propertyService';
 import ChatMessage from '../components/ChatMessage';
@@ -74,23 +75,52 @@ const ConversationDetail: React.FC = () => {
   const handleSendMessage = async (text: string, isAiResponse: boolean = false) => {
     if (!text.trim() || sending || !conversation || !conversationId) return;
 
-    const message: Message = {
-      id: Date.now().toString(),
+    console.log('🚀 Sending message:', {
       text,
-      isUser: true,
-      timestamp: new Date(),
-      sender: isAiResponse ? 'AI Assistant' : 'Host'
-    };
+      isAiResponse,
+      conversation,
+      propertyId
+    });
 
     setSending(true);
 
     try {
+      // 1. Créer le message
+      const message: Message = {
+        id: Date.now().toString(),
+        text,
+        isUser: true,
+        timestamp: new Date(),
+        sender: isAiResponse ? 'AI Assistant' : 'Host'
+      };
+
+      console.log('📝 Created message:', message);
+
+      // 2. Envoyer à Make.com
+      try {
+        console.log('📤 Sending to Make.com...');
+        await messageService.sendMessage(
+          message,
+          conversation.guestEmail,
+          propertyId || ''
+        );
+        console.log('✅ Sent to Make.com successfully');
+      } catch (makeError) {
+        console.error('❌ Failed to send to Make.com:', makeError);
+        // On continue même si l'envoi à Make.com échoue
+      }
+
+      // 3. Mettre à jour Airtable
+      console.log('💾 Updating Airtable...');
       const updatedMessages = [...(conversation.messages || []), message];
       
       await conversationService.updateConversation(conversationId, {
         Messages: JSON.stringify(updatedMessages)
       });
 
+      console.log('✅ Updated Airtable successfully');
+
+      // 4. Mettre à jour l'état local
       setConversation(prev => prev ? {
         ...prev,
         messages: updatedMessages
@@ -99,9 +129,9 @@ const ConversationDetail: React.FC = () => {
       setNewMessage('');
       setError(null);
 
-      // Si Auto-Pilot est activé et ce n'est pas déjà une réponse de l'IA,
-      // générer une réponse automatique
+      // 5. Gérer la réponse automatique
       if (isAutoPilot && !isAiResponse && property) {
+        console.log('🤖 Generating AI response...');
         const aiResponse = await aiService.generateResponse(
           message,
           property,
@@ -115,7 +145,7 @@ const ConversationDetail: React.FC = () => {
         await handleSendMessage(aiResponse, true);
       }
     } catch (err) {
-      console.error('Failed to send message:', err);
+      console.error('❌ Failed to send message:', err);
       setError('Failed to send message');
     } finally {
       setSending(false);
