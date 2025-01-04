@@ -4,6 +4,7 @@ import { ArrowLeft, Zap, AlertTriangle, Wrench, Package, HelpCircle, AlertOctago
 import type { Message, Conversation, Property, EmergencyTag } from '../types';
 import { aiService } from '../services/aiService';
 import { conversationService } from '../services/conversationService';
+import { messageService } from '../services/messageService';
 import ChatMessage from '../components/ChatMessage';
 import ResponseSuggestion from '../components/ResponseSuggestion';
 
@@ -76,6 +77,13 @@ const MobileChat: React.FC = () => {
     setIsEditing(false);
     setCustomResponse('');
     setSuggestedResponse('');
+
+    // Envoyer le message à Make.com
+    try {
+      await messageService.sendMessage(newMessage, conversation.guestEmail, conversation.properties[0]);
+    } catch (error) {
+      console.error('Error sending message to Make.com:', error);
+    }
 
     if (isAutoPilot) {
       setIsGenerating(true);
