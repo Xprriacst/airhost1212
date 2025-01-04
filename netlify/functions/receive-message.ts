@@ -2,7 +2,6 @@ import { Handler } from '@netlify/functions';
 import { z } from 'zod';
 import { propertyService } from '../../src/services/airtable/propertyService';
 import { conversationService } from '../../src/services/conversationService';
-import { messageService } from '../../src/services/messageService';
 import { aiService } from '../../src/services/ai/aiService';
 
 // Schéma de validation pour les messages entrants
@@ -72,15 +71,6 @@ export const handler: Handler = async (event) => {
         Messages: JSON.stringify(messages)
       });
 
-      // Envoyer le message à Make.com
-      await messageService.sendMessage({
-        text: data.message,
-        timestamp: new Date(),
-        sender: data.guestName,
-        isUser: false,
-        id: Date.now().toString()
-      }, data.guestEmail, data.propertyId);
-
       console.log('✅ Message added to existing conversation:', conversation.id);
     } else {
       console.log('⚠️ No matching conversation found. Creating new conversation.');
@@ -104,15 +94,6 @@ export const handler: Handler = async (event) => {
           },
         ]),
       });
-
-      // Envoyer le message à Make.com
-      await messageService.sendMessage({
-        text: data.message,
-        timestamp: new Date(),
-        sender: data.guestName,
-        isUser: false,
-        id: Date.now().toString()
-      }, data.guestEmail, data.propertyId);
 
       console.log('✅ New conversation created:', conversation.id);
     }
