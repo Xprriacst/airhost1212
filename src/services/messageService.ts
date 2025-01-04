@@ -5,74 +5,95 @@ const NETLIFY_URL = 'https://whimsical-beignet-91329f.netlify.app';
 
 export const messageService = {
   async sendMessage(message: Message, guestEmail: string, propertyId: string): Promise<void> {
-    console.log('🚀 messageService.sendMessage called with:', {
-      messageText: message.text,
-      guestEmail,
-      propertyId
-    });
-
-    if (!message?.text) {
-      console.error('❌ Invalid message:', message);
-      throw new Error('Message text is required');
-    }
-
-    if (!guestEmail) {
-      console.error('❌ Guest email is required');
-      throw new Error('Guest email is required');
-    }
-
-    if (!propertyId) {
-      console.error('❌ Property ID is required');
-      throw new Error('Property ID is required');
-    }
-
-    const payload = {
-      message: message.text,
-      guestEmail,
-      propertyId,
-      timestamp: message.timestamp,
-      sender: message.sender
-    };
-
-    // L'URL doit être relative car nous sommes déjà sur le domaine Netlify
-    const url = '/.netlify/functions/send-message';
-    console.log('📦 Request payload:', payload);
-    console.log('🔍 Request URL:', url);
-
+    console.group('🚀 messageService.sendMessage');
     try {
-      console.log('📤 Sending POST request to Netlify function...');
-      const response = await axios.post(url, payload, {
+      console.log('Input parameters:', {
+        messageText: message.text,
+        guestEmail,
+        propertyId,
+        fullMessage: message
+      });
+
+      // Validation
+      if (!message?.text) {
+        console.error('❌ Invalid message:', message);
+        throw new Error('Message text is required');
+      }
+
+      if (!guestEmail) {
+        console.error('❌ Guest email is required');
+        throw new Error('Guest email is required');
+      }
+
+      if (!propertyId) {
+        console.error('❌ Property ID is required');
+        throw new Error('Property ID is required');
+      }
+
+      // Préparer le payload
+      const payload = {
+        message: message.text,
+        guestEmail,
+        propertyId,
+        timestamp: message.timestamp,
+        sender: message.sender
+      };
+
+      console.log('📦 Request payload:', payload);
+
+      // Préparer la requête
+      const url = '/.netlify/functions/send-message';
+      const config = {
         headers: {
           'Content-Type': 'application/json'
         },
         timeout: 10000
+      };
+
+      console.log('🔍 Request details:', {
+        url,
+        method: 'POST',
+        headers: config.headers,
+        timeout: config.timeout
       });
 
-      console.log('✅ Response from Netlify function:', {
-        status: response.status,
-        statusText: response.statusText,
-        data: response.data
-      });
+      // Envoyer la requête
+      console.log('📤 Sending POST request to Netlify function...');
+      try {
+        const response = await axios.post(url, payload, config);
+        
+        console.log('✅ Response from Netlify function:', {
+          status: response.status,
+          statusText: response.statusText,
+          data: response.data,
+          headers: response.headers
+        });
 
-      if (!response.data.success) {
-        console.error('❌ Function returned error:', response.data.error);
-        throw new Error(response.data.error || 'Failed to send message');
+        if (!response.data.success) {
+          console.error('❌ Function returned error:', response.data.error);
+          throw new Error(response.data.error || 'Failed to send message');
+        }
+      } catch (axiosError) {
+        console.error('❌ Axios error:', axiosError);
+        if (axios.isAxiosError(axiosError)) {
+          console.error('Error details:', {
+            status: axiosError.response?.status,
+            statusText: axiosError.response?.statusText,
+            data: axiosError.response?.data,
+            config: {
+              url: axiosError.config?.url,
+              method: axiosError.config?.method,
+              headers: axiosError.config?.headers
+            }
+          });
+        }
+        throw new Error('Failed to send message to webhook');
       }
     } catch (error) {
-      console.error('❌ Error sending message:', error);
-      if (axios.isAxiosError(error)) {
-        console.error('Error details:', {
-          status: error.response?.status,
-          statusText: error.response?.statusText,
-          data: error.response?.data,
-          config: {
-            url: error.config?.url,
-            method: error.config?.method,
-            headers: error.config?.headers
-          }
-        });
-      }
-      throw new Error('Failed to send message to webhook');
+      console.error('❌ Error in messageService.sendMessage:', error);
+      throw error;
+    } finally {
+      console.groupEnd();
     }
   }
 };

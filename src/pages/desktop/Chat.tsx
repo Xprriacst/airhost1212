@@ -47,7 +47,8 @@ export default function Chat() {
     if (!text.trim() || !conversation) {
       console.warn('❌ Cannot send message:', {
         hasText: Boolean(text.trim()),
-        hasConversation: Boolean(conversation)
+        hasConversation: Boolean(conversation),
+        conversationDetails: conversation
       });
       return;
     }
@@ -61,27 +62,54 @@ export default function Chat() {
     };
 
     try {
-      console.log('📤 Sending message:', newMessage);
-      await messageService.sendMessage(
-        newMessage,
-        conversation.guestEmail,
-        conversation.propertyId
-      );
-      console.log('✅ Message sent successfully');
+      // 1. Envoyer à Make.com
+      console.log('📤 Sending message to Make.com:', {
+        message: newMessage,
+        guestEmail: conversation.guestEmail,
+        propertyId: conversation.propertyId
+      });
 
-      // Mettre à jour l'état local
+      try {
+        await messageService.sendMessage(
+          newMessage,
+          conversation.guestEmail,
+          conversation.propertyId
+        );
+        console.log('✅ Message sent to Make.com successfully');
+      } catch (makeError) {
+        console.error('❌ Failed to send message to Make.com:', makeError);
+        throw makeError;
+      }
+
+      // 2. Mettre à jour l'état local
+      console.log('🔄 Updating local state...');
       const updatedMessages = [...messages, newMessage];
       setMessages(updatedMessages);
       setNewMessage('');
 
-      // Sauvegarder dans Airtable
-      const updatedConversation = await conversationService.updateConversation(
-        conversation.id,
-        { Messages: JSON.stringify(updatedMessages) }
-      );
-      setConversation(updatedConversation);
+      // 3. Sauvegarder dans Airtable
+      console.log('💾 Saving to Airtable...', {
+        conversationId: conversation.id,
+        messageCount: updatedMessages.length
+      });
+
+      try {
+        const updatedConversation = await conversationService.updateConversation(
+          conversation.id,
+          { Messages: JSON.stringify(updatedMessages) }
+        );
+        console.log('✅ Saved to Airtable successfully:', {
+          id: updatedConversation.id,
+          messageCount: updatedConversation.messages?.length || 0
+        });
+        setConversation(updatedConversation);
+      } catch (airtableError) {
+        console.error('❌ Failed to save to Airtable:', airtableError);
+        throw airtableError;
+      }
     } catch (error) {
       console.error('❌ Error in handleSendMessage:', error);
+      // Optionally: show error to user
     }
   };
 
