@@ -30,6 +30,7 @@ export interface Conversation {
   id: string;
   propertyId: string;
   guestName: string;
+  guestEmail: string;
   checkIn: string;
   checkOut: string;
   messages: Message[];
