@@ -134,25 +134,47 @@ export default function Chat() {
         ))}
       </div>
 
-      <div className="flex gap-2">
+      <div className="flex items-center p-4 border-t">
         <input
           type="text"
           value={newMessage}
           onChange={(e) => {
-            console.log('📝 Input changed:', e.target.value);
+            console.log('💬 Input changed:', e.target.value);
             setNewMessage(e.target.value);
           }}
-          className="flex-1 p-2 border rounded"
+          onKeyPress={(e) => {
+            console.log('⌨️ Key pressed:', e.key);
+            if (e.key === 'Enter') {
+              console.log('↩️ Enter key pressed, sending message...');
+              handleSendMessage(newMessage);
+            }
+          }}
           placeholder="Type a message..."
+          className="flex-1 p-2 border rounded-l"
         />
         <button
           onClick={() => {
             console.log('🔘 Send button clicked');
+            console.log('Message to send:', newMessage);
+            console.log('Conversation:', conversation);
             handleSendMessage(newMessage);
           }}
-          className="px-4 py-2 bg-blue-500 text-white rounded"
+          className="bg-blue-500 text-white p-2 rounded-r"
         >
-          Send Message
+          <span className="flex items-center">
+            Send
+            <svg
+              className="w-4 h-4 ml-2"
+              fill="none"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="2"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path d="M14 5l7 7m0 0l-7 7m7-7H3"></path>
+            </svg>
+          </span>
         </button>
       </div>
     </div>
