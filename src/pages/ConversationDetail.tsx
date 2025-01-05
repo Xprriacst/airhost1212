@@ -331,31 +331,42 @@ const ConversationDetail: React.FC = () => {
               )}
             </button>
 
-            <textarea
-              value={newMessage}
-              onChange={(e) => setNewMessage(e.target.value)}
-              onKeyPress={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  handleSendMessage(newMessage);
-                }
-              }}
-              placeholder="Message"
-              className="flex-1 bg-transparent border-none focus:outline-none py-1.5 px-2 min-w-0 resize-none leading-5"
-              rows={1}
-              style={{
-                height: 'auto',
-                minHeight: '24px',
-                maxHeight: 'calc(5 * 1.25rem + 0.75rem)', // 5 lignes + padding
-                overflowY: newMessage.split('\n').length > 5 ? 'auto' : 'hidden'
-              }}
-              onInput={(e) => {
-                const target = e.target as HTMLTextAreaElement;
-                target.style.height = 'auto';
-                const newHeight = Math.min(target.scrollHeight, 5 * 20 + 12); // 5 lignes * 20px + padding
-                target.style.height = `${newHeight}px`;
-              }}
-            />
+            <div className="flex-1 relative">
+              <pre 
+                className="invisible overflow-hidden h-0 leading-6"
+                style={{
+                  fontFamily: 'inherit',
+                  fontSize: 'inherit',
+                  padding: '0.375rem 0.5rem',
+                  maxHeight: '120px', // 5 lignes * 24px
+                  whiteSpace: 'pre-wrap',
+                  wordWrap: 'break-word'
+                }}
+              >
+                {newMessage + '\n'}
+              </pre>
+              <textarea
+                value={newMessage}
+                onChange={(e) => {
+                  setNewMessage(e.target.value);
+                  const pre = e.target.previousSibling as HTMLPreElement;
+                  const height = Math.min(pre.scrollHeight, 120); // 5 lignes maximum
+                  e.target.style.height = `${height}px`;
+                }}
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSendMessage(newMessage);
+                  }
+                }}
+                placeholder="Message"
+                className="absolute top-0 left-0 w-full h-full bg-transparent border-none focus:outline-none py-1.5 px-2 leading-6 resize-none overflow-y-auto"
+                style={{
+                  minHeight: '24px',
+                  maxHeight: '120px' // 5 lignes * 24px
+                }}
+              />
+            </div>
           </div>
 
           {/* Bouton d'envoi */}
