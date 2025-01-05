@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Send, Zap } from 'lucide-react';
 import { conversationService } from '../services';
@@ -15,6 +15,7 @@ const ConversationDetail: React.FC = () => {
   const navigate = useNavigate();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const pollingRef = useRef<NodeJS.Timeout>();
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   
   const [conversation, setConversation] = useState<Conversation | null>(null);
   const [property, setProperty] = useState<Property | null>(null);
@@ -70,8 +71,32 @@ const ConversationDetail: React.FC = () => {
   }, [conversationId]);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (conversation?.messages) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'instant' });
+    }
   }, [conversation?.messages]);
+
+  useEffect(() => {
+    // Fonction pour ajuster la hauteur
+    const adjustHeight = () => {
+      const textarea = textareaRef.current;
+      if (textarea) {
+        textarea.style.height = 'auto';
+        const newHeight = Math.min(textarea.scrollHeight, 120); // Max 5 lignes (24px * 5)
+        textarea.style.height = `${newHeight}px`;
+      }
+    };
+
+    // Ajuster au chargement
+    adjustHeight();
+
+    // Observer les changements de contenu
+    const textarea = textareaRef.current;
+    if (textarea) {
+      textarea.addEventListener('input', adjustHeight);
+      return () => textarea.removeEventListener('input', adjustHeight);
+    }
+  }, [newMessage]);
 
   const handleSendMessage = async (text: string, isAiResponse: boolean = false) => {
     if (!text.trim() || sending || !conversation || !conversationId) return;
@@ -332,6 +357,7 @@ const ConversationDetail: React.FC = () => {
             </button>
 
             <textarea
+              ref={textareaRef}
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
               onKeyPress={(e) => {
@@ -341,7 +367,7 @@ const ConversationDetail: React.FC = () => {
                 }
               }}
               placeholder="Message"
-              className="flex-1 bg-transparent border-none focus:outline-none px-2 py-1 resize-none overflow-y-auto max-h-[120px] min-h-[24px]"
+              className="flex-1 bg-transparent border-none focus:outline-none px-2 py-1 resize-none overflow-y-auto min-h-[24px]"
               rows={1}
             />
           </div>
