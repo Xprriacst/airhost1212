@@ -1,35 +1,59 @@
 import React from 'react';
-
-interface Message {
-  id: string;
-  text: string;
-  isUser: boolean;
-  timestamp: Date;
-  sender: string;
-}
+import type { Message } from '../types';
 
 interface ChatMessageProps {
   message: Message;
+  isLast?: boolean;
 }
 
-const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
+const ChatMessage: React.FC<ChatMessageProps> = ({ message, isLast }) => {
+  const isUser = message.sender === 'Host' || message.sender === 'AI Assistant';
+  const time = new Date(message.timestamp).toLocaleTimeString([], { 
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false
+  });
+
   return (
-    <div className={`flex ${message.isUser ? 'justify-end' : 'justify-start'}`}>
-      <div className={`max-w-[80%] ${message.isUser ? 'order-1' : 'order-2'}`}>
-        <div className={`rounded-2xl px-4 py-2 ${
-          message.isUser 
-            ? 'bg-blue-600 text-white' 
-            : 'bg-white border text-gray-900'
-        }`}>
-          <p className="text-sm">{message.text}</p>
-        </div>
-        <div className={`mt-1 text-xs text-gray-500 ${
-          message.isUser ? 'text-right' : 'text-left'
-        }`}>
-          {message.sender} • {new Date(message.timestamp).toLocaleTimeString([], { 
-            hour: '2-digit', 
-            minute: '2-digit' 
-          })}
+    <div className={`flex ${isUser ? 'justify-end' : 'justify-start'} mb-1`}>
+      <div
+        className={`relative max-w-[75%] px-3 py-2 rounded-lg ${
+          isUser
+            ? 'bg-[#e7ffdb] mr-1'
+            : 'bg-white ml-1'
+        }`}
+      >
+        {/* Triangle pour la bulle */}
+        <div
+          className={`absolute top-0 w-3 h-3 ${
+            isUser
+              ? '-right-1.5 bg-[#e7ffdb]'
+              : '-left-1.5 bg-white'
+          }`}
+          style={{
+            clipPath: isUser
+              ? 'polygon(0 0, 0% 100%, 100% 0)'
+              : 'polygon(100% 0, 0 0, 100% 100%)'
+          }}
+        />
+
+        {/* Contenu du message */}
+        <div className="relative">
+          <p className="text-[15px] leading-[20px] text-gray-800 whitespace-pre-wrap break-words">
+            {message.text}
+          </p>
+          <div className="flex items-center justify-end -mb-1 mt-1 space-x-1">
+            <span className="text-[11px] text-gray-500 min-w-[45px]">
+              {time}
+            </span>
+            {isUser && (
+              <div className="flex -space-x-1">
+                <svg className="w-[15px] h-[15px] text-[#53bdeb]" viewBox="0 0 16 15" fill="currentColor">
+                  <path d="M15.01 3.316l-.478-.372a.365.365 0 0 0-.51.063L8.666 9.879a.32.32 0 0 1-.484.033l-.358-.325a.319.319 0 0 0-.484.032l-.378.483a.418.418 0 0 0 .036.541l1.32 1.266c.143.14.361.125.484-.033l6.272-8.048a.366.366 0 0 0-.064-.512zm-4.1 0l-.478-.372a.365.365 0 0 0-.51.063L4.566 9.879a.32.32 0 0 1-.484.033L1.891 7.769a.366.366 0 0 0-.515.006l-.423.433a.364.364 0 0 0 .006.514l3.258 3.185c.143.14.361.125.484-.033l6.272-8.048a.365.365 0 0 0-.063-.51z"/>
+                </svg>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
