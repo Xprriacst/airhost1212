@@ -295,37 +295,37 @@ const ConversationDetail: React.FC = () => {
 
       {/* Input */}
       <div className="bg-gray-50 border-t px-2 py-2 pb-safe">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 px-1">
           {/* Bouton + */}
           <button 
             onClick={() => alert('Bientôt disponible !')}
-            className="p-2 text-gray-400 hover:text-gray-500"
+            className="text-gray-400 hover:text-gray-500 flex-shrink-0"
             title="Bientôt disponible"
           >
-            <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
             </svg>
           </button>
           
           {/* Zone de texte avec bouton AI */}
-          <div className="flex-1 flex items-center bg-white rounded-full border px-3 py-1">
+          <div className="flex-1 flex items-center bg-white rounded-full border px-2 py-1">
             <button
               onClick={handleGenerateAiResponse}
               disabled={isGeneratingAi || isAutoPilot}
               title={isAutoPilot ? "Désactivé quand Auto-pilot est ON" : "Générer une réponse AI"}
-              className="p-2 text-gray-500 hover:text-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="p-1.5 text-gray-500 hover:text-blue-500 disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
             >
               {isGeneratingAi ? (
-                <div className="w-5 h-5 border-t-2 border-blue-500 rounded-full animate-spin" />
+                <div className="w-4 h-4 border-t-2 border-blue-500 rounded-full animate-spin" />
               ) : (
                 <svg
-                  className="w-5 h-5"
+                  className="w-4 h-4"
                   viewBox="0 0 24 24"
                   fill="none"
                   stroke="currentColor"
                   strokeWidth="2"
                 >
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9.82 14.687l-2.365-2.365a2 2 0 012.828-2.828l5.657 5.657a2 2 0 01-2.828 2.828L8.5 13.368M12 4v16m8-8H4" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
                 </svg>
               )}
             </button>
@@ -341,7 +341,7 @@ const ConversationDetail: React.FC = () => {
                 }
               }}
               placeholder="Message"
-              className="flex-1 bg-transparent border-none focus:outline-none py-2 px-2"
+              className="flex-1 bg-transparent border-none focus:outline-none py-1.5 px-2 min-w-0"
             />
           </div>
 
@@ -349,16 +349,16 @@ const ConversationDetail: React.FC = () => {
           <button
             onClick={() => handleSendMessage(newMessage)}
             disabled={!newMessage.trim() || sending}
-            className={`p-2 rounded-full ${
+            className={`p-2 rounded-full flex-shrink-0 ${
               newMessage.trim() 
                 ? 'text-white bg-green-500 hover:bg-green-600' 
                 : 'text-gray-400 bg-gray-200'
             } disabled:opacity-50`}
           >
             {sending ? (
-              <div className="w-6 h-6 border-t-2 border-white rounded-full animate-spin" />
+              <div className="w-5 h-5 border-t-2 border-white rounded-full animate-spin" />
             ) : (
-              <Send className="w-6 h-6" />
+              <Send className="w-5 h-5" />
             )}
           </button>
         </div>
