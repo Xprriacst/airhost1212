@@ -296,25 +296,44 @@ const ConversationDetail: React.FC = () => {
       {/* Input */}
       <div className="bg-gray-50 border-t px-2 py-2 pb-safe">
         <div className="flex items-center gap-2">
-          <button className="p-2 text-gray-600 hover:text-gray-800">
-            <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z" />
-            </svg>
-          </button>
-          <button className="p-2 text-gray-600 hover:text-gray-800">
-            <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+          {/* Bouton + */}
+          <button 
+            onClick={() => alert('Bientôt disponible !')}
+            className="p-2 text-gray-400 hover:text-gray-500"
+            title="Bientôt disponible"
+          >
+            <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
             </svg>
           </button>
           
+          {/* Zone de texte avec bouton AI */}
           <div className="flex-1 flex items-center bg-white rounded-full border px-3 py-1">
+            <button
+              onClick={handleGenerateAiResponse}
+              disabled={isGeneratingAi || isAutoPilot}
+              title={isAutoPilot ? "Désactivé quand Auto-pilot est ON" : "Générer une réponse AI"}
+              className="p-2 text-gray-500 hover:text-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isGeneratingAi ? (
+                <div className="w-5 h-5 border-t-2 border-blue-500 rounded-full animate-spin" />
+              ) : (
+                <svg
+                  className="w-5 h-5"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9.82 14.687l-2.365-2.365a2 2 0 012.828-2.828l5.657 5.657a2 2 0 01-2.828 2.828L8.5 13.368M12 4v16m8-8H4" />
+                </svg>
+              )}
+            </button>
+
             <input
               type="text"
               value={newMessage}
-              onChange={(e) => {
-                console.log('💬 Input changed:', e.target.value);
-                setNewMessage(e.target.value);
-              }}
+              onChange={(e) => setNewMessage(e.target.value)}
               onKeyPress={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault();
@@ -322,52 +341,26 @@ const ConversationDetail: React.FC = () => {
                 }
               }}
               placeholder="Message"
-              className="flex-1 bg-transparent border-none focus:outline-none py-2 px-1"
+              className="flex-1 bg-transparent border-none focus:outline-none py-2 px-2"
             />
-            <button
-              onClick={handleGenerateAiResponse}
-              disabled={isGeneratingAi || isAutoPilot}
-              title={isAutoPilot ? "Disabled when Auto-pilot is ON" : "Generate AI response"}
-              className="p-2 text-gray-600 hover:text-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isGeneratingAi ? (
-                <div className="w-5 h-5 border-t-2 border-blue-500 rounded-full animate-spin" />
-              ) : (
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path>
-                </svg>
-              )}
-            </button>
           </div>
 
-          {newMessage.trim() ? (
-            <button
-              onClick={() => handleSendMessage(newMessage)}
-              disabled={sending}
-              className="p-2 text-white bg-green-500 rounded-full hover:bg-green-600 disabled:opacity-50"
-            >
-              {sending ? (
-                <div className="w-6 h-6 border-t-2 border-white rounded-full animate-spin" />
-              ) : (
-                <Send className="w-6 h-6" />
-              )}
-            </button>
-          ) : (
-            <button className="p-2 text-white bg-green-500 rounded-full hover:bg-green-600">
-              <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm-1-9c0-.55.45-1 1-1s1 .45 1 1v6c0 .55-.45 1-1 1s-1-.45-1-1V5z"/>
-                <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
-              </svg>
-            </button>
-          )}
+          {/* Bouton d'envoi */}
+          <button
+            onClick={() => handleSendMessage(newMessage)}
+            disabled={!newMessage.trim() || sending}
+            className={`p-2 rounded-full ${
+              newMessage.trim() 
+                ? 'text-white bg-green-500 hover:bg-green-600' 
+                : 'text-gray-400 bg-gray-200'
+            } disabled:opacity-50`}
+          >
+            {sending ? (
+              <div className="w-6 h-6 border-t-2 border-white rounded-full animate-spin" />
+            ) : (
+              <Send className="w-6 h-6" />
+            )}
+          </button>
         </div>
       </div>
     </div>
