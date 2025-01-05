@@ -341,17 +341,19 @@ const ConversationDetail: React.FC = () => {
                 }
               }}
               placeholder="Message"
-              className="flex-1 bg-transparent border-none focus:outline-none py-1.5 px-2 min-w-0 resize-none min-h-[24px] max-h-32 overflow-y-auto"
+              className="flex-1 bg-transparent border-none focus:outline-none py-1.5 px-2 min-w-0 resize-none leading-5"
               rows={1}
               style={{
                 height: 'auto',
                 minHeight: '24px',
-                maxHeight: '8rem'
+                maxHeight: 'calc(5 * 1.25rem + 0.75rem)', // 5 lignes + padding
+                overflowY: newMessage.split('\n').length > 5 ? 'auto' : 'hidden'
               }}
               onInput={(e) => {
                 const target = e.target as HTMLTextAreaElement;
                 target.style.height = 'auto';
-                target.style.height = Math.min(target.scrollHeight, 128) + 'px';
+                const newHeight = Math.min(target.scrollHeight, 5 * 20 + 12); // 5 lignes * 20px + padding
+                target.style.height = `${newHeight}px`;
               }}
             />
           </div>
