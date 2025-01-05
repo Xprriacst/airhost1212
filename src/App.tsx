@@ -26,21 +26,23 @@ const App: React.FC = () => {
       <Routes>
         {isMobile ? (
           <Route path="/*" element={<MobileLayout />}>
-            <Route index element={<Properties />} />
+            <Route index element={<Conversations />} />
             <Route path="conversations" element={<Conversations />} />
             <Route path="settings" element={<Settings />} />
             <Route path="chat-sandbox" element={<ChatSandbox />} />
             <Route path="emergency-cases" element={<EmergencyCases />} />
+            <Route path="properties" element={<Properties />} />
             <Route path="properties/:propertyId/conversations/:conversationId" element={<ConversationDetail />} />
           </Route>
         ) : (
           <Route path="/*" element={<DesktopLayout />}>
-            <Route index element={<Properties />} />
+            <Route index element={<Conversations />} />
             <Route path="conversations" element={<Conversations />} />
             <Route path="settings" element={<Settings />} />
             <Route path="chat-sandbox" element={<ChatSandbox />} />
             <Route path="emergency-cases" element={<EmergencyCases />} />
             <Route path="properties/:propertyId/conversations/:conversationId" element={<ConversationDetail />} />
+            <Route path="properties" element={<Properties />} />
           </Route>
         )}
       </Routes>

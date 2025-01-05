@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Send, Zap } from 'lucide-react';
 import { conversationService } from '../services';
@@ -15,6 +15,7 @@ const ConversationDetail: React.FC = () => {
   const navigate = useNavigate();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const pollingRef = useRef<NodeJS.Timeout>();
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   
   const [conversation, setConversation] = useState<Conversation | null>(null);
   const [property, setProperty] = useState<Property | null>(null);
@@ -70,8 +71,32 @@ const ConversationDetail: React.FC = () => {
   }, [conversationId]);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (conversation?.messages) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'instant' });
+    }
   }, [conversation?.messages]);
+
+  useEffect(() => {
+    // Fonction pour ajuster la hauteur
+    const adjustHeight = () => {
+      const textarea = textareaRef.current;
+      if (textarea) {
+        textarea.style.height = 'auto';
+        const newHeight = Math.min(textarea.scrollHeight, 120); // Max 5 lignes (24px * 5)
+        textarea.style.height = `${newHeight}px`;
+      }
+    };
+
+    // Ajuster au chargement
+    adjustHeight();
+
+    // Observer les changements de contenu
+    const textarea = textareaRef.current;
+    if (textarea) {
+      textarea.addEventListener('input', adjustHeight);
+      return () => textarea.removeEventListener('input', adjustHeight);
+    }
+  }, [newMessage]);
 
   const handleSendMessage = async (text: string, isAiResponse: boolean = false) => {
     if (!text.trim() || sending || !conversation || !conversationId) return;
@@ -278,7 +303,7 @@ const ConversationDetail: React.FC = () => {
       <div 
         className="flex-1 overflow-y-auto p-4 space-y-2"
         style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-.895-2-2-2-2 .895-2 2 .895 2 2 2zm63 31c1.657 0 3-1.343 3-3s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM34 90c1.105 0 2-.895 2-2s-.45-2-1-2-1 .895-1 2 .45 2 1 2zM12 60c1.105 0 2-.895 2-2s-.45-2-1-2-1 .895-1 2 .45 2 1 2zM60 91c1.105 0 2-.895 2-2s-.45-2-1-2-1 .895-1 2 .45 2 1 2zM35 41c1.105 0 2-.895 2-2s-.45-2-1-2-1 .895-1 2 .45 2 1 2zM12 60c1.105 0 2-.895 2-2s-.45-2-1-2-1 .895-1 2 .45 2 1 2z' fill='%23000000' fill-opacity='0.03' fill-rule='evenodd'/%3E%3C/svg%3E")`,
+          backgroundImage: `url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-.895-2-2-2-2 .895-2 2 .895 2 2 2zm63 31c1.657 0 3-1.343 3-3s-.45-2-1-2-1 .895-1 2 .45 2 1 2zM34 90c1.105 0 2-.895 2-2s-.45-2-1-2-1 .895-1 2 .45 2 1 2zM12 60c1.105 0 2-.895 2-2s-.45-2-1-2-1 .895-1 2 .45 2 1 2zM60 91c1.105 0 2-.895 2-2s-.45-2-1-2-1 .895-1 2 .45 2 1 2zM35 41c1.105 0 2-.895 2-2s-.45-2-1-2-1 .895-1 2 .45 2 1 2zM12 60c1.105 0 2-.895 2-2s-.45-2-1-2-1 .895-1 2 .45 2 1 2zM12 60c1.105 0 2-.895 2-2s-.45-2-1-2-1 .895-1 2 .45 2 1 2zM12 60c1.105 0 2-.895 2-2s-.45-2-1-2-1 .895-1 2 .45 2 1 2z' fill='%23000000' fill-opacity='0.03' fill-rule='evenodd'/%3E%3C/svg%3E")`,
           backgroundRepeat: 'repeat',
           WebkitOverflowScrolling: 'touch'
         }}
@@ -294,12 +319,12 @@ const ConversationDetail: React.FC = () => {
       </div>
 
       {/* Input */}
-      <div className="bg-gray-50 border-t px-2 py-2 pb-safe">
-        <div className="flex items-center gap-2 px-1">
+      <div className="bg-gray-50 border-t px-2 py-2 pb-safe flex items-end">
+        <div className="flex items-end gap-2 w-full">
           {/* Bouton + */}
           <button 
             onClick={() => alert('Bientôt disponible !')}
-            className="text-gray-400 hover:text-gray-500 flex-shrink-0"
+            className="text-gray-400 hover:text-gray-500 flex-shrink-0 mb-2"
             title="Bientôt disponible"
           >
             <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -308,7 +333,7 @@ const ConversationDetail: React.FC = () => {
           </button>
           
           {/* Zone de texte avec bouton AI */}
-          <div className="flex-1 flex items-center bg-white rounded-full border px-2 py-1">
+          <div className="flex-1 flex items-end bg-white rounded-3xl border px-2 py-1.5 min-h-[40px]">
             <button
               onClick={handleGenerateAiResponse}
               disabled={isGeneratingAi || isAutoPilot}
@@ -321,17 +346,18 @@ const ConversationDetail: React.FC = () => {
                 <svg
                   className="w-4 h-4"
                   viewBox="0 0 24 24"
-                  fill="none"
                   stroke="currentColor"
+                  fill="none"
                   strokeWidth="2"
                 >
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                  <path d="M12 4L9 9 4 9.5L8 13 7 18L12 15.5L17 18L16 13L20 9.5L15 9z" />
+                  <path d="M20 3L19 5 17 4 18 6 16 7 18 8 17 10 19 9 20 11 21 9 23 8 21 7 22 5 20 6z" />
                 </svg>
               )}
             </button>
 
-            <input
-              type="text"
+            <textarea
+              ref={textareaRef}
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
               onKeyPress={(e) => {
@@ -341,7 +367,8 @@ const ConversationDetail: React.FC = () => {
                 }
               }}
               placeholder="Message"
-              className="flex-1 bg-transparent border-none focus:outline-none py-1.5 px-2 min-w-0"
+              className="flex-1 bg-transparent border-none focus:outline-none px-2 py-1 resize-none overflow-y-auto min-h-[24px]"
+              rows={1}
             />
           </div>
 
@@ -349,7 +376,7 @@ const ConversationDetail: React.FC = () => {
           <button
             onClick={() => handleSendMessage(newMessage)}
             disabled={!newMessage.trim() || sending}
-            className={`p-2 rounded-full flex-shrink-0 ${
+            className={`p-2 rounded-full flex-shrink-0 mb-0.5 ${
               newMessage.trim() 
                 ? 'text-white bg-green-500 hover:bg-green-600' 
                 : 'text-gray-400 bg-gray-200'
