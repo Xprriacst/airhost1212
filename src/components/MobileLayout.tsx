@@ -74,20 +74,20 @@ const MobileLayout: React.FC = () => {
             <ul className="space-y-2">
               <li>
                 <button
-                  onClick={() => handleNavigation('/')}
-                  className="flex items-center gap-3 w-full p-2 hover:bg-gray-100 rounded-lg"
-                >
-                  <Home className="w-5 h-5" />
-                  <span>Propriétés</span>
-                </button>
-              </li>
-              <li>
-                <button
                   onClick={() => handleNavigation('/conversations')}
                   className="flex items-center gap-3 w-full p-2 hover:bg-gray-100 rounded-lg"
                 >
                   <MessageSquare className="w-5 h-5" />
                   <span>Conversations</span>
+                </button>
+              </li>
+              <li>
+                <button
+                  onClick={() => handleNavigation('/')}
+                  className="flex items-center gap-3 w-full p-2 hover:bg-gray-100 rounded-lg"
+                >
+                  <Home className="w-5 h-5" />
+                  <span>Propriétés</span>
                 </button>
               </li>
               <li>
