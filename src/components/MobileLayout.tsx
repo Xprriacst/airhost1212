@@ -1,12 +1,6 @@
 import React, { useState } from 'react';
-import { Routes, Route, useLocation, useNavigate, Outlet } from 'react-router-dom';
+import { useLocation, useNavigate, Outlet } from 'react-router-dom';
 import { Menu, Home, MessageSquare, Settings as SettingsIcon, TestTube, AlertTriangle, X, ArrowLeft } from 'lucide-react';
-import Properties from '../pages/desktop/Properties';
-import Conversations from '../pages/Conversations';
-import MobileChat from '../pages/MobileChat';
-import Settings from '../pages/Settings';
-import ChatSandbox from '../pages/ChatSandbox';
-import EmergencyCases from '../pages/EmergencyCases';
 
 const MobileLayout: React.FC = () => {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -15,7 +9,6 @@ const MobileLayout: React.FC = () => {
 
   // Vérifier si nous sommes sur une page de conversation
   const isConversationPage = location.pathname.includes('/conversations/');
-
   const showBackButton = location.pathname !== '/';
 
   const handleNavigation = (path: string) => {
@@ -130,7 +123,7 @@ const MobileLayout: React.FC = () => {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 overflow-hidden">
+      <div className={`flex-1 overflow-hidden ${isConversationPage ? 'h-full' : ''}`}>
         <Outlet />
       </div>
     </div>
