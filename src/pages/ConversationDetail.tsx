@@ -23,6 +23,7 @@ const ConversationDetail: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const [isAutoPilot, setIsAutoPilot] = useState(false);
+  const [isGeneratingAi, setIsGeneratingAi] = useState(false);
 
   // Charger la propriété
   useEffect(() => {
@@ -152,6 +153,34 @@ const ConversationDetail: React.FC = () => {
     }
   };
 
+  const handleGenerateAiResponse = async () => {
+    if (!conversation || !property || isGeneratingAi) return;
+
+    setIsGeneratingAi(true);
+    try {
+      console.log('🤖 Generating AI response manually...');
+      const lastMessage = conversation.messages?.[conversation.messages.length - 1];
+      
+      const aiResponse = await aiService.generateResponse(
+        lastMessage,
+        property,
+        {
+          hasBooking: true,
+          checkIn: conversation.checkIn,
+          checkOut: conversation.checkOut
+        },
+        conversation.messages || []
+      );
+
+      setNewMessage(aiResponse);
+    } catch (error) {
+      console.error('Failed to generate AI response:', error);
+      setError('Failed to generate AI response');
+    } finally {
+      setIsGeneratingAi(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen">
@@ -232,24 +261,58 @@ const ConversationDetail: React.FC = () => {
       </div>
 
       {/* Input */}
-      <div className="bg-white border-t p-4">
+      <div className="p-4 border-t">
         <div className="flex gap-2">
-          <input
-            type="text"
-            value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && handleSendMessage(newMessage)}
-            placeholder="Type a message..."
-            className="flex-1 rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-            disabled={sending}
-          />
+          <div className="flex-1 flex gap-2">
+            <input
+              type="text"
+              value={newMessage}
+              onChange={(e) => {
+                console.log('💬 Input changed:', e.target.value);
+                setNewMessage(e.target.value);
+              }}
+              onKeyPress={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSendMessage(newMessage);
+                }
+              }}
+              placeholder="Type a message..."
+              className="flex-1 p-2 border rounded-l focus:outline-none focus:border-blue-500"
+            />
+            <button
+              onClick={handleGenerateAiResponse}
+              disabled={isGeneratingAi || isAutoPilot}
+              title={isAutoPilot ? "Disabled when Auto-pilot is ON" : "Generate AI response"}
+              className="px-3 text-gray-600 hover:text-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isGeneratingAi ? (
+                <div className="w-5 h-5 border-t-2 border-blue-500 rounded-full animate-spin" />
+              ) : (
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path>
+                </svg>
+              )}
+            </button>
+          </div>
           <button
             onClick={() => handleSendMessage(newMessage)}
-            disabled={!newMessage.trim() || sending}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            disabled={sending || !newMessage.trim()}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-r hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <Send className="w-5 h-5" />
-            {sending ? 'Sending...' : 'Send'}
+            {sending ? (
+              <div className="w-5 h-5 border-t-2 border-white rounded-full animate-spin" />
+            ) : (
+              <Send className="w-5 h-5" />
+            )}
           </button>
         </div>
       </div>
