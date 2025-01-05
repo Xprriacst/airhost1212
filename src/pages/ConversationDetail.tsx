@@ -278,7 +278,7 @@ const ConversationDetail: React.FC = () => {
       <div 
         className="flex-1 overflow-y-auto p-4 space-y-2"
         style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-.895-2-2-2-2 .895-2 2 .895 2 2 2zm63 31c1.657 0 3-1.343 3-3s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM34 90c1.105 0 2-.895 2-2s-.45-2-1-2-1 .895-1 2 .45 2 1 2zM12 60c1.105 0 2-.895 2-2s-.45-2-1-2-1 .895-1 2 .45 2 1 2zM60 91c1.105 0 2-.895 2-2s-.45-2-1-2-1 .895-1 2 .45 2 1 2zM35 41c1.105 0 2-.895 2-2s-.45-2-1-2-1 .895-1 2 .45 2 1 2zM12 60c1.105 0 2-.895 2-2s-.45-2-1-2-1 .895-1 2 .45 2 1 2zM12 60c1.105 0 2-.895 2-2s-.45-2-1-2-1 .895-1 2 .45 2 1 2z' fill='%23000000' fill-opacity='0.03' fill-rule='evenodd'/%3E%3C/svg%3E")`,
+          backgroundImage: `url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-.895-2-2-2-2 .895-2 2 .895 2 2 2zm63 31c1.657 0 3-1.343 3-3s-.45-2-1-2-1 .895-1 2 .45 2 1 2zM34 90c1.105 0 2-.895 2-2s-.45-2-1-2-1 .895-1 2 .45 2 1 2zM12 60c1.105 0 2-.895 2-2s-.45-2-1-2-1 .895-1 2 .45 2 1 2zM60 91c1.105 0 2-.895 2-2s-.45-2-1-2-1 .895-1 2 .45 2 1 2zM35 41c1.105 0 2-.895 2-2s-.45-2-1-2-1 .895-1 2 .45 2 1 2zM12 60c1.105 0 2-.895 2-2s-.45-2-1-2-1 .895-1 2 .45 2 1 2zM12 60c1.105 0 2-.895 2-2s-.45-2-1-2-1 .895-1 2 .45 2 1 2zM12 60c1.105 0 2-.895 2-2s-.45-2-1-2-1 .895-1 2 .45 2 1 2z' fill='%23000000' fill-opacity='0.03' fill-rule='evenodd'/%3E%3C/svg%3E")`,
           backgroundRepeat: 'repeat',
           WebkitOverflowScrolling: 'touch'
         }}
@@ -294,12 +294,12 @@ const ConversationDetail: React.FC = () => {
       </div>
 
       {/* Input */}
-      <div className="bg-gray-50 border-t px-2 py-2 pb-safe">
-        <div className="flex items-center gap-2 px-1">
+      <div className="bg-gray-50 border-t px-2 py-2 pb-safe flex items-end">
+        <div className="flex items-end gap-2 w-full">
           {/* Bouton + */}
           <button 
             onClick={() => alert('Bientôt disponible !')}
-            className="text-gray-400 hover:text-gray-500 flex-shrink-0"
+            className="text-gray-400 hover:text-gray-500 flex-shrink-0 mb-2"
             title="Bientôt disponible"
           >
             <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -308,12 +308,12 @@ const ConversationDetail: React.FC = () => {
           </button>
           
           {/* Zone de texte avec bouton AI */}
-          <div className="flex-1 flex items-start bg-white rounded-full border px-2 py-1">
+          <div className="flex-1 flex items-end bg-white rounded-3xl border px-2 py-1.5 min-h-[40px]">
             <button
               onClick={handleGenerateAiResponse}
               disabled={isGeneratingAi || isAutoPilot}
               title={isAutoPilot ? "Désactivé quand Auto-pilot est ON" : "Générer une réponse AI"}
-              className="p-1.5 text-gray-500 hover:text-blue-500 disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0 mt-1"
+              className="p-1.5 text-gray-500 hover:text-blue-500 disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
             >
               {isGeneratingAi ? (
                 <div className="w-4 h-4 border-t-2 border-blue-500 rounded-full animate-spin" />
@@ -331,49 +331,26 @@ const ConversationDetail: React.FC = () => {
               )}
             </button>
 
-            <div className="flex-1 relative">
-              <pre 
-                className="invisible overflow-hidden h-0 leading-6"
-                style={{
-                  fontFamily: 'inherit',
-                  fontSize: 'inherit',
-                  padding: '0.375rem 0.5rem',
-                  maxHeight: '120px', // 5 lignes * 24px
-                  whiteSpace: 'pre-wrap',
-                  wordWrap: 'break-word'
-                }}
-              >
-                {newMessage + '\n'}
-              </pre>
-              <textarea
-                value={newMessage}
-                onChange={(e) => {
-                  setNewMessage(e.target.value);
-                  const pre = e.target.previousSibling as HTMLPreElement;
-                  const height = Math.min(pre.scrollHeight, 120); // 5 lignes maximum
-                  e.target.style.height = `${height}px`;
-                }}
-                onKeyPress={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    handleSendMessage(newMessage);
-                  }
-                }}
-                placeholder="Message"
-                className="absolute top-0 left-0 w-full h-full bg-transparent border-none focus:outline-none py-1.5 px-2 leading-6 resize-none overflow-y-auto"
-                style={{
-                  minHeight: '24px',
-                  maxHeight: '120px' // 5 lignes * 24px
-                }}
-              />
-            </div>
+            <textarea
+              value={newMessage}
+              onChange={(e) => setNewMessage(e.target.value)}
+              onKeyPress={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSendMessage(newMessage);
+                }
+              }}
+              placeholder="Message"
+              className="flex-1 bg-transparent border-none focus:outline-none px-2 py-1 resize-none overflow-y-auto max-h-[120px] min-h-[24px]"
+              rows={1}
+            />
           </div>
 
           {/* Bouton d'envoi */}
           <button
             onClick={() => handleSendMessage(newMessage)}
             disabled={!newMessage.trim() || sending}
-            className={`p-2 rounded-full flex-shrink-0 ${
+            className={`p-2 rounded-full flex-shrink-0 mb-0.5 ${
               newMessage.trim() 
                 ? 'text-white bg-green-500 hover:bg-green-600' 
                 : 'text-gray-400 bg-gray-200'
