@@ -181,6 +181,28 @@ const ConversationDetail: React.FC = () => {
     }
   };
 
+  const toggleAutoPilot = async () => {
+    if (!conversation || !conversationId) return;
+
+    const newAutoPilotState = !isAutoPilot;
+    try {
+      await conversationService.updateConversation(conversationId, {
+        'Auto Pilot': newAutoPilotState
+      });
+      setIsAutoPilot(newAutoPilotState);
+      console.log('🤖 Auto Pilot set to:', newAutoPilotState ? 'ON' : 'OFF');
+    } catch (error) {
+      console.error('Failed to update Auto Pilot state:', error);
+      setError('Failed to update Auto Pilot state');
+    }
+  };
+
+  useEffect(() => {
+    if (conversation) {
+      setIsAutoPilot(conversation['Auto Pilot'] === true);
+    }
+  }, [conversation]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen">
@@ -236,7 +258,7 @@ const ConversationDetail: React.FC = () => {
 
         <div className="flex items-center gap-4">
           <button
-            onClick={() => setIsAutoPilot(!isAutoPilot)}
+            onClick={toggleAutoPilot}
             className={`flex items-center gap-1 px-2 py-1 rounded-full ${
               isAutoPilot ? 'bg-blue-100 text-blue-600' : 'text-gray-600'
             }`}
@@ -275,7 +297,7 @@ const ConversationDetail: React.FC = () => {
         <div className="flex items-center gap-2">
           <button className="p-2 text-gray-600 hover:text-gray-800">
             <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-5-9c.83 0 1.5-.67 1.5-1.5S7.83 8 7 8s-1.5.67-1.5 1.5S6.17 11 7 11zm3-4c.83 0 1.5-.67 1.5-1.5S10.83 4 10 4s-1.5.67-1.5 1.5S9.17 7 10 7zm5 0c.83 0 1.5-.67 1.5-1.5S15.83 4 15 4s-1.5.67-1.5 1.5S14.17 7 15 7zm3 4c.83 0 1.5-.67 1.5-1.5S18.83 8 18 8s-1.5.67-1.5 1.5S17.17 11 18 11z" />
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z" />
             </svg>
           </button>
           <button className="p-2 text-gray-600 hover:text-gray-800">

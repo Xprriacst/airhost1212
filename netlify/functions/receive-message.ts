@@ -74,6 +74,7 @@ export const handler: Handler = async (event) => {
         Messages: '[]',
         'Check-in Date': data.checkInDate,
         'Check-out Date': data.checkOutDate,
+        'Auto Pilot': false, // Par défaut, Auto Pilot est désactivé
       });
       console.log(' New conversation created:', conversation.id);
     }
@@ -99,8 +100,12 @@ export const handler: Handler = async (event) => {
 
     console.log(' Message added to conversation');
 
-    // Générer une réponse AI si l'autopilot est activé
-    if (property.aiInstructions && property.aiInstructions.length > 0) {
+    // Vérifier si Auto Pilot est activé
+    const isAutoPilotEnabled = conversation['Auto Pilot'] === true;
+    console.log(' Auto Pilot status:', isAutoPilotEnabled ? 'ON' : 'OFF');
+
+    // Générer une réponse AI seulement si Auto Pilot est activé
+    if (isAutoPilotEnabled && property.aiInstructions && property.aiInstructions.length > 0) {
       console.log(' Generating AI response...');
       try {
         const aiResponse = await aiService.generateResponse(newMessage, property);
@@ -124,7 +129,7 @@ export const handler: Handler = async (event) => {
         console.error(' Error generating AI response:', aiError);
       }
     } else {
-      console.log(' AI response not needed - no AI instructions found');
+      console.log(' Skipping AI response:', !isAutoPilotEnabled ? 'Auto Pilot is OFF' : 'No AI instructions found');
     }
 
     return {
