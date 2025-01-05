@@ -12,36 +12,40 @@ interface ConversationListProps {
   error?: string | null;
 }
 
-const ConversationList: React.FC<ConversationListProps> = ({
-  conversations,
+export default function ConversationList({ 
+  conversations, 
   autoPilotStates,
   onSelectConversation,
   onToggleAutoPilot,
   isLoading,
-  error
-}) => {
+  error 
+}: ConversationListProps) {
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      <div className="flex items-center justify-center h-full">
+        <div className="w-8 h-8 border-t-2 border-blue-500 rounded-full animate-spin" />
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="p-4 bg-red-50 rounded-lg text-red-600">
-        {error}
+      <div className="flex flex-col items-center justify-center h-full gap-2 text-gray-500">
+        <span>Une erreur est survenue</span>
+        <button 
+          onClick={() => window.location.reload()}
+          className="text-blue-500 hover:underline"
+        >
+          Réessayer
+        </button>
       </div>
     );
   }
 
-  if (!conversations || conversations.length === 0) {
+  if (conversations.length === 0) {
     return (
-      <div className="text-center py-12">
-        <MessageSquare className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-        <h3 className="text-lg font-medium text-gray-900 mb-2">Aucune conversation</h3>
-        <p className="text-gray-500">Il n'y a pas encore de conversations.</p>
+      <div className="flex items-center justify-center h-full text-gray-500">
+        Aucune conversation
       </div>
     );
   }
@@ -52,18 +56,47 @@ const ConversationList: React.FC<ConversationListProps> = ({
   );
 
   return (
-    <div className="space-y-4">
+    <div className="divide-y">
       {uniqueConversations.map((conversation) => (
-        <ConversationItem
+        <div 
           key={conversation.id}
-          conversation={conversation}
-          isAutoPilot={autoPilotStates[conversation.id] || false}
-          onToggleAutoPilot={onToggleAutoPilot}
+          className="flex items-center gap-4 p-4 hover:bg-gray-100 cursor-pointer"
           onClick={() => onSelectConversation(conversation)}
-        />
+        >
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2">
+              <span className="font-medium truncate">
+                {conversation.guestName}
+              </span>
+              {conversation.unreadCount > 0 && (
+                <span className="flex-shrink-0 px-2 py-0.5 text-xs font-medium text-white bg-blue-500 rounded-full">
+                  {conversation.unreadCount}
+                </span>
+              )}
+            </div>
+            <div className="mt-1 text-sm text-gray-500 truncate">
+              {conversation.propertyName}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleAutoPilot(conversation);
+              }}
+              className={`p-2 rounded-lg ${
+                autoPilotStates[conversation.id] 
+                  ? 'text-blue-500 bg-blue-50 hover:bg-blue-100'
+                  : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
+              }`}
+              title={autoPilotStates[conversation.id] ? "Désactiver Auto-pilot" : "Activer Auto-pilot"}
+            >
+              <MessageSquare className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
       ))}
     </div>
   );
-};
-
-export default ConversationList;
+}

@@ -5,7 +5,7 @@ import ConversationList from '../components/ConversationList';
 import { conversationService } from '../services';
 import type { Conversation } from '../types';
 
-const Conversations: React.FC = () => {
+export default function Conversations() {
   const navigate = useNavigate();
   const { propertyId } = useParams();
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -58,29 +58,18 @@ const Conversations: React.FC = () => {
   };
 
   return (
-    <div className="p-6">
-      <div className="flex items-center gap-4 mb-6">
-        <button
-          onClick={() => navigate(-1)}
-          className="p-2 hover:bg-gray-100 rounded-lg"
-        >
-          <ArrowLeft className="w-5 h-5 text-gray-600" />
-        </button>
-        <h1 className="text-2xl font-bold text-gray-900">
-          {propertyId ? 'Conversations du logement' : 'Toutes les conversations'}
-        </h1>
+    <div className="flex flex-col h-full bg-gray-50">
+      {/* Liste des conversations */}
+      <div className="flex-1 overflow-y-auto">
+        <ConversationList
+          conversations={conversations}
+          autoPilotStates={autoPilotStates}
+          onSelectConversation={handleSelectConversation}
+          onToggleAutoPilot={handleToggleAutoPilot}
+          isLoading={isLoading}
+          error={error}
+        />
       </div>
-
-      <ConversationList
-        conversations={conversations}
-        autoPilotStates={autoPilotStates}
-        onSelectConversation={handleSelectConversation}
-        onToggleAutoPilot={handleToggleAutoPilot}
-        isLoading={isLoading}
-        error={error}
-      />
     </div>
   );
-};
-
-export default Conversations;
+}
