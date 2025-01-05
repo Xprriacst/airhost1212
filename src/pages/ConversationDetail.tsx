@@ -321,11 +321,10 @@ const ConversationDetail: React.FC = () => {
                 <svg
                   className="w-4 h-4"
                   viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
+                  fill="currentColor"
                 >
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                  <path d="M12 4L9 9 4 9.5L8 13 7 18L12 15.5L17 18L16 13L20 9.5L15 9z" />
+                  <path d="M20 3L19 5 17 4 18 6 16 7 18 8 17 10 19 9 20 11 21 9 23 8 21 7 22 5 20 6z" />
                 </svg>
               )}
             </button>
