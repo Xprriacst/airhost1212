@@ -205,7 +205,7 @@ const ConversationDetail: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-screen">
+      <div className="flex items-center justify-center min-h-[100dvh]">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
       </div>
     );
@@ -213,7 +213,7 @@ const ConversationDetail: React.FC = () => {
 
   if (error) {
     return (
-      <div className="p-6">
+      <div className="min-h-[100dvh] p-6">
         <div className="bg-red-50 text-red-600 p-4 rounded-lg">
           {error}
         </div>
@@ -223,7 +223,7 @@ const ConversationDetail: React.FC = () => {
 
   if (!conversation) {
     return (
-      <div className="p-6">
+      <div className="min-h-[100dvh] p-6">
         <div className="bg-yellow-50 text-yellow-600 p-4 rounded-lg">
           Conversation not found
         </div>
@@ -232,7 +232,7 @@ const ConversationDetail: React.FC = () => {
   }
 
   return (
-    <div className="flex flex-col h-[100dvh] bg-gray-200">
+    <div className="flex flex-col min-h-[100dvh] h-[100dvh] bg-gray-200 fixed inset-0">
       {/* Header */}
       <div className="flex items-center px-4 py-2 bg-white shadow-sm z-10">
         <button
@@ -279,7 +279,8 @@ const ConversationDetail: React.FC = () => {
         className="flex-1 overflow-y-auto p-4 space-y-2"
         style={{
           backgroundImage: `url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-.895-2-2-2-2 .895-2 2 .895 2 2 2zm63 31c1.657 0 3-1.343 3-3s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM34 90c1.105 0 2-.895 2-2s-.45-2-1-2-1 .895-1 2 .45 2 1 2zM12 60c1.105 0 2-.895 2-2s-.45-2-1-2-1 .895-1 2 .45 2 1 2zM60 91c1.105 0 2-.895 2-2s-.45-2-1-2-1 .895-1 2 .45 2 1 2zM35 41c1.105 0 2-.895 2-2s-.45-2-1-2-1 .895-1 2 .45 2 1 2zM12 60c1.105 0 2-.895 2-2s-.45-2-1-2-1 .895-1 2 .45 2 1 2z' fill='%23000000' fill-opacity='0.03' fill-rule='evenodd'/%3E%3C/svg%3E")`,
-          backgroundRepeat: 'repeat'
+          backgroundRepeat: 'repeat',
+          WebkitOverflowScrolling: 'touch'
         }}
       >
         {conversation.messages?.map((message, index) => (
@@ -293,7 +294,7 @@ const ConversationDetail: React.FC = () => {
       </div>
 
       {/* Input */}
-      <div className="bg-gray-50 border-t px-2 py-2">
+      <div className="bg-gray-50 border-t px-2 py-2 pb-safe">
         <div className="flex items-center gap-2">
           <button className="p-2 text-gray-600 hover:text-gray-800">
             <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
