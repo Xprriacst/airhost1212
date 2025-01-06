@@ -69,7 +69,7 @@ export default function ConversationList({
                 {conversation.guestName}
               </span>
               {conversation.unreadCount > 0 && (
-                <span className="flex-shrink-0 px-2 py-0.5 text-xs font-medium text-white bg-blue-500 rounded-full">
+                <span className="inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white transform translate-x-1/2 bg-red-500 rounded-full">
                   {conversation.unreadCount}
                 </span>
               )}

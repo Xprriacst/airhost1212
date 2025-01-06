@@ -23,7 +23,8 @@ const mapAirtableToConversation = (record: any): Conversation => {
     checkIn: record.get('Check-in Date') || '',
     checkOut: record.get('Check-out Date') || '',
     autoPilot: record.get('Auto Pilot') || false,
-    messages: parseMessages(record.get('Messages'))
+    messages: parseMessages(record.get('Messages')),
+    unreadCount: record.get('Unread Count') || 0
   };
 };
 
@@ -42,7 +43,8 @@ export const conversationService = {
             'Messages',
             'Check-in Date',
             'Check-out Date',
-            'Auto Pilot'
+            'Auto Pilot',
+            'Unread Count'
           ],
         })
         .all();
@@ -90,7 +92,8 @@ export const conversationService = {
             'Messages',
             'Check-in Date',
             'Check-out Date',
-            'Auto Pilot'
+            'Auto Pilot',
+            'Unread Count'
           ],
         })
         .all();
@@ -104,7 +107,7 @@ export const conversationService = {
 
   async updateConversation(
     conversationId: string, 
-    data: { Messages?: string }
+    data: { Messages?: string; unreadCount?: number }
   ): Promise<Conversation> {
     try {
       if (!base) throw new Error('Airtable is not configured');
@@ -122,6 +125,30 @@ export const conversationService = {
     }
   },
 
+  async incrementUnreadCount(conversationId: string): Promise<void> {
+    try {
+      const conversation = await this.fetchConversationById(conversationId);
+      const currentCount = conversation.unreadCount || 0;
+      await this.updateConversation(conversationId, {
+        'Unread Count': currentCount + 1
+      });
+    } catch (error) {
+      console.error('Error incrementing unread count:', error);
+      throw error;
+    }
+  },
+
+  async markConversationAsRead(conversationId: string): Promise<void> {
+    try {
+      await this.updateConversation(conversationId, {
+        'Unread Count': 0
+      });
+    } catch (error) {
+      console.error('Error marking conversation as read:', error);
+      throw error;
+    }
+  },
+
   async addConversation(data: Record<string, any>): Promise<Conversation> {
     try {
       if (!base) throw new Error('Airtable is not configured');
@@ -133,7 +160,8 @@ export const conversationService = {
         ...data,
         Properties: Array.isArray(data.Properties) ? data.Properties : [data.Properties],
         Messages: data.Messages || '[]',
-        'Auto Pilot': false // Désactivé par défaut
+        'Auto Pilot': false, // Désactivé par défaut
+        'Unread Count': 0
       };
 
       console.log('Formatted data for Airtable:', formattedData);

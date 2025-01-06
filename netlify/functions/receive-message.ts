@@ -15,6 +15,7 @@ const messageSchema = z.object({
   timestamp: z.string().optional(),
   checkInDate: z.string().optional(),
   checkOutDate: z.string().optional(),
+  isHost: z.boolean().optional().default(false)
 });
 
 export const handler: Handler = async (event) => {
@@ -112,21 +113,19 @@ export const handler: Handler = async (event) => {
       console.log('📝 Found existing conversation:', conversation.id);
     } else {
       console.log('🔄 Creating new conversation');
-      const newMessage = {
-        id: Date.now().toString(),
-        text: data.message,
-        timestamp: new Date(),
-        isUser: true,
-        sender: 'Guest'
-      };
-
       try {
         conversation = await conversationService.addConversation({
           Properties: [propertyId],
           'Guest Name': data.guestName || 'Guest',
           'Guest Email': data.guestEmail || '',
           'Guest phone number': data.guestPhone,
-          Messages: JSON.stringify([newMessage]),
+          Messages: JSON.stringify([{
+            id: Date.now().toString(),
+            text: data.message,
+            timestamp: new Date(),
+            isUser: !data.isHost,
+            sender: data.isHost ? 'Host' : 'Guest'
+          }]),
           'Auto Pilot': false
         });
         console.log('✅ New conversation created:', conversation.id);
@@ -150,8 +149,8 @@ export const handler: Handler = async (event) => {
       id: Date.now().toString(),
       text: data.message,
       timestamp: new Date(data.timestamp || Date.now()),
-      isUser: true,
-      sender: data.platform
+      isUser: !data.isHost,
+      sender: data.isHost ? 'Host' : data.platform
     };
 
     console.log('📨 Adding new message to conversation:', {
@@ -163,6 +162,11 @@ export const handler: Handler = async (event) => {
     await conversationService.updateConversation(conversation.id, {
       Messages: JSON.stringify(updatedMessages),
     });
+
+    // Incrémenter le compteur de messages non lus si le message vient du guest
+    if (!data.isHost) {
+      await conversationService.incrementUnreadCount(conversation.id);
+    }
 
     console.log('📨 Message added to conversation');
 

@@ -48,6 +48,12 @@ const ConversationDetail: React.FC = () => {
 
     try {
       const data = await conversationService.fetchConversationById(conversationId);
+      
+      // Réinitialiser le compteur de messages non lus
+      if (data.unreadCount > 0) {
+        await conversationService.markConversationAsRead(conversationId);
+      }
+      
       setConversation(data);
       setError(null);
     } catch (err) {
