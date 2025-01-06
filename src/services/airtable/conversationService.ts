@@ -133,7 +133,7 @@ export const conversationService = {
       const conversation = await this.fetchConversationById(conversationId);
       const currentCount = conversation.unreadCount || 0;
       await this.updateConversation(conversationId, {
-        'UnreadCount': currentCount + 1
+        unreadCount: currentCount + 1
       });
     } catch (error) {
       console.error('Error incrementing unread count:', error);
