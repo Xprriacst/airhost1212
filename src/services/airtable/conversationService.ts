@@ -24,7 +24,7 @@ const mapAirtableToConversation = (record: any): Conversation => {
     checkOut: record.get('Check-out Date') || '',
     autoPilot: record.get('Auto Pilot') || false,
     messages: parseMessages(record.get('Messages')),
-    unreadCount: record.get('Unread Count') || 0
+    unreadCount: record.get('UnreadCount') || 0
   };
 };
 
@@ -44,7 +44,7 @@ export const conversationService = {
             'Check-in Date',
             'Check-out Date',
             'Auto Pilot',
-            'Unread Count'
+            'UnreadCount'
           ],
         })
         .all();
@@ -93,7 +93,7 @@ export const conversationService = {
             'Check-in Date',
             'Check-out Date',
             'Auto Pilot',
-            'Unread Count'
+            'UnreadCount'
           ],
         })
         .all();
@@ -111,14 +111,17 @@ export const conversationService = {
   ): Promise<Conversation> {
     try {
       if (!base) throw new Error('Airtable is not configured');
-      if (!conversationId) throw new Error('Conversation ID is required');
 
-      console.log('Updating conversation:', conversationId);
-      const record = await base('Conversations').update(conversationId, data);
-      
-      // Récupérer la conversation mise à jour avec tous les champs
-      const updatedRecord = await base('Conversations').find(conversationId);
-      return mapAirtableToConversation(updatedRecord);
+      const formattedData = {
+        ...data,
+        Messages: data.Messages,
+        'UnreadCount': data.unreadCount
+      };
+
+      const response = await base('Conversations')
+        .update(conversationId, formattedData);
+
+      return mapAirtableToConversation(response);
     } catch (error) {
       console.error('Error updating conversation:', error);
       throw error;
@@ -130,7 +133,7 @@ export const conversationService = {
       const conversation = await this.fetchConversationById(conversationId);
       const currentCount = conversation.unreadCount || 0;
       await this.updateConversation(conversationId, {
-        'Unread Count': currentCount + 1
+        'UnreadCount': currentCount + 1
       });
     } catch (error) {
       console.error('Error incrementing unread count:', error);
@@ -141,7 +144,7 @@ export const conversationService = {
   async markConversationAsRead(conversationId: string): Promise<void> {
     try {
       await this.updateConversation(conversationId, {
-        'Unread Count': 0
+        'UnreadCount': 0
       });
     } catch (error) {
       console.error('Error marking conversation as read:', error);
@@ -161,7 +164,7 @@ export const conversationService = {
         Properties: Array.isArray(data.Properties) ? data.Properties : [data.Properties],
         Messages: data.Messages || '[]',
         'Auto Pilot': false, // Désactivé par défaut
-        'Unread Count': 0
+        'UnreadCount': 0
       };
 
       console.log('Formatted data for Airtable:', formattedData);
