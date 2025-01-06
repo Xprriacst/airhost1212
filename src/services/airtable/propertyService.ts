@@ -21,7 +21,6 @@ export const propertyService = {
             'Description',
             'Photos',
             'AI Instructions',
-            'Auto Pilot',
             'Guest Name',
             'Guest Email',
             'Guest phone number'

@@ -22,6 +22,7 @@ const mapAirtableToConversation = (record: any): Conversation => {
     guestPhone: record.get('Guest phone number') || '',
     checkIn: record.get('Check-in Date') || '',
     checkOut: record.get('Check-out Date') || '',
+    autoPilot: record.get('Auto Pilot') || false,
     messages: parseMessages(record.get('Messages'))
   };
 };
@@ -40,7 +41,8 @@ export const conversationService = {
             'Guest phone number',
             'Messages',
             'Check-in Date',
-            'Check-out Date'
+            'Check-out Date',
+            'Auto Pilot'
           ],
         })
         .all();
@@ -87,7 +89,8 @@ export const conversationService = {
             'Guest phone number',
             'Messages',
             'Check-in Date',
-            'Check-out Date'
+            'Check-out Date',
+            'Auto Pilot'
           ],
         })
         .all();

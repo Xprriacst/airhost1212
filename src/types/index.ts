@@ -16,7 +16,6 @@ export interface Property {
   description?: string;
   photos: string[];
   aiInstructions?: AIInstruction[];
-  autoPilot?: boolean;
   guestName?: string;
   guestEmail?: string;
   guestPhone?: string;
@@ -38,5 +37,6 @@ export interface Conversation {
   guestPhone: string;
   checkIn: string;
   checkOut: string;
+  autoPilot: boolean;
   messages: Message[];
 }

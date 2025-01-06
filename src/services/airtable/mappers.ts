@@ -26,7 +26,6 @@ export const mapRecordToProperty = (record: any): Property => {
         ? record.get('Photos').map((photo: any) => photo.url)
         : [],
       aiInstructions,
-      autoPilot: record.get('Auto Pilot') || false,
       guestName: record.get('Guest Name') || '',
       guestEmail: record.get('Guest Email') || '',
       guestPhone: record.get('Guest phone number') || ''
