@@ -127,16 +127,25 @@ export const handler: Handler = async (event) => {
           'Guest Email': data.guestEmail || '',
           'Guest phone number': data.guestPhone,
           Messages: JSON.stringify([newMessage]),
-          'Auto Pilot': true
+          'Auto Pilot': false
         });
         console.log('✅ New conversation created:', conversation.id);
+        
+        // Si on vient de créer la conversation avec le message, pas besoin de l'ajouter à nouveau
+        return {
+          statusCode: 200,
+          body: JSON.stringify({ 
+            status: 'success',
+            conversationId: conversation.id
+          }),
+        };
       } catch (error) {
         console.error('❌ Failed to create conversation:', error);
         throw error;
       }
     }
 
-    // Ajout du message à la conversation
+    // On ajoute le message seulement si la conversation existait déjà
     const newMessage = {
       id: Date.now().toString(),
       text: data.message,
