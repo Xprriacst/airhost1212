@@ -44,6 +44,11 @@ export default function Conversations() {
     };
 
     fetchConversations();
+
+    // Rafraîchir les conversations toutes les 5 secondes
+    const interval = setInterval(fetchConversations, 5000);
+
+    return () => clearInterval(interval);
   }, [propertyId]);
 
   const handleSelectConversation = (conversation: Conversation) => {
