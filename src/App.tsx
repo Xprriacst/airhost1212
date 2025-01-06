@@ -1,12 +1,12 @@
 import React from 'react';
 import { BrowserRouter as Router, Route, Routes, Link, Navigate } from 'react-router-dom';
-import { Home, Building2, MessageSquare, AlertTriangle, Sparkles, Settings } from 'lucide-react';
+import { Home, Building2, MessageSquare, AlertTriangle, Sparkles, Settings as SettingsIcon } from 'lucide-react';
 import DesktopLayout from './components/DesktopLayout';
 import MobileLayout from './components/MobileLayout';
 import Properties from './pages/Properties';
 import Conversations from './pages/Conversations';
 import ConversationDetail from './pages/ConversationDetail';
-import Settings as SettingsPage from './pages/Settings';
+import Settings from './pages/Settings';
 import ChatSandbox from './pages/ChatSandbox';
 import EmergencyCases from './pages/EmergencyCases';
 
@@ -39,7 +39,7 @@ function App() {
                 Chat Sandbox
               </Link>
               <Link to="/settings" className="flex items-center px-6 py-3 text-gray-300 hover:bg-gray-800">
-                <Settings className="w-5 h-5 mr-3" />
+                <SettingsIcon className="w-5 h-5 mr-3" />
                 Paramètres
               </Link>
             </div>
@@ -55,7 +55,7 @@ function App() {
             <Route path="/properties/:propertyId/conversations/:conversationId" element={<ConversationDetail />} />
             <Route path="/emergency-cases" element={<EmergencyCases />} />
             <Route path="/chat-sandbox" element={<ChatSandbox />} />
-            <Route path="/settings" element={<SettingsPage />} />
+            <Route path="/settings" element={<Settings />} />
           </Routes>
         </div>
       </div>
