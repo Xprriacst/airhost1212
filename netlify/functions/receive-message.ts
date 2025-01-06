@@ -9,6 +9,7 @@ const messageSchema = z.object({
   propertyId: z.string().min(1, 'Property ID is required'),
   guestName: z.string().min(1, 'Guest Name is required'),
   guestEmail: z.string().email('A valid email is required'),
+  guestPhone: z.string().min(1, 'Phone number is required'),
   message: z.string().min(1, 'Message cannot be empty'),
   platform: z.enum(['whatsapp', 'sms', 'email']).default('whatsapp'),
   timestamp: z.string().optional(),
@@ -57,24 +58,25 @@ export const handler: Handler = async (event) => {
     const conversations = await conversationService.fetchPropertyConversations(data.propertyId);
     console.log('Found conversations:', conversations.length);
 
-    // Vérification si une conversation existe pour cet email
+    // Vérification si une conversation existe pour ce numéro de téléphone
     let conversation = conversations.find(
-      (conv) => conv.guestEmail?.toLowerCase() === data.guestEmail.toLowerCase()
+      (conv) => conv.guestPhone === data.guestPhone
     );
 
     if (conversation) {
       console.log(' Found existing conversation:', conversation.id);
     } else {
-      console.log(' Creating new conversation for guest:', data.guestEmail);
+      console.log(' Creating new conversation for guest:', data.guestPhone);
       // Création d'une nouvelle conversation
       conversation = await conversationService.addConversation({
         Properties: [data.propertyId],
         'Guest Name': data.guestName,
         'Guest Email': data.guestEmail,
+        'Guest Phone Number': data.guestPhone,
         Messages: '[]',
         'Check-in Date': data.checkInDate,
         'Check-out Date': data.checkOutDate,
-        'Auto Pilot': false, // Par défaut, Auto Pilot est désactivé
+        'Auto Pilot': false,
       });
       console.log(' New conversation created:', conversation.id);
     }

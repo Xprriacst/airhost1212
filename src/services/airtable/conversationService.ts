@@ -19,6 +19,7 @@ const mapAirtableToConversation = (record: any): Conversation => {
     propertyId: Array.isArray(propertyIds) ? propertyIds[0] : propertyIds,
     guestName: record.get('Guest Name') || '',
     guestEmail: record.get('Guest Email') || '',
+    guestPhone: record.get('Guest Phone Number') || '',
     checkIn: record.get('Check-in Date') || '',
     checkOut: record.get('Check-out Date') || '',
     messages: parseMessages(record.get('Messages'))
@@ -36,6 +37,7 @@ export const conversationService = {
             'Properties',
             'Guest Name',
             'Guest Email',
+            'Guest Phone Number',
             'Messages',
             'Check-in Date',
             'Check-out Date'
@@ -82,6 +84,7 @@ export const conversationService = {
             'Properties',
             'Guest Name',
             'Guest Email',
+            'Guest Phone Number',
             'Messages',
             'Check-in Date',
             'Check-out Date'

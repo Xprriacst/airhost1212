@@ -31,6 +31,7 @@ export interface Conversation {
   propertyId: string;
   guestName: string;
   guestEmail: string;
+  guestPhone: string;
   checkIn: string;
   checkOut: string;
   messages: Message[];
