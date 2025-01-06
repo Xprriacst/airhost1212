@@ -197,7 +197,13 @@ export const handler: Handler = async (event) => {
       }),
     };
   } catch (error) {
-    console.error('🚨 Error processing message:', error);
+    console.error('🚨 Error processing message:', {
+      error: error,
+      message: error.message,
+      stack: error.stack,
+      name: error.name
+    });
+    
     if (error instanceof z.ZodError) {
       console.error('🚨 Validation errors:', error.errors);
       return {
@@ -208,11 +214,22 @@ export const handler: Handler = async (event) => {
         }),
       };
     }
+
+    // Log any Airtable specific error details
+    if (error.error) {
+      console.error('🚨 Airtable error details:', {
+        type: error.error.type,
+        message: error.error.message,
+        statusCode: error.statusCode
+      });
+    }
+
     return {
       statusCode: 500,
       body: JSON.stringify({ 
         error: 'Internal server error',
-        message: error instanceof Error ? error.message : 'Unknown error'
+        message: error instanceof Error ? error.message : 'Unknown error',
+        details: error.error || error
       }),
     };
   }
