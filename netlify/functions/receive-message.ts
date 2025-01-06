@@ -31,10 +31,28 @@ export const handler: Handler = async (event) => {
   }
 
   try {
-    console.log(' Raw request body:', event.body);
+    console.log('🔍 Raw request body:', event.body);
+    console.log('🔍 Headers:', JSON.stringify(event.headers, null, 2));
 
     const body = JSON.parse(event.body || '{}');
-    console.log(' Parsed body:', body);
+    console.log('📦 Parsed body:', JSON.stringify(body, null, 2));
+
+    try {
+      const data = messageSchema.parse(body);
+      console.log('✅ Validated data:', JSON.stringify(data, null, 2));
+    } catch (validationError) {
+      console.error('❌ Validation error:', validationError);
+      if (validationError instanceof z.ZodError) {
+        return {
+          statusCode: 400,
+          body: JSON.stringify({
+            error: 'Validation failed',
+            details: validationError.errors
+          })
+        };
+      }
+      throw validationError;
+    }
 
     const data = messageSchema.parse(body);
     console.log(' Validated data:', data);
