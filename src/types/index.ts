@@ -16,9 +16,7 @@ export interface Property {
   description?: string;
   photos: string[];
   aiInstructions?: AIInstruction[];
-  guestName?: string;
-  guestEmail?: string;
-  guestPhone?: string;
+  autoPilot?: boolean;
 }
 
 export interface Message {
