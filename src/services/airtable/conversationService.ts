@@ -112,11 +112,15 @@ export const conversationService = {
     try {
       if (!base) throw new Error('Airtable is not configured');
 
-      const formattedData = {
-        ...data,
-        Messages: data.Messages,
-        'UnreadCount': data.unreadCount
-      };
+      const formattedData: Record<string, any> = {};
+      
+      if (data.Messages !== undefined) {
+        formattedData.Messages = data.Messages;
+      }
+      
+      if (data.unreadCount !== undefined) {
+        formattedData.UnreadCount = data.unreadCount;
+      }
 
       const response = await base('Conversations')
         .update(conversationId, formattedData);
@@ -133,7 +137,7 @@ export const conversationService = {
       const conversation = await this.fetchConversationById(conversationId);
       const currentCount = conversation.unreadCount || 0;
       await this.updateConversation(conversationId, {
-        'UnreadCount': currentCount + 1
+        unreadCount: currentCount + 1
       });
     } catch (error) {
       console.error('Error incrementing unread count:', error);
@@ -144,7 +148,7 @@ export const conversationService = {
   async markConversationAsRead(conversationId: string): Promise<void> {
     try {
       await this.updateConversation(conversationId, {
-        'UnreadCount': 0
+        unreadCount: 0
       });
     } catch (error) {
       console.error('Error marking conversation as read:', error);

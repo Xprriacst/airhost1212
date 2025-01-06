@@ -87,36 +87,37 @@ export default function ConversationList({
         >
           {/* Avatar circle */}
           <div className="relative flex-shrink-0">
-            <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-              <span className="text-blue-600 text-lg font-medium">
+            <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center">
+              <span className="text-gray-600 text-lg font-medium">
                 {conversation.guestName.charAt(0).toUpperCase()}
               </span>
             </div>
-            {/* WhatsApp style notification */}
-            {conversation.unreadCount > 0 && (
-              <div className="absolute -top-1 -right-1 bg-green-500 text-white rounded-full min-w-[20px] h-5 flex items-center justify-center text-xs font-medium px-1">
-                {conversation.unreadCount}
-              </div>
-            )}
           </div>
 
           {/* Message content */}
           <div className="flex-1 min-w-0">
-            <div className="flex justify-between items-start">
-              <span className={`font-medium ${conversation.unreadCount > 0 ? 'font-semibold' : ''}`}>
+            <div className="flex justify-between items-center">
+              <span className={`font-medium ${conversation.unreadCount > 0 ? 'font-semibold text-black' : 'text-gray-900'}`}>
                 {conversation.guestName}
               </span>
-              <span className="text-xs text-gray-500">
-                {formatTimestamp(conversation.messages[conversation.messages.length - 1]?.timestamp)}
-              </span>
+              <div className="flex items-center gap-1">
+                {conversation.unreadCount > 0 && (
+                  <div className="bg-green-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">
+                    {conversation.unreadCount}
+                  </div>
+                )}
+                <span className="text-xs text-gray-500 ml-1">
+                  {formatTimestamp(conversation.messages[conversation.messages.length - 1]?.timestamp)}
+                </span>
+              </div>
             </div>
-            <div className="mt-1 text-sm text-gray-600 truncate">
+            <div className={`mt-0.5 text-sm truncate ${conversation.unreadCount > 0 ? 'text-gray-900' : 'text-gray-500'}`}>
               {conversation.messages[conversation.messages.length - 1]?.text || 'Aucun message'}
             </div>
           </div>
 
           {/* Auto-pilot button */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center">
             <button
               onClick={(e) => {
                 e.stopPropagation();
