@@ -1,18 +1,14 @@
 import React from 'react';
 import { BrowserRouter as Router, Route, Routes, Link, Navigate } from 'react-router-dom';
+import { Home, Building2, MessageSquare, AlertTriangle, Sparkles, Settings } from 'lucide-react';
 import DesktopLayout from './components/DesktopLayout';
 import MobileLayout from './components/MobileLayout';
-import ConversationDetail from './pages/ConversationDetail';
-import Properties from './pages/desktop/Properties';
+import Properties from './pages/Properties';
 import Conversations from './pages/Conversations';
-import Settings from './pages/Settings';
+import ConversationDetail from './pages/ConversationDetail';
+import Settings as SettingsPage from './pages/Settings';
 import ChatSandbox from './pages/ChatSandbox';
 import EmergencyCases from './pages/EmergencyCases';
-import Home from './icons/Home';
-import Building2 from './icons/Building2';
-import MessageSquare from './icons/MessageSquare';
-import AlertTriangle from './icons/AlertTriangle';
-import Sparkles from './icons/Sparkles';
 
 function App() {
   return (
@@ -59,7 +55,7 @@ function App() {
             <Route path="/properties/:propertyId/conversations/:conversationId" element={<ConversationDetail />} />
             <Route path="/emergency-cases" element={<EmergencyCases />} />
             <Route path="/chat-sandbox" element={<ChatSandbox />} />
-            <Route path="/settings" element={<Settings />} />
+            <Route path="/settings" element={<SettingsPage />} />
           </Routes>
         </div>
       </div>
