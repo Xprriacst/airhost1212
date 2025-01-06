@@ -72,7 +72,7 @@ export const handler: Handler = async (event) => {
         Properties: [data.propertyId],
         'Guest Name': data.guestName,
         'Guest Email': data.guestEmail,
-        'Guest Phone Number': data.guestPhone,
+        'Guest phone number': data.guestPhone,
         Messages: '[]',
         'Check-in Date': data.checkInDate,
         'Check-out Date': data.checkOutDate,
