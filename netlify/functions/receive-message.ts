@@ -6,9 +6,9 @@ import { aiService } from '../../src/services/ai/aiService';
 
 // Schéma de validation pour les messages entrants
 const messageSchema = z.object({
-  propertyId: z.string().min(1, 'Property ID is required'),
-  guestName: z.string().min(1, 'Guest Name is required'),
-  guestEmail: z.string().email('A valid email is required'),
+  propertyId: z.string().optional(),
+  guestName: z.string().optional(),
+  guestEmail: z.string().optional(),
   guestPhone: z.string().min(1, 'Phone number is required'),
   message: z.string().min(1, 'Message cannot be empty'),
   platform: z.enum(['whatsapp', 'sms', 'email']).default('whatsapp'),
@@ -39,13 +39,23 @@ export const handler: Handler = async (event) => {
     const data = messageSchema.parse(body);
     console.log(' Validated data:', data);
 
+    // Si propertyId n'est pas fourni, on utilise une valeur par défaut
+    const propertyId = data.propertyId || process.env.DEFAULT_PROPERTY_ID;
+    if (!propertyId) {
+      console.error(' No propertyId provided and no default set');
+      return {
+        statusCode: 400,
+        body: JSON.stringify({ error: 'Property ID is required' }),
+      };
+    }
+
     // Recherche de la propriété
-    console.log(' Searching for property:', data.propertyId);
+    console.log(' Searching for property:', propertyId);
     const properties = await propertyService.getProperties();
-    const property = properties.find((p) => p.id === data.propertyId);
+    const property = properties.find((p) => p.id === propertyId);
 
     if (!property) {
-      console.error(' Property not found for ID:', data.propertyId);
+      console.error(' Property not found for ID:', propertyId);
       return {
         statusCode: 404,
         body: JSON.stringify({ error: 'Property not found' }),
@@ -54,8 +64,8 @@ export const handler: Handler = async (event) => {
     console.log(' Property found:', property);
 
     // Récupération des conversations pour cette propriété
-    console.log(' Fetching conversations for property:', data.propertyId);
-    const conversations = await conversationService.fetchPropertyConversations(data.propertyId);
+    console.log(' Fetching conversations for property:', propertyId);
+    const conversations = await conversationService.fetchPropertyConversations(propertyId);
     console.log('Found conversations:', conversations.length);
 
     // Vérification si une conversation existe pour ce numéro de téléphone
@@ -69,7 +79,7 @@ export const handler: Handler = async (event) => {
       console.log(' Creating new conversation for guest:', data.guestPhone);
       // Création d'une nouvelle conversation
       conversation = await conversationService.addConversation({
-        Properties: [data.propertyId],
+        Properties: [propertyId],
         'Guest Name': data.guestName,
         'Guest Email': data.guestEmail,
         'Guest phone number': data.guestPhone,
