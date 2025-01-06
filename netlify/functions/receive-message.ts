@@ -18,12 +18,24 @@ const messageSchema = z.object({
 });
 
 export const handler: Handler = async (event) => {
-  console.log(' Receive Message Function Called');
+  console.log('🚀 Receive Message Function Called');
   console.log('Method:', event.httpMethod);
-  console.log('Headers:', event.headers);
+  console.log('Headers:', JSON.stringify(event.headers, null, 2));
+
+  // Vérifier la configuration Airtable
+  try {
+    const { env, isConfigValid } = await import('../../src/config/env');
+    console.log('🔑 Airtable Config:', {
+      isValid: isConfigValid,
+      hasApiKey: Boolean(env.airtable.apiKey),
+      hasBaseId: Boolean(env.airtable.baseId)
+    });
+  } catch (configError) {
+    console.error('❌ Error checking config:', configError);
+  }
 
   if (event.httpMethod !== 'POST') {
-    console.warn(' Method not allowed:', event.httpMethod);
+    console.warn('❌ Method not allowed:', event.httpMethod);
     return {
       statusCode: 405,
       body: JSON.stringify({ error: 'Method not allowed' }),
@@ -31,9 +43,7 @@ export const handler: Handler = async (event) => {
   }
 
   try {
-    console.log('🔍 Raw request body:', event.body);
-    console.log('🔍 Headers:', JSON.stringify(event.headers, null, 2));
-
+    console.log('📦 Raw request body:', event.body);
     const body = JSON.parse(event.body || '{}');
     console.log('📦 Parsed body:', JSON.stringify(body, null, 2));
 
@@ -55,12 +65,13 @@ export const handler: Handler = async (event) => {
     }
 
     const data = messageSchema.parse(body);
-    console.log(' Validated data:', data);
 
     // Si propertyId n'est pas fourni, on utilise une valeur par défaut
     const propertyId = data.propertyId || process.env.DEFAULT_PROPERTY_ID;
+    console.log('🏠 Using property ID:', propertyId);
+    
     if (!propertyId) {
-      console.error(' No propertyId provided and no default set');
+      console.error('❌ No propertyId provided and no default set');
       return {
         statusCode: 400,
         body: JSON.stringify({ error: 'Property ID is required' }),
@@ -68,23 +79,29 @@ export const handler: Handler = async (event) => {
     }
 
     // Recherche de la propriété
-    console.log(' Searching for property:', propertyId);
+    console.log('🔍 Searching for property:', propertyId);
     const properties = await propertyService.getProperties();
+    console.log('📋 Found properties:', properties.length);
+    
     const property = properties.find((p) => p.id === propertyId);
 
     if (!property) {
-      console.error(' Property not found for ID:', propertyId);
+      console.error('❌ Property not found for ID:', propertyId);
       return {
         statusCode: 404,
         body: JSON.stringify({ error: 'Property not found' }),
       };
     }
-    console.log(' Property found:', property);
+
+    console.log('✅ Found property:', {
+      id: property.id,
+      name: property.name
+    });
 
     // Récupération des conversations pour cette propriété
-    console.log(' Fetching conversations for property:', propertyId);
+    console.log('📝 Fetching conversations for property:', propertyId);
     const conversations = await conversationService.fetchPropertyConversations(propertyId);
-    console.log('Found conversations:', conversations.length);
+    console.log('📝 Found conversations:', conversations.length);
 
     // Vérification si une conversation existe pour ce numéro de téléphone
     let conversation = conversations.find(
@@ -92,7 +109,7 @@ export const handler: Handler = async (event) => {
     );
 
     if (conversation) {
-      console.log(' Found existing conversation:', conversation.id);
+      console.log('📝 Found existing conversation:', conversation.id);
     } else {
       console.log('🔄 Creating new conversation');
       const newMessage = {
@@ -128,7 +145,7 @@ export const handler: Handler = async (event) => {
       sender: data.platform
     };
 
-    console.log(' Adding new message to conversation:', {
+    console.log('📨 Adding new message to conversation:', {
       conversationId: conversation.id,
       message: newMessage
     });
@@ -138,19 +155,19 @@ export const handler: Handler = async (event) => {
       Messages: JSON.stringify(updatedMessages),
     });
 
-    console.log(' Message added to conversation');
+    console.log('📨 Message added to conversation');
 
     // Vérifier si Auto Pilot est activé
     const isAutoPilotEnabled = conversation['Auto Pilot'] === true;
-    console.log(' Auto Pilot status:', isAutoPilotEnabled ? 'ON' : 'OFF');
+    console.log('🤖 Auto Pilot status:', isAutoPilotEnabled ? 'ON' : 'OFF');
 
     // Générer une réponse AI seulement si Auto Pilot est activé
     if (isAutoPilotEnabled && property.aiInstructions && property.aiInstructions.length > 0) {
-      console.log(' Generating AI response...');
+      console.log('💡 Generating AI response...');
       try {
         const aiResponse = await aiService.generateResponse(newMessage, property);
         if (aiResponse) {
-          console.log(' AI response generated:', aiResponse);
+          console.log('💡 AI response generated:', aiResponse);
           const aiMessage = {
             id: Date.now().toString(),
             text: aiResponse,
@@ -163,13 +180,13 @@ export const handler: Handler = async (event) => {
           await conversationService.updateConversation(conversation.id, {
             Messages: JSON.stringify(messagesWithAiResponse),
           });
-          console.log(' AI response added to conversation');
+          console.log('💡 AI response added to conversation');
         }
       } catch (aiError) {
-        console.error(' Error generating AI response:', aiError);
+        console.error('❌ Error generating AI response:', aiError);
       }
     } else {
-      console.log(' Skipping AI response:', !isAutoPilotEnabled ? 'Auto Pilot is OFF' : 'No AI instructions found');
+      console.log('🤖 Skipping AI response:', !isAutoPilotEnabled ? 'Auto Pilot is OFF' : 'No AI instructions found');
     }
 
     return {
@@ -180,9 +197,9 @@ export const handler: Handler = async (event) => {
       }),
     };
   } catch (error) {
-    console.error(' Error processing message:', error);
+    console.error('🚨 Error processing message:', error);
     if (error instanceof z.ZodError) {
-      console.error('Validation errors:', error.errors);
+      console.error('🚨 Validation errors:', error.errors);
       return {
         statusCode: 400,
         body: JSON.stringify({ 
