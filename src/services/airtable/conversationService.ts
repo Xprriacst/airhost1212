@@ -126,13 +126,14 @@ export const conversationService = {
     try {
       if (!base) throw new Error('Airtable is not configured');
 
-      console.log('Adding new conversation with data:', data);
+      console.log('Creating new conversation with data:', data);
 
       // S'assurer que Properties est un tableau
       const formattedData = {
         ...data,
         Properties: Array.isArray(data.Properties) ? data.Properties : [data.Properties],
-        Messages: data.Messages || '[]'
+        Messages: data.Messages || '[]',
+        'Auto Pilot': false // Désactivé par défaut
       };
 
       console.log('Formatted data for Airtable:', formattedData);
