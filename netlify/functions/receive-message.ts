@@ -94,19 +94,29 @@ export const handler: Handler = async (event) => {
     if (conversation) {
       console.log(' Found existing conversation:', conversation.id);
     } else {
-      console.log(' Creating new conversation for guest:', data.guestPhone);
-      // Création d'une nouvelle conversation
-      conversation = await conversationService.addConversation({
-        Properties: [propertyId],
-        'Guest Name': data.guestName,
-        'Guest Email': data.guestEmail,
-        'Guest phone number': data.guestPhone,
-        Messages: '[]',
-        'Check-in Date': data.checkInDate,
-        'Check-out Date': data.checkOutDate,
-        'Auto Pilot': false,
-      });
-      console.log(' New conversation created:', conversation.id);
+      console.log('🔄 Creating new conversation');
+      const newMessage = {
+        id: Date.now().toString(),
+        text: data.message,
+        timestamp: new Date(),
+        isUser: true,
+        sender: 'Guest'
+      };
+
+      try {
+        conversation = await conversationService.addConversation({
+          Properties: [propertyId],
+          'Guest Name': data.guestName || 'Guest',
+          'Guest Email': data.guestEmail || '',
+          'Guest phone number': data.guestPhone,
+          Messages: JSON.stringify([newMessage]),
+          'Auto Pilot': true
+        });
+        console.log('✅ New conversation created:', conversation.id);
+      } catch (error) {
+        console.error('❌ Failed to create conversation:', error);
+        throw error;
+      }
     }
 
     // Ajout du message à la conversation

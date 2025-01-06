@@ -123,8 +123,20 @@ export const conversationService = {
     try {
       if (!base) throw new Error('Airtable is not configured');
 
-      console.log('Adding new conversation');
-      const record = await base('Conversations').create(data);
+      console.log('Adding new conversation with data:', data);
+
+      // S'assurer que Properties est un tableau
+      const formattedData = {
+        ...data,
+        Properties: Array.isArray(data.Properties) ? data.Properties : [data.Properties],
+        Messages: data.Messages || '[]'
+      };
+
+      console.log('Formatted data for Airtable:', formattedData);
+
+      const record = await base('Conversations').create(formattedData);
+      console.log('Created conversation record:', record.id);
+      
       return mapAirtableToConversation(record);
     } catch (error) {
       console.error('Error adding conversation:', error);
