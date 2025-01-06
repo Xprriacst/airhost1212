@@ -5,12 +5,13 @@ import type { Message } from '../types';
 const BASE_URL = 'https://whimsical-beignet-91329f.netlify.app';
 
 export const messageService = {
-  async sendMessage(message: Message, guestEmail: string, propertyId: string): Promise<void> {
+  async sendMessage(message: Message, guestPhone: string, propertyId: string, guestName: string): Promise<void> {
     console.group('🚀 messageService.sendMessage');
     try {
       console.log('Input parameters:', {
         messageText: message.text,
-        guestEmail,
+        guestPhone,
+        guestName,
         propertyId,
         fullMessage: message
       });
@@ -21,9 +22,14 @@ export const messageService = {
         throw new Error('Message text is required');
       }
 
-      if (!guestEmail) {
-        console.error('❌ Guest email is required');
-        throw new Error('Guest email is required');
+      if (!guestPhone) {
+        console.error('❌ Guest phone number is required');
+        throw new Error('Guest phone number is required');
+      }
+
+      if (!guestName) {
+        console.error('❌ Guest name is required');
+        throw new Error('Guest name is required');
       }
 
       if (!propertyId) {
@@ -34,7 +40,8 @@ export const messageService = {
       // Préparer le payload
       const payload = {
         message: message.text,
-        guestEmail,
+        guestPhone,
+        guestName,
         propertyId,
         timestamp: message.timestamp,
         sender: message.sender

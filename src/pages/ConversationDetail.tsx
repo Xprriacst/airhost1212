@@ -127,8 +127,9 @@ const ConversationDetail: React.FC = () => {
         console.log('📤 Sending to Make.com...');
         await messageService.sendMessage(
           message,
-          conversation.guestEmail,
-          propertyId || ''
+          conversation.guestPhone,
+          propertyId || '',
+          conversation.guestName
         );
         console.log('✅ Sent to Make.com successfully');
       } catch (makeError) {

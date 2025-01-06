@@ -43,10 +43,10 @@ export const handler: Handler = async (event) => {
     console.log('📦 Parsed payload:', payload);
 
     // Validation
-    if (!payload.message || !payload.guestEmail || !payload.propertyId) {
+    if (!payload.message || !payload.guestPhone || !payload.propertyId) {
       console.error('❌ Missing required fields in payload:', {
         hasMessage: Boolean(payload.message),
-        hasGuestEmail: Boolean(payload.guestEmail),
+        hasGuestPhone: Boolean(payload.guestPhone),
         hasPropertyId: Boolean(payload.propertyId)
       });
       return {
@@ -56,7 +56,7 @@ export const handler: Handler = async (event) => {
           error: 'Missing required fields',
           details: {
             message: !payload.message ? 'Message is required' : undefined,
-            guestEmail: !payload.guestEmail ? 'Guest email is required' : undefined,
+            guestPhone: !payload.guestPhone ? 'Guest phone is required' : undefined,
             propertyId: !payload.propertyId ? 'Property ID is required' : undefined
           }
         }),
