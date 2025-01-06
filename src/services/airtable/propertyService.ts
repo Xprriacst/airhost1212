@@ -20,7 +20,11 @@ export const propertyService = {
             'Address',
             'Description',
             'Photos',
-            'AI Instructions'
+            'AI Instructions',
+            'Auto Pilot',
+            'Guest Name',
+            'Guest Email',
+            'Guest phone number'
           ]
         })
         .all();

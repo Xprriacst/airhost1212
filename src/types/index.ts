@@ -16,6 +16,10 @@ export interface Property {
   description?: string;
   photos: string[];
   aiInstructions?: AIInstruction[];
+  autoPilot?: boolean;
+  guestName?: string;
+  guestEmail?: string;
+  guestPhone?: string;
 }
 
 export interface Message {

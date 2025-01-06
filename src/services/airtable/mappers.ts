@@ -25,7 +25,11 @@ export const mapRecordToProperty = (record: any): Property => {
       photos: Array.isArray(record.get('Photos')) 
         ? record.get('Photos').map((photo: any) => photo.url)
         : [],
-      aiInstructions
+      aiInstructions,
+      autoPilot: record.get('Auto Pilot') || false,
+      guestName: record.get('Guest Name') || '',
+      guestEmail: record.get('Guest Email') || '',
+      guestPhone: record.get('Guest phone number') || ''
     };
 
     console.log('Mapped property:', {
