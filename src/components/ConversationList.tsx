@@ -12,6 +12,28 @@ interface ConversationListProps {
   error?: string | null;
 }
 
+const formatTimestamp = (timestamp: Date | undefined) => {
+  if (!timestamp) return '';
+  
+  const date = new Date(timestamp);
+  const now = new Date();
+  const diff = now.getTime() - date.getTime();
+  const oneDay = 24 * 60 * 60 * 1000;
+
+  // Si c'est aujourd'hui, afficher l'heure
+  if (diff < oneDay) {
+    return date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+  }
+  
+  // Si c'est hier
+  if (diff < oneDay * 2) {
+    return 'Hier';
+  }
+  
+  // Sinon afficher la date
+  return date.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: '2-digit' });
+};
+
 export default function ConversationList({ 
   conversations, 
   autoPilotStates,
@@ -60,25 +82,40 @@ export default function ConversationList({
       {uniqueConversations.map((conversation) => (
         <div 
           key={conversation.id}
-          className="flex items-center gap-4 p-4 hover:bg-gray-100 cursor-pointer relative"
+          className="flex items-center gap-4 p-4 hover:bg-gray-100 cursor-pointer"
           onClick={() => onSelectConversation(conversation)}
         >
+          {/* Avatar circle */}
+          <div className="relative flex-shrink-0">
+            <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+              <span className="text-blue-600 text-lg font-medium">
+                {conversation.guestName.charAt(0).toUpperCase()}
+              </span>
+            </div>
+            {/* WhatsApp style notification */}
+            {conversation.unreadCount > 0 && (
+              <div className="absolute -top-1 -right-1 bg-green-500 text-white rounded-full min-w-[20px] h-5 flex items-center justify-center text-xs font-medium px-1">
+                {conversation.unreadCount}
+              </div>
+            )}
+          </div>
+
+          {/* Message content */}
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
-              <span className={`font-medium truncate ${conversation.unreadCount > 0 ? 'font-bold' : ''}`}>
+            <div className="flex justify-between items-start">
+              <span className={`font-medium ${conversation.unreadCount > 0 ? 'font-semibold' : ''}`}>
                 {conversation.guestName}
               </span>
-              {conversation.unreadCount > 0 && (
-                <span className="absolute top-2 right-2 inline-flex items-center justify-center w-6 h-6 text-xs font-bold text-white bg-red-500 rounded-full">
-                  {conversation.unreadCount}
-                </span>
-              )}
+              <span className="text-xs text-gray-500">
+                {formatTimestamp(conversation.messages[conversation.messages.length - 1]?.timestamp)}
+              </span>
             </div>
-            <div className="mt-1 text-sm text-gray-500 truncate">
+            <div className="mt-1 text-sm text-gray-600 truncate">
               {conversation.messages[conversation.messages.length - 1]?.text || 'Aucun message'}
             </div>
           </div>
 
+          {/* Auto-pilot button */}
           <div className="flex items-center gap-2">
             <button
               onClick={(e) => {
