@@ -128,6 +128,8 @@ const ConversationDetail: React.FC = () => {
     if (!newMessage.trim() || sending) return;
 
     setSending(true);
+    const tempId = `temp-${Date.now()}`;
+    
     try {
       if (!conversation || !conversation.guestPhone) {
         throw new Error('Missing conversation data');
@@ -135,7 +137,7 @@ const ConversationDetail: React.FC = () => {
 
       // Créer le message avec un ID temporaire
       const messageData: Message = {
-        id: `temp-${Date.now()}`,
+        id: tempId,
         text: newMessage.trim(),
         timestamp: new Date(),
         sender: 'host',
@@ -173,8 +175,21 @@ const ConversationDetail: React.FC = () => {
         throw new Error('Failed to send message');
       }
 
-      // Attendre un peu avant de recharger la conversation pour éviter les doublons
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Marquer le message comme envoyé
+      setConversation(prev => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          messages: prev.messages.map(msg => 
+            msg.id === tempId
+              ? { ...msg, status: 'sent' }
+              : msg
+          )
+        };
+      });
+
+      // Attendre un peu plus longtemps avant de recharger la conversation
+      await new Promise(resolve => setTimeout(resolve, 5000));
       await fetchConversation();
 
     } catch (error) {
@@ -185,7 +200,7 @@ const ConversationDetail: React.FC = () => {
         return {
           ...prev,
           messages: prev.messages.map(msg => 
-            msg.id === `temp-${Date.now()}` 
+            msg.id === tempId
               ? { ...msg, status: 'failed' }
               : msg
           )
