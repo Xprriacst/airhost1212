@@ -74,8 +74,28 @@ const handler: Handler = async (event) => {
       };
     }
 
-    const messages = conversation.get('messages') || [];
+    // Récupérer les messages
+    const rawMessages = conversation.get('Messages'); 
+    console.log('Raw messages from Airtable:', rawMessages);
+    
+    let messages = [];
+    try {
+      messages = rawMessages ? JSON.parse(rawMessages) : [];
+    } catch (error) {
+      console.error('Error parsing messages:', error);
+      messages = [];
+    }
+    
+    console.log('Parsed messages:', messages);
     console.log('Conversation found with', messages.length, 'messages');
+
+    // Récupérer les 5 derniers messages pour le contexte
+    const recentMessages = messages
+      .slice(-5)
+      .map(msg => `${msg.sender === 'guest' ? 'Client' : 'Hôte'}: ${msg.text}`)
+      .join('\n');
+    
+    console.log('Recent messages for AI:', recentMessages);
 
     // Préparer le contexte pour l'IA
     const propertyContext = `
@@ -107,12 +127,6 @@ const handler: Handler = async (event) => {
     } catch (error) {
       console.error('Error parsing AI Instructions:', error);
     }
-
-    // Récupérer les 5 derniers messages pour le contexte
-    const recentMessages = messages
-      .slice(-5)
-      .map(msg => `${msg.sender === 'guest' ? 'Client' : 'Hôte'}: ${msg.text}`)
-      .join('\n');
 
     console.log('Calling OpenAI API...');
     // Générer la réponse avec GPT
