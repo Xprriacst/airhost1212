@@ -160,13 +160,19 @@ export const handler: Handler = async (event) => {
     });
 
     // Vérifier si le message n'existe pas déjà (éviter les doublons)
-    const isDuplicate = conversation.messages.some(msg => 
-      msg.text === newMessage.text && 
-      Math.abs(new Date(msg.timestamp).getTime() - new Date(newMessage.timestamp).getTime()) < 5000
-    );
+    const isDuplicate = conversation.messages.some(msg => {
+      // Si le message a exactement le même texte et timestamp proche
+      const isTextMatch = msg.text === newMessage.text;
+      const isTimeMatch = Math.abs(new Date(msg.timestamp).getTime() - new Date(newMessage.timestamp).getTime()) < 5000;
+      
+      // Si c'est un message qu'on a envoyé nous-même
+      const isOurMessage = msg.sender === 'host' && msg.text === data.message;
+      
+      return (isTextMatch && isTimeMatch) || isOurMessage;
+    });
 
     if (isDuplicate) {
-      console.log('⚠️ Duplicate message detected, skipping...');
+      console.log('⚠️ Duplicate or self-sent message detected, skipping...');
       return {
         statusCode: 200,
         body: JSON.stringify({ 
@@ -174,6 +180,19 @@ export const handler: Handler = async (event) => {
           conversationId: conversation.id,
           messageId: newMessage.id,
           duplicate: true
+        }),
+      };
+    }
+
+    // Si le message vient de nous (via Make), on ne l'ajoute pas
+    if (data.isHost) {
+      console.log('⚠️ Host message received via webhook, skipping...');
+      return {
+        statusCode: 200,
+        body: JSON.stringify({ 
+          status: 'success',
+          conversationId: conversation.id,
+          skipped: true
         }),
       };
     }
