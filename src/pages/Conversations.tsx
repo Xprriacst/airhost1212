@@ -80,8 +80,8 @@ export default function Conversations() {
 
 const ConversationItem = ({ conversation, onClick }: { conversation: Conversation; onClick: () => void }) => {
   const lastMessage = conversation.messages[conversation.messages.length - 1];
-  const truncatedMessage = lastMessage?.text.length > 40 
-    ? lastMessage.text.substring(0, 37) + "..."
+  const truncatedMessage = lastMessage?.text.length > 30 
+    ? lastMessage.text.substring(0, 27) + "..."
     : lastMessage?.text;
 
   return (
@@ -97,7 +97,7 @@ const ConversationItem = ({ conversation, onClick }: { conversation: Conversatio
       </div>
 
       {/* Info */}
-      <div className="flex-1 min-w-0 ml-4">
+      <div className="flex-1 min-w-0 ml-4 mr-4">
         <div className="flex justify-between items-baseline">
           <h3 className="text-base font-medium text-gray-900 truncate">
             {conversation.guestName}
