@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Send } from 'lucide-react';
+import { ArrowLeft, Send, Sparkles } from 'lucide-react';
 import axios from 'axios';
 import { conversationService } from '../services';
 import { propertyService } from '../services/airtable/propertyService';
@@ -43,6 +43,7 @@ const ConversationDetail: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
+  const [generating, setGenerating] = useState(false);
 
   // Charger la propriété
   useEffect(() => {
@@ -222,6 +223,41 @@ const ConversationDetail: React.FC = () => {
     navigate(-1);
   };
 
+  const handleGenerateResponse = async () => {
+    if (generating) return;
+    setGenerating(true);
+
+    try {
+      const response = await fetch('/.netlify/functions/generate-ai-response', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          conversationId,
+          propertyId,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to generate response');
+      }
+
+      const data = await response.json();
+      setNewMessage(data.response);
+      
+      // Focus et sélectionner le texte pour faciliter l'édition
+      if (textareaRef.current) {
+        textareaRef.current.focus();
+        textareaRef.current.setSelectionRange(0, data.response.length);
+      }
+    } catch (error) {
+      console.error('Error generating response:', error);
+    } finally {
+      setGenerating(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[100dvh]">
@@ -291,11 +327,12 @@ const ConversationDetail: React.FC = () => {
         </div>
       </div>
 
-      {/* Input fixe en bas */}
+      {/* Input avec bouton IA */}
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t px-4 py-2">
         <div className="flex items-end gap-2">
           <div className="flex-1 min-h-[40px] max-h-[120px] flex items-end bg-white rounded-full border px-4 py-2">
             <textarea
+              ref={textareaRef}
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
               onKeyDown={handleKeyDown}
@@ -305,6 +342,17 @@ const ConversationDetail: React.FC = () => {
               style={{ height: 24, maxHeight: 100 }}
             />
           </div>
+          <button
+            onClick={handleGenerateResponse}
+            disabled={generating}
+            className={`p-2 rounded-full ${
+              generating
+                ? 'bg-gray-100 text-gray-400'
+                : 'bg-purple-500 text-white hover:bg-purple-600'
+            }`}
+          >
+            <Sparkles className="w-5 h-5" />
+          </button>
           <button
             onClick={handleSubmit}
             disabled={!newMessage.trim()}
