@@ -1,8 +1,8 @@
 import axios from 'axios';
 import type { Message } from '../types';
 
-// L'URL complète de l'application
-const BASE_URL = 'https://whimsical-beignet-91329f.netlify.app';
+// URL du webhook Make.com
+const MAKE_WEBHOOK_URL = 'https://hook.eu1.make.com/6nnd7wwqw2srqyar2jwwtqqliyn83gda';
 
 export const messageService = {
   async sendMessage(message: Message, guestPhone: string, propertyId: string, guestName: string): Promise<void> {
@@ -47,58 +47,11 @@ export const messageService = {
         sender: message.sender
       };
 
-      // Utiliser l'URL complète
-      const url = `${BASE_URL}/.netlify/functions/send-message`;
-      const config = {
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        timeout: 10000
-      };
-
-      console.log('📦 Request details:', {
-        url,
-        method: 'POST',
-        headers: config.headers,
-        payload,
-        timeout: config.timeout
-      });
-
-      // Envoyer la requête
-      console.log('📤 Sending POST request to Netlify function...');
-      try {
-        const response = await axios.post(url, payload, config);
-        
-        console.log('✅ Response from Netlify function:', {
-          status: response.status,
-          statusText: response.statusText,
-          data: response.data,
-          headers: response.headers
-        });
-
-        if (!response.data.success) {
-          console.error('❌ Function returned error:', response.data.error);
-          throw new Error(response.data.error || 'Failed to send message');
-        }
-      } catch (axiosError) {
-        console.error('❌ Axios error:', axiosError);
-        if (axios.isAxiosError(axiosError)) {
-          console.error('Error details:', {
-            status: axiosError.response?.status,
-            statusText: axiosError.response?.statusText,
-            data: axiosError.response?.data,
-            config: {
-              url: axiosError.config?.url,
-              method: axiosError.config?.method,
-              headers: axiosError.config?.headers,
-              data: axiosError.config?.data
-            },
-            message: axiosError.message
-          });
-        }
-        throw new Error('Failed to send message to webhook');
-      }
+      // Envoyer à Make.com
+      console.log('📤 Sending to Make.com:', payload);
+      const response = await axios.post(MAKE_WEBHOOK_URL, payload);
+      console.log('✅ Make.com response:', response.data);
+      
     } catch (error) {
       console.error('❌ Error in messageService.sendMessage:', error);
       throw error;

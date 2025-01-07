@@ -44,8 +44,6 @@ const ConversationDetail: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
-  const [isAutoPilot, setIsAutoPilot] = useState(false);
-  const [isGeneratingAi, setIsGeneratingAi] = useState(false);
 
   // Charger la propriété
   useEffect(() => {
@@ -126,12 +124,11 @@ const ConversationDetail: React.FC = () => {
     }
   }, [newMessage]);
 
-  const handleSendMessage = async (text: string, isAiResponse: boolean = false) => {
+  const handleSendMessage = async (text: string) => {
     if (!text.trim() || sending || !conversation || !conversationId) return;
 
     console.log('🚀 Sending message:', {
       text,
-      isAiResponse,
       conversation,
       propertyId
     });
@@ -139,18 +136,26 @@ const ConversationDetail: React.FC = () => {
     setSending(true);
 
     try {
-      // 1. Créer le message
+      // 1. Créer le message localement
       const message: Message = {
         id: Date.now().toString(),
         text,
         isUser: true,
         timestamp: new Date(),
-        sender: isAiResponse ? 'bot' : 'Host'
+        sender: 'Host'
       };
 
       console.log('📝 Created message:', message);
 
-      // 2. Envoyer à Make.com
+      // 2. Mettre à jour l'état local immédiatement
+      const updatedMessages = [...(conversation.messages || []), message];
+      setConversation(prev => prev ? {
+        ...prev,
+        messages: updatedMessages
+      } : null);
+      setNewMessage('');
+
+      // 3. Envoyer à Make.com
       try {
         console.log('📤 Sending to Make.com...');
         await messageService.sendMessage(
@@ -165,104 +170,27 @@ const ConversationDetail: React.FC = () => {
         // On continue même si l'envoi à Make.com échoue
       }
 
-      // 3. Mettre à jour Airtable
+      // 4. Mettre à jour Airtable
       console.log('💾 Updating Airtable...');
-      const updatedMessages = [...(conversation.messages || []), message];
-      
       await conversationService.updateConversation(conversationId, {
         Messages: JSON.stringify(updatedMessages)
       });
-
       console.log('✅ Updated Airtable successfully');
 
-      // 4. Mettre à jour l'état local
-      setConversation(prev => prev ? {
-        ...prev,
-        messages: updatedMessages
-      } : null);
-      
-      setNewMessage('');
-      setError(null);
-
-      // 5. Gérer la réponse automatique
-      if (isAutoPilot && !isAiResponse && property) {
-        console.log('🤖 Generating AI response...');
-        const aiResponse = await aiService.generateResponse(
-          message,
-          property,
-          {
-            hasBooking: true,
-            checkIn: conversation.checkIn,
-            checkOut: conversation.checkOut
-          },
-          updatedMessages
-        );
-        await handleSendMessage(aiResponse, true);
-      }
-    } catch (err) {
-      console.error('❌ Failed to send message:', err);
+    } catch (error) {
+      console.error('Failed to send message:', error);
       setError('Failed to send message');
     } finally {
       setSending(false);
     }
   };
 
-  const handleGenerateAiResponse = async () => {
-    if (!conversation || !property || isGeneratingAi) return;
-
-    setIsGeneratingAi(true);
-    try {
-      console.log('🤖 Generating AI response manually...');
-      const lastMessage = conversation.messages?.[conversation.messages.length - 1];
-      
-      const aiResponse = await aiService.generateResponse(
-        lastMessage,
-        property,
-        {
-          hasBooking: true,
-          checkIn: conversation.checkIn,
-          checkOut: conversation.checkOut
-        },
-        conversation.messages || []
-      );
-
-      setNewMessage(aiResponse);
-    } catch (error) {
-      console.error('Failed to generate AI response:', error);
-      setError('Failed to generate AI response');
-    } finally {
-      setIsGeneratingAi(false);
-    }
+  const handleSubmit = () => {
+    handleSendMessage(newMessage);
   };
-
-  const toggleAutoPilot = async () => {
-    if (!conversation || !conversationId) return;
-
-    const newAutoPilotState = !isAutoPilot;
-    try {
-      await conversationService.updateConversation(conversationId, {
-        'Auto Pilot': newAutoPilotState
-      });
-      setIsAutoPilot(newAutoPilotState);
-      console.log('🤖 Auto Pilot set to:', newAutoPilotState ? 'ON' : 'OFF');
-    } catch (error) {
-      console.error('Failed to update Auto Pilot state:', error);
-      setError('Failed to update Auto Pilot state');
-    }
-  };
-
-  useEffect(() => {
-    if (conversation) {
-      setIsAutoPilot(conversation['Auto Pilot'] === true);
-    }
-  }, [conversation]);
 
   const handleBack = () => {
     navigate(-1);
-  };
-
-  const handleSubmit = () => {
-    handleSendMessage(newMessage);
   };
 
   if (loading) {
