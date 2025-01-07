@@ -4,7 +4,7 @@ import { conversationService } from '../../src/services/airtable/conversationSer
 import OpenAI from 'openai';
 
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
+  apiKey: process.env.VITE_OPENAI_API_KEY,
 });
 
 const handler: Handler = async (event) => {
