@@ -1,9 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Send, Zap } from 'lucide-react';
+import { ArrowLeft, Send } from 'lucide-react';
 import { conversationService } from '../services';
 import { messageService } from '../services/messageService';
-import { aiService } from '../services/ai/aiService';
 import { propertyService } from '../services/airtable/propertyService';
 import type { Conversation, Message, Property } from '../types';
 
