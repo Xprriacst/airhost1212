@@ -10,13 +10,21 @@ import type { Conversation, Message, Property } from '../types';
 const POLLING_INTERVAL = 3000;
 
 const Message = ({ message }: { message: Message }) => {
-  const isBot = message.sender === 'AI Assistant';
+  const isBot = message.sender === 'bot';
   
   return (
     <div className={`flex ${isBot ? 'justify-start' : 'justify-end'} mb-2`}>
-      <div className={`max-w-[75%] rounded-2xl px-4 py-2 ${
-        isBot ? 'bg-white text-gray-900' : 'bg-blue-500 text-white'
-      }`}>
+      <div 
+        className={`max-w-[75%] rounded-2xl px-4 py-2 ${
+          isBot 
+            ? 'bg-gray-100 text-gray-900' 
+            : 'bg-blue-500 text-white'
+        } ${
+          isBot
+            ? 'rounded-tl-sm'
+            : 'rounded-tr-sm'
+        }`}
+      >
         {message.text}
       </div>
     </div>
@@ -137,7 +145,7 @@ const ConversationDetail: React.FC = () => {
         text,
         isUser: true,
         timestamp: new Date(),
-        sender: isAiResponse ? 'AI Assistant' : 'Host'
+        sender: isAiResponse ? 'bot' : 'Host'
       };
 
       console.log('📝 Created message:', message);
@@ -314,20 +322,20 @@ const ConversationDetail: React.FC = () => {
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto bg-gray-100">
-        <div className="p-4">
+      <div className="flex-1 overflow-y-auto bg-white">
+        <div className="p-4 space-y-1">
           {conversation?.messages.map((message, index) => (
             <Message
               key={message.id || index}
               message={message}
             />
           ))}
-          <div ref={messagesEndRef} /> {/* Anchor for scrolling */}
+          <div ref={messagesEndRef} />
         </div>
       </div>
 
       {/* Input fixe en bas */}
-      <div className="border-t bg-white px-4 py-2 sticky bottom-0">
+      <div className="border-t bg-white px-4 py-2">
         <div className="flex items-end gap-2">
           <div className="flex-1 min-h-[40px] max-h-[120px] flex items-end bg-white rounded-full border px-4 py-2">
             <textarea

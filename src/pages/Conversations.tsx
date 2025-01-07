@@ -80,38 +80,34 @@ export default function Conversations() {
 
 const ConversationItem = ({ conversation, onClick }: { conversation: Conversation; onClick: () => void }) => {
   const lastMessage = conversation.messages[conversation.messages.length - 1];
-  
+  const truncatedMessage = lastMessage?.text.length > 40 
+    ? lastMessage.text.substring(0, 37) + "..."
+    : lastMessage?.text;
+
   return (
     <div 
       onClick={onClick}
-      className="flex items-center px-4 py-3 hover:bg-gray-50 cursor-pointer border-b border-gray-100"
+      className="flex items-center px-4 py-3 hover:bg-gray-50 cursor-pointer"
     >
       {/* Avatar */}
-      <div className="relative flex-shrink-0">
-        <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center">
-          <span className="text-gray-600 text-lg font-medium">
-            {conversation.guestName.charAt(0).toUpperCase()}
-          </span>
-        </div>
-        {conversation.unreadCount > 0 && (
-          <div className="absolute -top-1 -right-1 bg-green-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-medium">
-            {conversation.unreadCount}
-          </div>
-        )}
+      <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center flex-shrink-0">
+        <span className="text-gray-600 text-lg font-medium">
+          {conversation.guestName?.charAt(0).toUpperCase()}
+        </span>
       </div>
 
-      {/* Content */}
-      <div className="flex-1 min-w-0 ml-3">
+      {/* Info */}
+      <div className="flex-1 min-w-0 ml-4">
         <div className="flex justify-between items-baseline">
-          <h3 className="text-base font-semibold text-gray-900 truncate pr-2">
+          <h3 className="text-base font-medium text-gray-900 truncate">
             {conversation.guestName}
           </h3>
-          <span className="text-xs text-gray-500 flex-shrink-0">
-            {lastMessage ? formatTimestamp(lastMessage.timestamp) : ''}
+          <span className="text-sm text-gray-500 ml-2 flex-shrink-0">
+            {lastMessage?.timestamp ? new Date(lastMessage.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
           </span>
         </div>
-        <p className="text-sm text-gray-500 truncate mt-0.5">
-          {lastMessage ? lastMessage.text : 'Aucun message'}
+        <p className="text-sm text-gray-500 truncate">
+          {truncatedMessage}
         </p>
       </div>
     </div>
