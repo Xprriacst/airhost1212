@@ -249,8 +249,8 @@ const ConversationDetail: React.FC = () => {
         </div>
       </div>
 
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto bg-white">
+      {/* Messages avec padding en bas pour la barre de texte */}
+      <div className="flex-1 overflow-y-auto bg-white pb-[60px]">
         <div className="p-4 space-y-1">
           {conversation?.messages.map((message, index) => (
             <Message
@@ -262,8 +262,8 @@ const ConversationDetail: React.FC = () => {
         </div>
       </div>
 
-      {/* Input en bas */}
-      <div className="bg-white border-t px-4 py-2 flex-shrink-0">
+      {/* Input fixe en bas */}
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t px-4 py-2">
         <div className="flex items-end gap-2">
           <div className="flex-1 min-h-[40px] max-h-[120px] flex items-end bg-white rounded-full border px-4 py-2">
             <textarea
