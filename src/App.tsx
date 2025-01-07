@@ -44,10 +44,10 @@ function App() {
         {!isMobile && (
           <aside className="w-64 bg-gray-900 text-white flex-shrink-0">
             <nav className="h-full flex flex-col py-6">
-              <Link to="/" className="flex items-center px-6 py-2 text-white hover:bg-gray-800">
+              <div className="flex items-center px-6 py-2 text-white">
                 <Home className="w-5 h-5 mr-3" />
                 AirHost Admin
-              </Link>
+              </div>
               
               <div className="mt-6 space-y-1">
                 <Link to="/conversations" className="flex items-center px-6 py-2 text-gray-300 hover:bg-gray-800 hover:text-white">
@@ -156,7 +156,7 @@ function App() {
         )}
 
         {/* Main content */}
-        <main className={`flex-1 ${!isMobile ? 'ml-64' : 'mt-16'} relative z-10 overflow-hidden`}>
+        <main className="flex-1 flex flex-col">
           <Routes>
             <Route path="/" element={<Navigate to="/conversations" replace />} />
             <Route path="/properties" element={<Properties />} />
