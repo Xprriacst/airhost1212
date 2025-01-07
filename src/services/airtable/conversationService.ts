@@ -5,7 +5,30 @@ import type { Conversation, Message } from '../../types';
 const parseMessages = (rawMessages: any): Message[] => {
   try {
     if (!rawMessages) return [];
-    return typeof rawMessages === 'string' ? JSON.parse(rawMessages) : rawMessages;
+    
+    let messages: Message[] = typeof rawMessages === 'string' 
+      ? JSON.parse(rawMessages) 
+      : rawMessages;
+
+    // Dédupliquer les messages par ID
+    const uniqueMessages = new Map<string, Message>();
+    messages.forEach(msg => {
+      if (!uniqueMessages.has(msg.id)) {
+        // S'assurer que le message a le bon format
+        uniqueMessages.set(msg.id, {
+          ...msg,
+          timestamp: new Date(msg.timestamp),
+          sender: msg.sender === 'host' ? 'host' : 'guest',
+          type: msg.type || 'text',
+          status: msg.status || 'sent'
+        });
+      }
+    });
+
+    // Trier les messages par date
+    return Array.from(uniqueMessages.values())
+      .sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+
   } catch (error) {
     console.warn('Failed to parse messages:', error);
     return [];

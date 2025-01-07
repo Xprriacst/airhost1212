@@ -9,17 +9,17 @@ import type { Conversation, Message, Property } from '../types';
 const POLLING_INTERVAL = 3000;
 
 const Message = ({ message }: { message: Message }) => {
-  const isBot = message.sender === 'bot';
+  const isGuest = message.sender === 'guest';
   
   return (
-    <div className={`flex ${isBot ? 'justify-start' : 'justify-end'} mb-2`}>
+    <div className={`flex ${isGuest ? 'justify-start' : 'justify-end'} mb-2`}>
       <div 
         className={`max-w-[75%] rounded-2xl px-4 py-2 ${
-          isBot 
+          isGuest 
             ? 'bg-gray-100 text-gray-900' 
             : 'bg-blue-500 text-white'
         } ${
-          isBot
+          isGuest
             ? 'rounded-tl-sm'
             : 'rounded-tr-sm'
         }`}

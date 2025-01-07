@@ -123,8 +123,8 @@ export const handler: Handler = async (event) => {
             id: Date.now().toString(),
             text: data.message,
             timestamp: new Date(),
-            isUser: !data.isHost,
-            sender: data.isHost ? 'Host' : 'Guest'
+            sender: data.isHost ? 'host' : 'guest',
+            type: 'text'
           }]),
           'Auto Pilot': false
         });
@@ -135,7 +135,8 @@ export const handler: Handler = async (event) => {
           statusCode: 200,
           body: JSON.stringify({ 
             status: 'success',
-            conversationId: conversation.id
+            conversationId: conversation.id,
+            messageId: conversation.messages[0].id
           }),
         };
       } catch (error) {
@@ -149,8 +150,8 @@ export const handler: Handler = async (event) => {
       id: Date.now().toString(),
       text: data.message,
       timestamp: new Date(data.timestamp || Date.now()),
-      isUser: !data.isHost,
-      sender: data.isHost ? 'Host' : data.platform
+      sender: data.isHost ? 'host' : 'guest',
+      type: 'text'
     };
 
     console.log('📨 Adding new message to conversation:', {
@@ -170,39 +171,15 @@ export const handler: Handler = async (event) => {
 
     console.log('📨 Message added to conversation');
 
-    // Vérifier si il y a des instructions AI
-    if (property.aiInstructions && property.aiInstructions.length > 0) {
-      console.log('💡 Generating AI response...');
-      try {
-        const aiResponse = await aiService.generateResponse(newMessage, property);
-        if (aiResponse) {
-          console.log('💡 AI response generated:', aiResponse);
-          const aiMessage = {
-            id: Date.now().toString(),
-            text: aiResponse,
-            timestamp: new Date(),
-            isUser: false,
-            sender: 'AI'
-          };
-          
-          const messagesWithAiResponse = [...updatedMessages, aiMessage];
-          await conversationService.updateConversation(conversation.id, {
-            Messages: JSON.stringify(messagesWithAiResponse),
-          });
-          console.log('💡 AI response added to conversation');
-        }
-      } catch (aiError) {
-        console.error('❌ Error generating AI response:', aiError);
-      }
-    } else {
-      console.log('🤖 Skipping AI response: No AI instructions found');
-    }
+    // Note: Désactivation temporaire de la réponse automatique de l'IA
+    // La réponse de l'IA sera gérée par le frontend quand l'autoPilot sera activé
 
     return {
       statusCode: 200,
       body: JSON.stringify({ 
         status: 'success',
-        conversationId: conversation.id
+        conversationId: conversation.id,
+        messageId: newMessage.id
       }),
     };
   } catch (error) {
