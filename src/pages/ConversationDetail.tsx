@@ -1,8 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Send } from 'lucide-react';
+import axios from 'axios';
 import { conversationService } from '../services';
-import { messageService } from '../services/messageService';
 import { propertyService } from '../services/airtable/propertyService';
 import type { Conversation, Message, Property } from '../types';
 
@@ -123,69 +123,101 @@ const ConversationDetail: React.FC = () => {
     }
   }, [newMessage]);
 
-  const handleSendMessage = async (text: string) => {
-    if (!text.trim() || sending || !conversation || !conversationId) return;
-
-    console.log('🚀 Sending message:', {
-      text,
-      conversation,
-      propertyId
-    });
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newMessage.trim() || sending) return;
 
     setSending(true);
-
     try {
-      // 1. Créer le message localement
-      const message: Message = {
-        id: Date.now().toString(),
-        text,
-        isUser: true,
-        timestamp: new Date(),
-        sender: 'Host'
-      };
-
-      console.log('📝 Created message:', message);
-
-      // 2. Mettre à jour l'état local immédiatement
-      const updatedMessages = [...(conversation.messages || []), message];
-      setConversation(prev => prev ? {
-        ...prev,
-        messages: updatedMessages
-      } : null);
-      setNewMessage('');
-
-      // 3. Envoyer à Make.com
-      try {
-        console.log('📤 Sending to Make.com...');
-        await messageService.sendMessage(
-          message,
-          conversation.guestPhone,
-          propertyId || '',
-          conversation.guestName
-        );
-        console.log('✅ Sent to Make.com successfully');
-      } catch (makeError) {
-        console.error('❌ Failed to send to Make.com:', makeError);
-        // On continue même si l'envoi à Make.com échoue
+      if (!conversation || !conversation.guestPhone) {
+        throw new Error('Missing conversation data');
       }
 
-      // 4. Mettre à jour Airtable
-      console.log('💾 Updating Airtable...');
-      await conversationService.updateConversation(conversationId, {
-        Messages: JSON.stringify(updatedMessages)
-      });
-      console.log('✅ Updated Airtable successfully');
+      const messageData: Message = {
+        id: `temp-${Date.now()}`,
+        text: newMessage.trim(),
+        timestamp: new Date(),
+        sender: 'host',
+        type: 'text',
+        status: 'pending'
+      };
 
-    } catch (error) {
-      console.error('Failed to send message:', error);
-      setError('Failed to send message');
+      // Optimistic update
+      setConversation(prev => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          messages: [...prev.messages, messageData]
+        };
+      });
+
+      // Reset input
+      setNewMessage('');
+
+      // Scroll to bottom
+      setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }, 100);
+
+      // Préparer le payload pour la fonction Netlify
+      const payload = {
+        message: messageData.text,
+        guestPhone: conversation.guestPhone.replace(/\D/g, ''),
+        guestName: conversation.guestName,
+        propertyId: propertyId || '',
+        timestamp: messageData.timestamp.toISOString(),
+        platform: 'whatsapp',
+        isHost: true,
+        messageType: messageData.type
+      };
+
+      // Envoyer via la fonction Netlify
+      const response = await axios.post('/.netlify/functions/send-message', payload);
+
+      if (response.data?.error) {
+        throw new Error(response.data.error);
+      }
+
+      // Mettre à jour le statut du message
+      setConversation(prev => {
+        if (!prev) return prev;
+        const updatedMessages = prev.messages.map(msg => 
+          msg.id === messageData.id 
+            ? { ...msg, status: 'sent' as const }
+            : msg
+        );
+        return {
+          ...prev,
+          messages: updatedMessages
+        };
+      });
+
+    } catch (err) {
+      console.error('Error sending message:', err);
+      // Mettre à jour le statut du message en échec
+      setConversation(prev => {
+        if (!prev) return prev;
+        const updatedMessages = prev.messages.map(msg => 
+          msg.id === messageData?.id 
+            ? { ...msg, status: 'failed' as const }
+            : msg
+        );
+        return {
+          ...prev,
+          messages: updatedMessages
+        };
+      });
+      setError(err instanceof Error ? err.message : 'Failed to send message');
     } finally {
       setSending(false);
     }
   };
 
-  const handleSubmit = () => {
-    handleSendMessage(newMessage);
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSubmit(e as unknown as React.FormEvent);
+    }
   };
 
   const handleBack = () => {
@@ -268,6 +300,7 @@ const ConversationDetail: React.FC = () => {
             <textarea
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
+              onKeyDown={handleKeyDown}
               placeholder="Message"
               className="flex-1 bg-transparent border-none focus:outline-none resize-none max-h-[100px] py-1"
               rows={1}
