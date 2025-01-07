@@ -294,9 +294,9 @@ const ConversationDetail: React.FC = () => {
   }
 
   return (
-    <div className="h-[100dvh] flex flex-col bg-gray-100">
+    <div className="min-h-screen max-h-screen w-screen flex flex-col bg-gray-100">
       {/* Header */}
-      <div className="flex items-center h-14 px-4 bg-white border-b fixed top-0 left-0 right-0 z-10">
+      <div className="h-14 bg-white border-b z-10 flex items-center px-4 flex-shrink-0">
         <button 
           onClick={handleBack}
           className="p-2 -ml-2 hover:bg-gray-50 rounded-full"
@@ -322,7 +322,7 @@ const ConversationDetail: React.FC = () => {
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto bg-white pt-14 pb-16">
+      <div className="flex-1 overflow-y-auto bg-white">
         <div className="p-4 space-y-1">
           {conversation?.messages.map((message, index) => (
             <Message
@@ -334,8 +334,8 @@ const ConversationDetail: React.FC = () => {
         </div>
       </div>
 
-      {/* Input fixe en bas */}
-      <div className="fixed bottom-0 left-0 right-0 border-t bg-white px-4 py-2">
+      {/* Input en bas */}
+      <div className="bg-white border-t px-4 py-2 flex-shrink-0">
         <div className="flex items-end gap-2">
           <div className="flex-1 min-h-[40px] max-h-[120px] flex items-end bg-white rounded-full border px-4 py-2">
             <textarea

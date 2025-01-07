@@ -63,8 +63,14 @@ export default function Conversations() {
   };
 
   return (
-    <div className="h-[100dvh] bg-white pt-14">
-      <div className="h-full overflow-y-auto">
+    <div className="min-h-screen max-h-screen w-screen bg-white flex flex-col">
+      {/* Header fixe */}
+      <div className="h-14 bg-white border-b z-10 flex items-center justify-center flex-shrink-0">
+        <h1 className="text-xl font-semibold">AirHost</h1>
+      </div>
+
+      {/* Liste scrollable */}
+      <div className="flex-1 overflow-y-auto">
         <ConversationList
           conversations={conversations}
           autoPilotStates={autoPilotStates}
@@ -80,14 +86,14 @@ export default function Conversations() {
 
 const ConversationItem = ({ conversation, onClick }: { conversation: Conversation; onClick: () => void }) => {
   const lastMessage = conversation.messages[conversation.messages.length - 1];
-  const truncatedMessage = lastMessage?.text.length > 30 
-    ? lastMessage.text.substring(0, 27) + "..."
+  const truncatedMessage = lastMessage?.text.length > 25 
+    ? lastMessage.text.substring(0, 22) + "..."
     : lastMessage?.text;
 
   return (
     <div 
       onClick={onClick}
-      className="flex items-center px-4 py-3 hover:bg-gray-50 cursor-pointer"
+      className="flex items-center px-4 py-3 hover:bg-gray-50 cursor-pointer w-full"
     >
       {/* Avatar */}
       <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center flex-shrink-0">
@@ -97,12 +103,12 @@ const ConversationItem = ({ conversation, onClick }: { conversation: Conversatio
       </div>
 
       {/* Info */}
-      <div className="flex-1 min-w-0 ml-4 mr-4">
+      <div className="flex-1 min-w-0 ml-3 mr-2">
         <div className="flex justify-between items-baseline">
-          <h3 className="text-base font-medium text-gray-900 truncate">
+          <h3 className="text-base font-medium text-gray-900 truncate max-w-[60%]">
             {conversation.guestName}
           </h3>
-          <span className="text-sm text-gray-500 ml-2 flex-shrink-0">
+          <span className="text-sm text-gray-500 flex-shrink-0">
             {lastMessage?.timestamp ? new Date(lastMessage.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
           </span>
         </div>

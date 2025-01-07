@@ -23,6 +23,14 @@ function App() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  useEffect(() => {
+    // Ajouter les meta viewport pour le mobile
+    const meta = document.createElement('meta');
+    meta.name = 'viewport';
+    meta.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover';
+    document.getElementsByTagName('head')[0].appendChild(meta);
+  }, []);
+
   const handleLinkClick = () => {
     if (isMobile) {
       setIsSidebarOpen(false);
