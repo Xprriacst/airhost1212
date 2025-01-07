@@ -9,6 +9,20 @@ import type { Conversation, Message, Property } from '../types';
 
 const POLLING_INTERVAL = 3000;
 
+const Message = ({ message }: { message: Message }) => {
+  const isBot = message.sender === 'AI Assistant';
+  
+  return (
+    <div className={`flex ${isBot ? 'justify-start' : 'justify-end'} mb-2`}>
+      <div className={`max-w-[75%] rounded-2xl px-4 py-2 ${
+        isBot ? 'bg-white text-gray-900' : 'bg-blue-500 text-white'
+      }`}>
+        {message.text}
+      </div>
+    </div>
+  );
+};
+
 const ConversationDetail: React.FC = () => {
   const { conversationId, propertyId } = useParams();
   const navigate = useNavigate();
@@ -300,21 +314,20 @@ const ConversationDetail: React.FC = () => {
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto">
-        <div className="p-4 space-y-2">
+      <div className="flex-1 overflow-y-auto bg-gray-100">
+        <div className="p-4">
           {conversation?.messages.map((message, index) => (
-            <div key={message.id || index} className="flex justify-end">
-              <div className="bg-blue-500 text-white p-2 rounded-lg">
-                {message.text}
-              </div>
-            </div>
+            <Message
+              key={message.id || index}
+              message={message}
+            />
           ))}
           <div ref={messagesEndRef} /> {/* Anchor for scrolling */}
         </div>
       </div>
 
       {/* Input fixe en bas */}
-      <div className="border-t bg-white px-4 py-2">
+      <div className="border-t bg-white px-4 py-2 sticky bottom-0">
         <div className="flex items-end gap-2">
           <div className="flex-1 min-h-[40px] max-h-[120px] flex items-end bg-white rounded-full border px-4 py-2">
             <textarea

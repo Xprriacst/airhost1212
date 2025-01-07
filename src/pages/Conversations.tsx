@@ -63,9 +63,8 @@ export default function Conversations() {
   };
 
   return (
-    <div className="h-[100dvh] flex flex-col bg-white">
-      {/* Liste des conversations */}
-      <div className="flex-1 overflow-y-auto">
+    <div className="h-[100dvh] bg-white pt-14">
+      <div className="h-full overflow-y-auto">
         <ConversationList
           conversations={conversations}
           autoPilotStates={autoPilotStates}
