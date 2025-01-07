@@ -23,56 +23,98 @@ function App() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  const handleLinkClick = () => {
+    if (isMobile) {
+      setIsSidebarOpen(false);
+    }
+  };
+
   return (
     <Router>
       <div className="flex h-screen bg-gray-100">
-        {/* Mobile hamburger menu */}
-        {isMobile && (
-          <button
-            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-            className="fixed top-4 left-4 z-20 p-2 bg-gray-900 text-white rounded-md"
-          >
-            <Menu className="w-6 h-6" />
-          </button>
+        {/* Desktop Sidebar - toujours visible et fixe à gauche */}
+        {!isMobile && (
+          <div className="fixed left-0 top-0 w-64 h-full bg-gray-900 text-white z-10">
+            <nav className="mt-5">
+              <Link to="/" className="flex items-center px-6 py-3 text-lg font-medium">
+                <Home className="w-5 h-5 mr-3" />
+                AirHost Admin
+              </Link>
+              <div className="mt-5">
+                <Link to="/properties" className="flex items-center px-6 py-3 text-gray-300 hover:bg-gray-800">
+                  <Building2 className="w-5 h-5 mr-3" />
+                  Propriétés
+                </Link>
+                <Link to="/conversations" className="flex items-center px-6 py-3 text-gray-300 hover:bg-gray-800">
+                  <MessageSquare className="w-5 h-5 mr-3" />
+                  Conversations
+                </Link>
+                <Link to="/emergency-cases" className="flex items-center px-6 py-3 text-gray-300 hover:bg-gray-800">
+                  <AlertTriangle className="w-5 h-5 mr-3" />
+                  Cas d'urgence
+                </Link>
+                <Link to="/chat-sandbox" className="flex items-center px-6 py-3 text-gray-300 hover:bg-gray-800">
+                  <Sparkles className="w-5 h-5 mr-3" />
+                  Chat Sandbox
+                </Link>
+                <Link to="/settings" className="flex items-center px-6 py-3 text-gray-300 hover:bg-gray-800">
+                  <SettingsIcon className="w-5 h-5 mr-3" />
+                  Paramètres
+                </Link>
+              </div>
+            </nav>
+          </div>
         )}
 
-        {/* Sidebar - avec gestion mobile */}
-        <div className={`
-          ${isMobile ? 'fixed' : ''} 
-          ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
-          w-64 bg-gray-900 text-white h-full transition-transform duration-200 ease-in-out z-10
-        `}>
-          <nav className={`mt-5 ${isMobile ? 'mt-16' : ''}`}>
-            <Link to="/" className="flex items-center px-6 py-3 text-lg font-medium">
-              <Home className="w-5 h-5 mr-3" />
-              AirHost Admin
-            </Link>
-            <div className="mt-5">
-              <Link to="/properties" className="flex items-center px-6 py-3 text-gray-300 hover:bg-gray-800">
+        {/* Mobile Header avec hamburger */}
+        {isMobile && (
+          <div className="fixed top-0 left-0 right-0 h-16 bg-gray-900 text-white z-20 px-4 flex items-center">
+            <button
+              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+              className="p-2 hover:bg-gray-800 rounded-md"
+            >
+              <Menu className="w-6 h-6" />
+            </button>
+            <span className="ml-4 text-lg font-medium">AirHost Admin</span>
+          </div>
+        )}
+
+        {/* Mobile Menu - s'ouvre vers le bas */}
+        {isMobile && (
+          <div className={`
+            fixed left-0 right-0 bg-gray-900 text-white z-10 transition-all duration-200 ease-in-out
+            ${isSidebarOpen ? 'top-16' : '-top-full'}
+          `}>
+            <nav className="py-2">
+              <Link to="/" className="flex items-center px-6 py-3 text-gray-300 hover:bg-gray-800" onClick={handleLinkClick}>
+                <Home className="w-5 h-5 mr-3" />
+                Accueil
+              </Link>
+              <Link to="/properties" className="flex items-center px-6 py-3 text-gray-300 hover:bg-gray-800" onClick={handleLinkClick}>
                 <Building2 className="w-5 h-5 mr-3" />
                 Propriétés
               </Link>
-              <Link to="/conversations" className="flex items-center px-6 py-3 text-gray-300 hover:bg-gray-800">
+              <Link to="/conversations" className="flex items-center px-6 py-3 text-gray-300 hover:bg-gray-800" onClick={handleLinkClick}>
                 <MessageSquare className="w-5 h-5 mr-3" />
                 Conversations
               </Link>
-              <Link to="/emergency-cases" className="flex items-center px-6 py-3 text-gray-300 hover:bg-gray-800">
+              <Link to="/emergency-cases" className="flex items-center px-6 py-3 text-gray-300 hover:bg-gray-800" onClick={handleLinkClick}>
                 <AlertTriangle className="w-5 h-5 mr-3" />
                 Cas d'urgence
               </Link>
-              <Link to="/chat-sandbox" className="flex items-center px-6 py-3 text-gray-300 hover:bg-gray-800">
+              <Link to="/chat-sandbox" className="flex items-center px-6 py-3 text-gray-300 hover:bg-gray-800" onClick={handleLinkClick}>
                 <Sparkles className="w-5 h-5 mr-3" />
                 Chat Sandbox
               </Link>
-              <Link to="/settings" className="flex items-center px-6 py-3 text-gray-300 hover:bg-gray-800">
+              <Link to="/settings" className="flex items-center px-6 py-3 text-gray-300 hover:bg-gray-800" onClick={handleLinkClick}>
                 <SettingsIcon className="w-5 h-5 mr-3" />
                 Paramètres
               </Link>
-            </div>
-          </nav>
-        </div>
+            </nav>
+          </div>
+        )}
 
-        {/* Overlay pour fermer le menu sur mobile */}
+        {/* Overlay pour mobile */}
         {isMobile && isSidebarOpen && (
           <div 
             className="fixed inset-0 bg-black bg-opacity-50 z-0"
@@ -80,8 +122,8 @@ function App() {
           />
         )}
 
-        {/* Main content - avec gestion mobile */}
-        <div className={`flex-1 ${!isMobile ? 'ml-64' : ''}`}>
+        {/* Main content */}
+        <div className={`flex-1 ${!isMobile ? 'ml-64' : 'mt-16'} relative`}>
           <Routes>
             <Route path="/" element={<Navigate to="/conversations" replace />} />
             <Route path="/properties" element={<Properties />} />
