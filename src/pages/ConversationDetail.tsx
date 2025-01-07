@@ -5,7 +5,6 @@ import { conversationService } from '../services';
 import { messageService } from '../services/messageService';
 import { aiService } from '../services/ai/aiService';
 import { propertyService } from '../services/airtable/propertyService';
-import ChatMessage from '../components/ChatMessage';
 import type { Conversation, Message, Property } from '../types';
 
 const POLLING_INTERVAL = 3000;
@@ -236,6 +235,14 @@ const ConversationDetail: React.FC = () => {
     }
   }, [conversation]);
 
+  const handleBack = () => {
+    navigate(-1);
+  };
+
+  const handleSubmit = () => {
+    handleSendMessage(newMessage);
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[100dvh]">
@@ -265,108 +272,67 @@ const ConversationDetail: React.FC = () => {
   }
 
   return (
-    <div className="h-screen flex flex-col bg-gray-100 overflow-hidden">
+    <div className="h-[100dvh] flex flex-col bg-gray-100">
       {/* Header */}
-      <div className="flex items-center justify-between p-4 bg-white border-b">
-        <div className="flex items-center gap-4">
-          <button
-            onClick={() => navigate(-1)}
-            className="text-gray-600 hover:text-gray-900"
-          >
-            <ArrowLeft className="w-6 h-6" />
-          </button>
-          <div>
-            <h1 className="text-xl font-semibold">{conversation?.guestName || 'Conversation'}</h1>
-            <p className="text-sm text-gray-500">
+      <div className="flex items-center h-14 px-4 bg-white border-b">
+        <button 
+          onClick={handleBack}
+          className="p-2 -ml-2 hover:bg-gray-50 rounded-full"
+        >
+          <ArrowLeft className="w-6 h-6 text-gray-700" />
+        </button>
+        
+        <div className="flex items-center ml-2">
+          <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center mr-3">
+            <span className="text-gray-600 text-sm font-medium">
+              {conversation?.guestName?.charAt(0).toUpperCase()}
+            </span>
+          </div>
+          <div className="flex-1">
+            <h2 className="font-semibold text-gray-900">
+              {conversation?.guestName || 'Conversation'}
+            </h2>
+            <p className="text-xs text-gray-500">
               {conversation?.checkIn && new Date(conversation.checkIn).toLocaleDateString()} - {conversation?.checkOut && new Date(conversation.checkOut).toLocaleDateString()}
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={toggleAutoPilot}
-            className={`flex items-center gap-2 px-3 py-2 rounded-lg ${
-              isAutoPilot 
-                ? 'text-blue-500 bg-blue-50 hover:bg-blue-100'
-                : 'text-gray-500 hover:bg-gray-100'
-            }`}
-          >
-            <Zap className="w-5 h-5" />
-            <span>Auto-pilot</span>
-          </button>
-        </div>
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4" ref={messagesEndRef}>
-        <div className="max-w-3xl mx-auto space-y-4">
+      <div className="flex-1 overflow-y-auto">
+        <div className="p-4 space-y-2">
           {conversation?.messages.map((message, index) => (
-            <ChatMessage
-              key={message.id || index}
-              message={message}
-              isLast={index === conversation.messages.length - 1}
-            />
+            <div key={message.id || index} className="flex justify-end">
+              <div className="bg-blue-500 text-white p-2 rounded-lg">
+                {message.text}
+              </div>
+            </div>
           ))}
           <div ref={messagesEndRef} /> {/* Anchor for scrolling */}
         </div>
       </div>
 
-      {/* Input */}
-      <div className="p-4 bg-white border-t">
-        <div className="max-w-3xl mx-auto">
-          <div className="flex gap-2">
-            <div className="flex-1 flex items-end bg-white rounded-3xl border px-2 py-1.5 min-h-[40px]">
-              <button
-                onClick={handleGenerateAiResponse}
-                disabled={isGeneratingAi || isAutoPilot}
-                title={isAutoPilot ? "Désactivé quand Auto-pilot est ON" : "Générer une réponse AI"}
-                className="p-1.5 text-gray-500 hover:text-blue-500 disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
-              >
-                {isGeneratingAi ? (
-                  <div className="w-4 h-4 border-t-2 border-blue-500 rounded-full animate-spin" />
-                ) : (
-                  <svg
-                    className="w-4 h-4"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    fill="none"
-                    strokeWidth="2"
-                  >
-                    <path d="M12 4L9 9 4 9.5L8 13 7 18L12 15.5L17 18L16 13L20 9.5L15 9z" />
-                    <path d="M20 3L19 5 17 4 18 6 16 7 18 8 17 10 19 9 20 11 21 9 23 8 21 7 22 5 20 6z" />
-                  </svg>
-                )}
-              </button>
-
-              <textarea
-                ref={textareaRef}
-                value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
-                onKeyPress={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    handleSendMessage(newMessage);
-                  }
-                }}
-                placeholder="Message"
-                className="flex-1 bg-transparent border-none focus:outline-none px-2 py-1 resize-none overflow-y-auto min-h-[24px]"
-                rows={1}
-              />
-            </div>
-
-            {/* Bouton d'envoi */}
-            <button
-              onClick={() => handleSendMessage(newMessage)}
-              disabled={!newMessage.trim() || sending}
-              className={`px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed`}
-            >
-              {sending ? (
-                <div className="w-5 h-5 border-t-2 border-white rounded-full animate-spin" />
-              ) : (
-                <Send className="w-5 h-5" />
-              )}
-            </button>
+      {/* Input fixe en bas */}
+      <div className="border-t bg-white px-4 py-2">
+        <div className="flex items-end gap-2">
+          <div className="flex-1 min-h-[40px] max-h-[120px] flex items-end bg-white rounded-full border px-4 py-2">
+            <textarea
+              value={newMessage}
+              onChange={(e) => setNewMessage(e.target.value)}
+              placeholder="Message"
+              className="flex-1 bg-transparent border-none focus:outline-none resize-none max-h-[100px] py-1"
+              rows={1}
+              style={{ height: 24, maxHeight: 100 }}
+            />
           </div>
+          <button
+            onClick={handleSubmit}
+            disabled={!newMessage.trim()}
+            className="p-2 bg-blue-500 text-white rounded-full hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Send className="w-5 h-5" />
+          </button>
         </div>
       </div>
     </div>

@@ -63,7 +63,7 @@ export default function Conversations() {
   };
 
   return (
-    <div className="flex flex-col h-full bg-gray-50">
+    <div className="h-[100dvh] flex flex-col bg-white">
       {/* Liste des conversations */}
       <div className="flex-1 overflow-y-auto">
         <ConversationList
