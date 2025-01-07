@@ -107,9 +107,13 @@ export const handler: Handler = async (event) => {
         // Formater le numéro de téléphone pour Waapi
         const formattedPhone = payload.guestPhone.replace(/\D/g, '') + '@c.us';
         const makePayload = {
-          ...payload,
-          guestPhone: formattedPhone
+          chatId: formattedPhone,  // Changer le nom du champ pour Waapi
+          message: payload.message,
+          propertyId: payload.propertyId,
         };
+        
+        console.log('Formatted phone:', formattedPhone);
+        console.log('Payload to Make:', makePayload);
         
         const response = await axios.post(MAKE_WEBHOOK_URL, makePayload, {
           headers: {
