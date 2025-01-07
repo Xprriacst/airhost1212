@@ -117,7 +117,7 @@ const handler: Handler = async (event) => {
     console.log('Calling OpenAI API...');
     // Générer la réponse avec GPT
     const completion = await openai.chat.completions.create({
-      model: "gpt-4",
+      model: "gpt-4o-mini-2024-07-18",  // Version mini optimisée pour les tâches spécifiques
       messages: [
         {
           role: "system",
