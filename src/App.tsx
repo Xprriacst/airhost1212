@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Route, Routes, Link, Navigate } from 'react-router-dom';
-import { Home, Building2, MessageSquare, AlertTriangle, Sparkles, Settings as SettingsIcon, Menu } from 'lucide-react';
+import { Home, Building2, MessageSquare, AlertTriangle, Sparkles, Settings as SettingsIcon, Menu, X } from 'lucide-react';
 import Properties from './pages/Properties';
 import Conversations from './pages/Conversations';
 import ConversationDetail from './pages/ConversationDetail';
@@ -68,47 +68,66 @@ function App() {
 
         {/* Mobile Header avec hamburger */}
         {isMobile && (
-          <div className="fixed top-0 left-0 right-0 h-16 bg-gray-900 text-white z-20 px-4 flex items-center">
+          <div className="fixed top-0 left-0 right-0 h-16 bg-white border-b z-20 px-4 flex items-center justify-between">
             <button
               onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-              className="p-2 hover:bg-gray-800 rounded-md"
+              className="p-2 hover:bg-gray-100 rounded-md"
             >
-              <Menu className="w-6 h-6" />
+              <Menu className="w-6 h-6 text-gray-700" />
             </button>
-            <span className="ml-4 text-lg font-medium">AirHost Admin</span>
           </div>
         )}
 
-        {/* Mobile Menu - s'ouvre vers le bas */}
+        {/* Mobile Menu - s'ouvre sur la gauche */}
         {isMobile && (
           <div className={`
-            fixed left-0 right-0 bg-gray-900 text-white z-10 transition-all duration-200 ease-in-out
-            ${isSidebarOpen ? 'top-16' : '-top-full'}
+            fixed top-0 left-0 h-full w-80 bg-white z-30 transition-transform duration-300 ease-in-out
+            ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
           `}>
+            <div className="flex items-center justify-between p-4 border-b">
+              <span className="text-xl font-medium">Menu</span>
+              <button
+                onClick={() => setIsSidebarOpen(false)}
+                className="p-2 hover:bg-gray-100 rounded-full"
+              >
+                <X className="w-6 h-6 text-gray-700" />
+              </button>
+            </div>
             <nav className="py-2">
-              <Link to="/" className="flex items-center px-6 py-3 text-gray-300 hover:bg-gray-800" onClick={handleLinkClick}>
-                <Home className="w-5 h-5 mr-3" />
-                Accueil
+              <Link to="/properties" 
+                className="flex items-center px-6 py-4 text-gray-700 hover:bg-gray-100" 
+                onClick={handleLinkClick}
+              >
+                <Building2 className="w-6 h-6 mr-3 text-gray-500" />
+                <span className="text-lg">Properties</span>
               </Link>
-              <Link to="/properties" className="flex items-center px-6 py-3 text-gray-300 hover:bg-gray-800" onClick={handleLinkClick}>
-                <Building2 className="w-5 h-5 mr-3" />
-                Propriétés
+              <Link to="/conversations" 
+                className="flex items-center px-6 py-4 text-gray-700 hover:bg-gray-100" 
+                onClick={handleLinkClick}
+              >
+                <MessageSquare className="w-6 h-6 mr-3 text-gray-500" />
+                <span className="text-lg">Conversations</span>
               </Link>
-              <Link to="/conversations" className="flex items-center px-6 py-3 text-gray-300 hover:bg-gray-800" onClick={handleLinkClick}>
-                <MessageSquare className="w-5 h-5 mr-3" />
-                Conversations
+              <Link to="/emergency-cases" 
+                className="flex items-center px-6 py-4 text-gray-700 hover:bg-gray-100" 
+                onClick={handleLinkClick}
+              >
+                <AlertTriangle className="w-6 h-6 mr-3 text-gray-500" />
+                <span className="text-lg">Emergency Cases</span>
               </Link>
-              <Link to="/emergency-cases" className="flex items-center px-6 py-3 text-gray-300 hover:bg-gray-800" onClick={handleLinkClick}>
-                <AlertTriangle className="w-5 h-5 mr-3" />
-                Cas d'urgence
+              <Link to="/chat-sandbox" 
+                className="flex items-center px-6 py-4 text-gray-700 hover:bg-gray-100" 
+                onClick={handleLinkClick}
+              >
+                <Sparkles className="w-6 h-6 mr-3 text-gray-500" />
+                <span className="text-lg">Chat Sandbox</span>
               </Link>
-              <Link to="/chat-sandbox" className="flex items-center px-6 py-3 text-gray-300 hover:bg-gray-800" onClick={handleLinkClick}>
-                <Sparkles className="w-5 h-5 mr-3" />
-                Chat Sandbox
-              </Link>
-              <Link to="/settings" className="flex items-center px-6 py-3 text-gray-300 hover:bg-gray-800" onClick={handleLinkClick}>
-                <SettingsIcon className="w-5 h-5 mr-3" />
-                Paramètres
+              <Link to="/settings" 
+                className="flex items-center px-6 py-4 text-gray-700 hover:bg-gray-100" 
+                onClick={handleLinkClick}
+              >
+                <SettingsIcon className="w-6 h-6 mr-3 text-gray-500" />
+                <span className="text-lg">Settings</span>
               </Link>
             </nav>
           </div>
@@ -117,7 +136,7 @@ function App() {
         {/* Overlay pour mobile */}
         {isMobile && isSidebarOpen && (
           <div 
-            className="fixed inset-0 bg-black bg-opacity-50 z-0"
+            className="fixed inset-0 bg-black bg-opacity-50 z-20"
             onClick={() => setIsSidebarOpen(false)}
           />
         )}
