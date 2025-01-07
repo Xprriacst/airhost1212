@@ -43,28 +43,32 @@ function App() {
         {/* Desktop Sidebar - toujours visible et fixe à gauche */}
         {!isMobile && (
           <aside className="w-64 bg-gray-900 text-white flex-shrink-0">
-            <nav className="h-full flex flex-col py-4">
-              <Link to="/" className="flex items-center px-4 py-2 text-white hover:bg-gray-800">
+            <nav className="h-full flex flex-col py-6">
+              <Link to="/" className="flex items-center px-6 py-2 text-white hover:bg-gray-800">
                 <Home className="w-5 h-5 mr-3" />
                 AirHost Admin
               </Link>
-              <Link to="/properties" className="flex items-center px-4 py-2 mt-2 text-white hover:bg-gray-800">
-                <Building2 className="w-5 h-5 mr-3" />
-                Propriétés
-              </Link>
-              <Link to="/conversations" className="flex items-center px-4 py-2 text-white hover:bg-gray-800">
-                <MessageSquare className="w-5 h-5 mr-3" />
-                Conversations
-              </Link>
-              <Link to="/emergency-cases" className="flex items-center px-4 py-2 text-white hover:bg-gray-800">
-                <AlertTriangle className="w-5 h-5 mr-3" />
-                Cas d'urgence
-              </Link>
-              <Link to="/chat-sandbox" className="flex items-center px-4 py-2 text-white hover:bg-gray-800">
-                <Sparkles className="w-5 h-5 mr-3" />
-                Chat Sandbox
-              </Link>
-              <Link to="/settings" className="flex items-center px-4 py-2 mt-auto text-white hover:bg-gray-800">
+              
+              <div className="mt-6 space-y-1">
+                <Link to="/conversations" className="flex items-center px-6 py-2 text-gray-300 hover:bg-gray-800 hover:text-white">
+                  <MessageSquare className="w-5 h-5 mr-3" />
+                  Conversations
+                </Link>
+                <Link to="/properties" className="flex items-center px-6 py-2 text-gray-300 hover:bg-gray-800 hover:text-white">
+                  <Building2 className="w-5 h-5 mr-3" />
+                  Propriétés
+                </Link>
+                <Link to="/emergency-cases" className="flex items-center px-6 py-2 text-gray-300 hover:bg-gray-800 hover:text-white">
+                  <AlertTriangle className="w-5 h-5 mr-3" />
+                  Cas d'urgence
+                </Link>
+                <Link to="/chat-sandbox" className="flex items-center px-6 py-2 text-gray-300 hover:bg-gray-800 hover:text-white">
+                  <Sparkles className="w-5 h-5 mr-3" />
+                  Chat Sandbox
+                </Link>
+              </div>
+
+              <Link to="/settings" className="flex items-center px-6 py-2 mt-auto text-gray-300 hover:bg-gray-800 hover:text-white">
                 <SettingsIcon className="w-5 h-5 mr-3" />
                 Paramètres
               </Link>
