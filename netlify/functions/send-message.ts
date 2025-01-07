@@ -107,9 +107,8 @@ export const handler: Handler = async (event) => {
         // Formater le numéro de téléphone pour Waapi
         const formattedPhone = payload.guestPhone.replace(/\D/g, '') + '@c.us';
         const makePayload = {
-          chatId: formattedPhone,  // Changer le nom du champ pour Waapi
-          message: payload.message,
-          propertyId: payload.propertyId,
+          chatId: formattedPhone,
+          message: payload.message
         };
         
         console.log('Formatted phone:', formattedPhone);
