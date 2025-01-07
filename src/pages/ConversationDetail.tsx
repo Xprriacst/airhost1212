@@ -264,137 +264,107 @@ const ConversationDetail: React.FC = () => {
   }
 
   return (
-    <div className="flex flex-col min-h-[100dvh] h-[100dvh] bg-gray-200 fixed inset-0">
+    <div className="h-screen flex flex-col bg-gray-100 overflow-hidden">
       {/* Header */}
-      <div className="flex items-center px-4 py-2 bg-white shadow-sm z-10">
-        <button
-          onClick={() => navigate(-1)}
-          className="mr-2 p-2 -ml-2 hover:bg-gray-100 rounded-full"
-        >
-          <ArrowLeft className="w-6 h-6" />
-        </button>
-        
-        <div className="flex items-center flex-1">
-          <div className="w-10 h-10 rounded-full bg-gray-300 mr-3 flex-shrink-0">
-            {/* Avatar placeholder */}
-          </div>
-          <div className="flex-1 min-w-0">
-            <h2 className="text-base font-semibold truncate">
-              {conversation.guestName || 'Guest'}
-            </h2>
-            <p className="text-xs text-gray-500 truncate">
-              {new Date(conversation.checkIn).toLocaleDateString()} - {new Date(conversation.checkOut).toLocaleDateString()}
+      <div className="flex items-center justify-between p-4 bg-white border-b">
+        <div className="flex items-center gap-4">
+          <button
+            onClick={() => navigate(-1)}
+            className="text-gray-600 hover:text-gray-900"
+          >
+            <ArrowLeft className="w-6 h-6" />
+          </button>
+          <div>
+            <h1 className="text-xl font-semibold">{conversation?.guestName || 'Conversation'}</h1>
+            <p className="text-sm text-gray-500">
+              {conversation?.checkIn && new Date(conversation.checkIn).toLocaleDateString()} - {conversation?.checkOut && new Date(conversation.checkOut).toLocaleDateString()}
             </p>
           </div>
         </div>
-
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2">
           <button
             onClick={toggleAutoPilot}
-            className={`flex items-center gap-1 px-2 py-1 rounded-full ${
-              isAutoPilot ? 'bg-blue-100 text-blue-600' : 'text-gray-600'
+            className={`flex items-center gap-2 px-3 py-2 rounded-lg ${
+              isAutoPilot 
+                ? 'text-blue-500 bg-blue-50 hover:bg-blue-100'
+                : 'text-gray-500 hover:bg-gray-100'
             }`}
           >
-            <Zap className="w-4 h-4" />
-            <span className="text-xs">{isAutoPilot ? 'ON' : 'OFF'}</span>
-          </button>
-          <button className="p-2 hover:bg-gray-100 rounded-full">
-            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
-            </svg>
+            <Zap className="w-5 h-5" />
+            <span>Auto-pilot</span>
           </button>
         </div>
       </div>
 
       {/* Messages */}
-      <div 
-        className="flex-1 overflow-y-auto p-4 space-y-2"
-        style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-.895-2-2-2-2 .895-2 2 .895 2 2 2zm63 31c1.657 0 3-1.343 3-3s-.45-2-1-2-1 .895-1 2 .45 2 1 2zM34 90c1.105 0 2-.895 2-2s-.45-2-1-2-1 .895-1 2 .45 2 1 2zM12 60c1.105 0 2-.895 2-2s-.45-2-1-2-1 .895-1 2 .45 2 1 2zM60 91c1.105 0 2-.895 2-2s-.45-2-1-2-1 .895-1 2 .45 2 1 2zM35 41c1.105 0 2-.895 2-2s-.45-2-1-2-1 .895-1 2 .45 2 1 2zM12 60c1.105 0 2-.895 2-2s-.45-2-1-2-1 .895-1 2 .45 2 1 2zM12 60c1.105 0 2-.895 2-2s-.45-2-1-2-1 .895-1 2 .45 2 1 2zM12 60c1.105 0 2-.895 2-2s-.45-2-1-2-1 .895-1 2 .45 2 1 2z' fill='%23000000' fill-opacity='0.03' fill-rule='evenodd'/%3E%3C/svg%3E")`,
-          backgroundRepeat: 'repeat',
-          WebkitOverflowScrolling: 'touch'
-        }}
-      >
-        {conversation.messages?.map((message, index) => (
-          <ChatMessage
-            key={message.id || index}
-            message={message}
-            isLast={index === conversation.messages!.length - 1}
-          />
-        ))}
-        <div ref={messagesEndRef} />
+      <div className="flex-1 overflow-y-auto p-4" ref={messagesEndRef}>
+        <div className="max-w-3xl mx-auto space-y-4">
+          {conversation?.messages.map((message, index) => (
+            <ChatMessage
+              key={message.id || index}
+              message={message}
+              isLast={index === conversation.messages.length - 1}
+            />
+          ))}
+        </div>
       </div>
 
       {/* Input */}
-      <div className="bg-gray-50 border-t px-2 py-2 pb-safe flex items-end">
-        <div className="flex items-end gap-2 w-full">
-          {/* Bouton + */}
-          <button 
-            onClick={() => alert('Bientôt disponible !')}
-            className="text-gray-400 hover:text-gray-500 flex-shrink-0 mb-2"
-            title="Bientôt disponible"
-          >
-            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-            </svg>
-          </button>
-          
-          {/* Zone de texte avec bouton AI */}
-          <div className="flex-1 flex items-end bg-white rounded-3xl border px-2 py-1.5 min-h-[40px]">
+      <div className="p-4 bg-white border-t">
+        <div className="max-w-3xl mx-auto">
+          <div className="flex gap-2">
+            <div className="flex-1 flex items-end bg-white rounded-3xl border px-2 py-1.5 min-h-[40px]">
+              <button
+                onClick={handleGenerateAiResponse}
+                disabled={isGeneratingAi || isAutoPilot}
+                title={isAutoPilot ? "Désactivé quand Auto-pilot est ON" : "Générer une réponse AI"}
+                className="p-1.5 text-gray-500 hover:text-blue-500 disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
+              >
+                {isGeneratingAi ? (
+                  <div className="w-4 h-4 border-t-2 border-blue-500 rounded-full animate-spin" />
+                ) : (
+                  <svg
+                    className="w-4 h-4"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    fill="none"
+                    strokeWidth="2"
+                  >
+                    <path d="M12 4L9 9 4 9.5L8 13 7 18L12 15.5L17 18L16 13L20 9.5L15 9z" />
+                    <path d="M20 3L19 5 17 4 18 6 16 7 18 8 17 10 19 9 20 11 21 9 23 8 21 7 22 5 20 6z" />
+                  </svg>
+                )}
+              </button>
+
+              <textarea
+                ref={textareaRef}
+                value={newMessage}
+                onChange={(e) => setNewMessage(e.target.value)}
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSendMessage(newMessage);
+                  }
+                }}
+                placeholder="Message"
+                className="flex-1 bg-transparent border-none focus:outline-none px-2 py-1 resize-none overflow-y-auto min-h-[24px]"
+                rows={1}
+              />
+            </div>
+
+            {/* Bouton d'envoi */}
             <button
-              onClick={handleGenerateAiResponse}
-              disabled={isGeneratingAi || isAutoPilot}
-              title={isAutoPilot ? "Désactivé quand Auto-pilot est ON" : "Générer une réponse AI"}
-              className="p-1.5 text-gray-500 hover:text-blue-500 disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
+              onClick={() => handleSendMessage(newMessage)}
+              disabled={!newMessage.trim() || sending}
+              className={`px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed`}
             >
-              {isGeneratingAi ? (
-                <div className="w-4 h-4 border-t-2 border-blue-500 rounded-full animate-spin" />
+              {sending ? (
+                <div className="w-5 h-5 border-t-2 border-white rounded-full animate-spin" />
               ) : (
-                <svg
-                  className="w-4 h-4"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  fill="none"
-                  strokeWidth="2"
-                >
-                  <path d="M12 4L9 9 4 9.5L8 13 7 18L12 15.5L17 18L16 13L20 9.5L15 9z" />
-                  <path d="M20 3L19 5 17 4 18 6 16 7 18 8 17 10 19 9 20 11 21 9 23 8 21 7 22 5 20 6z" />
-                </svg>
+                <Send className="w-5 h-5" />
               )}
             </button>
-
-            <textarea
-              ref={textareaRef}
-              value={newMessage}
-              onChange={(e) => setNewMessage(e.target.value)}
-              onKeyPress={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  handleSendMessage(newMessage);
-                }
-              }}
-              placeholder="Message"
-              className="flex-1 bg-transparent border-none focus:outline-none px-2 py-1 resize-none overflow-y-auto min-h-[24px]"
-              rows={1}
-            />
           </div>
-
-          {/* Bouton d'envoi */}
-          <button
-            onClick={() => handleSendMessage(newMessage)}
-            disabled={!newMessage.trim() || sending}
-            className={`p-2 rounded-full flex-shrink-0 mb-0.5 ${
-              newMessage.trim() 
-                ? 'text-white bg-green-500 hover:bg-green-600' 
-                : 'text-gray-400 bg-gray-200'
-            } disabled:opacity-50`}
-          >
-            {sending ? (
-              <div className="w-5 h-5 border-t-2 border-white rounded-full animate-spin" />
-            ) : (
-              <Send className="w-5 h-5" />
-            )}
-          </button>
         </div>
       </div>
     </div>

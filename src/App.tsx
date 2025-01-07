@@ -34,7 +34,7 @@ function App() {
       <div className="flex h-screen bg-gray-100">
         {/* Desktop Sidebar - toujours visible et fixe à gauche */}
         {!isMobile && (
-          <div className="fixed left-0 top-0 w-64 h-full bg-gray-900 text-white z-10">
+          <div className="fixed left-0 top-0 w-64 h-full bg-gray-900 text-white">
             <nav className="mt-5">
               <Link to="/" className="flex items-center px-6 py-3 text-lg font-medium">
                 <Home className="w-5 h-5 mr-3" />
@@ -142,7 +142,7 @@ function App() {
         )}
 
         {/* Main content */}
-        <div className={`flex-1 ${!isMobile ? 'ml-64' : 'mt-16'} relative`}>
+        <div className={`flex-1 ${!isMobile ? 'ml-64' : 'mt-16'} relative z-10`}>
           <Routes>
             <Route path="/" element={<Navigate to="/conversations" replace />} />
             <Route path="/properties" element={<Properties />} />
