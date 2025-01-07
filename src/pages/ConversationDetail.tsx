@@ -143,7 +143,13 @@ const ConversationDetail: React.FC = () => {
         timestamp: new Date(),
         sender: 'host',
         type: 'text',
-        status: 'pending'
+        status: 'pending',
+        conversationId: conversationId,
+        propertyId: propertyId,
+        guestName: conversation.guestName,
+        guestPhone: conversation.guestPhone,
+        checkIn: conversation.checkIn,
+        checkOut: conversation.checkOut,
       };
 
       // Mise à jour optimiste
@@ -168,7 +174,11 @@ const ConversationDetail: React.FC = () => {
           propertyId: propertyId,
           message: messageData.text,
           guestPhone: conversation.guestPhone,
-          isHost: true
+          isHost: true,
+          conversationId: conversationId,
+          guestName: conversation.guestName,
+          checkIn: conversation.checkIn,
+          checkOut: conversation.checkOut,
         }),
       });
 
@@ -195,6 +205,7 @@ const ConversationDetail: React.FC = () => {
 
     } catch (error) {
       console.error('Error sending message:', error);
+
       // Marquer le message comme échoué
       setConversation(prev => {
         if (!prev) return prev;
@@ -224,9 +235,9 @@ const ConversationDetail: React.FC = () => {
   };
 
   const handleGenerateResponse = async () => {
-    if (generating) return;
-    setGenerating(true);
+    if (!conversation || sending) return;
 
+    setGenerating(true);
     try {
       const response = await fetch('/.netlify/functions/generate-ai-response', {
         method: 'POST',
@@ -234,8 +245,8 @@ const ConversationDetail: React.FC = () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          conversationId,
-          propertyId,
+          conversationId: conversationId,
+          propertyId: propertyId,
         }),
       });
 
@@ -244,15 +255,12 @@ const ConversationDetail: React.FC = () => {
       }
 
       const data = await response.json();
+      console.log('AI Generated response:', data.response);
       setNewMessage(data.response);
-      
-      // Focus et sélectionner le texte pour faciliter l'édition
-      if (textareaRef.current) {
-        textareaRef.current.focus();
-        textareaRef.current.setSelectionRange(0, data.response.length);
-      }
+
     } catch (error) {
       console.error('Error generating response:', error);
+      // TODO: Ajouter une notification d'erreur pour l'utilisateur
     } finally {
       setGenerating(false);
     }

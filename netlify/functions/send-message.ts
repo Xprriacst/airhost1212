@@ -103,6 +103,7 @@ export const handler: Handler = async (event) => {
       try {
         console.log(`📤 Attempt ${attempt}/${MAX_RETRIES} to send message to Make.com`);
         console.log('Sending to URL:', MAKE_WEBHOOK_URL);
+        console.log('Original payload:', payload);
         
         // Formater le numéro de téléphone pour Waapi
         const formattedPhone = payload.guestPhone.replace(/\D/g, '') + '@c.us';
@@ -112,7 +113,9 @@ export const handler: Handler = async (event) => {
         };
         
         console.log('Formatted phone:', formattedPhone);
-        console.log('Payload to Make:', makePayload);
+        console.log('Message length:', payload.message.length);
+        console.log('Message content:', payload.message);
+        console.log('Final payload to Make:', JSON.stringify(makePayload, null, 2));
         
         const response = await axios.post(MAKE_WEBHOOK_URL, makePayload, {
           headers: {
