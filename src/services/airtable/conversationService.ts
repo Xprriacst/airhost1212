@@ -10,24 +10,17 @@ const parseMessages = (rawMessages: any): Message[] => {
       ? JSON.parse(rawMessages) 
       : rawMessages;
 
-    // Dédupliquer les messages par ID
-    const uniqueMessages = new Map<string, Message>();
-    messages.forEach(msg => {
-      if (!uniqueMessages.has(msg.id)) {
-        // S'assurer que le message a le bon format
-        uniqueMessages.set(msg.id, {
-          ...msg,
-          timestamp: new Date(msg.timestamp),
-          sender: msg.sender === 'host' ? 'host' : 'guest',
-          type: msg.type || 'text',
-          status: msg.status || 'sent'
-        });
-      }
-    });
-
-    // Trier les messages par date
-    return Array.from(uniqueMessages.values())
-      .sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+    // Convertir et normaliser les messages
+    return messages.map(msg => ({
+      ...msg,
+      timestamp: new Date(msg.timestamp),
+      // Convertir les anciens formats vers le nouveau format sender
+      sender: msg.sender === 'Host' || msg.sender === 'host' 
+        ? 'host' 
+        : 'guest',
+      type: msg.type || 'text',
+      status: msg.status || 'sent'
+    })).sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
 
   } catch (error) {
     console.warn('Failed to parse messages:', error);
