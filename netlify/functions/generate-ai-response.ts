@@ -40,6 +40,8 @@ const handler: Handler = async (event) => {
           reject(err);
           return;
         }
+        console.log('Raw property record:', record);
+        console.log('Property fields:', record?.fields);
         resolve(record);
       });
     });
@@ -112,12 +114,18 @@ const handler: Handler = async (event) => {
     let aiInstructions = '';
     try {
       const rawInstructions = property.get('AI Instructions');
+      console.log('Raw AI Instructions:', rawInstructions);
+      
       if (rawInstructions) {
         const instructions = JSON.parse(rawInstructions);
+        console.log('Parsed AI Instructions:', instructions);
+        
         // Trier par priorité et ne prendre que les instructions actives
         const activeInstructions = instructions
           .filter((inst: any) => inst.isActive)
           .sort((a: any, b: any) => (a.priority || 0) - (b.priority || 0));
+        
+        console.log('Active AI Instructions:', activeInstructions);
         
         // Extraire le contenu
         aiInstructions = activeInstructions
@@ -127,6 +135,8 @@ const handler: Handler = async (event) => {
     } catch (error) {
       console.error('Error parsing AI Instructions:', error);
     }
+
+    console.log('Final AI Instructions:', aiInstructions);
 
     console.log('Calling OpenAI API...');
     // Générer la réponse avec GPT

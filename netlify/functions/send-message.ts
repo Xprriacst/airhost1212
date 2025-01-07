@@ -107,17 +107,23 @@ export const handler: Handler = async (event) => {
         
         // Formater le numéro de téléphone pour Waapi
         const formattedPhone = payload.guestPhone
-          .replace(/\D/g, '')  // Supprimer tous les caractères non numériques
-          .replace(/^0/, '33') // Remplacer le 0 initial par 33
-          .replace(/^33\+?33/, '33') // Éviter les doubles 33
-          + '@c.us';
+          .replace(/^\+/, '')     // Supprimer le + initial s'il existe
+          .replace(/\D/g, '')     // Supprimer tous les autres caractères non numériques
+          .replace(/^0/, '')      // Supprimer le 0 initial s'il existe
+          .replace(/^33/, '')     // Supprimer le 33 initial s'il existe
+          .replace(/^/, '33');    // Ajouter 33 au début
+        
+        // Formater le message en remplaçant les retours à la ligne par des espaces
+        const formattedMessage = payload.message
+          .replace(/\n{2,}/g, ' ') // Remplacer les doubles retours à la ligne par un espace
+          .replace(/\n/g, ' ');    // Remplacer les retours à la ligne simples par un espace
         
         const makePayload = {
-          chatId: formattedPhone,
-          message: payload.message
+          chatId: formattedPhone + '@c.us',
+          message: formattedMessage
         };
         
-        console.log('Formatted phone:', formattedPhone);
+        console.log('Formatted phone:', formattedPhone + '@c.us');
         console.log('Message length:', payload.message.length);
         console.log('Message content:', payload.message);
         console.log('Final payload to Make:', JSON.stringify(makePayload, null, 2));
