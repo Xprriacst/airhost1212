@@ -147,7 +147,7 @@ export const handler: Handler = async (event) => {
 
     // On ajoute le message seulement si la conversation existait déjà
     const newMessage = {
-      id: Date.now().toString(),
+      id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       text: data.message,
       timestamp: new Date(data.timestamp || Date.now()),
       sender: data.isHost ? 'host' : 'guest',
@@ -158,6 +158,25 @@ export const handler: Handler = async (event) => {
       conversationId: conversation.id,
       message: newMessage
     });
+
+    // Vérifier si le message n'existe pas déjà (éviter les doublons)
+    const isDuplicate = conversation.messages.some(msg => 
+      msg.text === newMessage.text && 
+      Math.abs(new Date(msg.timestamp).getTime() - new Date(newMessage.timestamp).getTime()) < 5000
+    );
+
+    if (isDuplicate) {
+      console.log('⚠️ Duplicate message detected, skipping...');
+      return {
+        statusCode: 200,
+        body: JSON.stringify({ 
+          status: 'success',
+          conversationId: conversation.id,
+          messageId: newMessage.id,
+          duplicate: true
+        }),
+      };
+    }
 
     const updatedMessages = [...(conversation.messages || []), newMessage];
     await conversationService.updateConversation(conversation.id, {

@@ -133,6 +133,7 @@ const ConversationDetail: React.FC = () => {
         throw new Error('Missing conversation data');
       }
 
+      // Créer le message avec un ID temporaire
       const messageData: Message = {
         id: `temp-${Date.now()}`,
         text: newMessage.trim(),
@@ -142,7 +143,7 @@ const ConversationDetail: React.FC = () => {
         status: 'pending'
       };
 
-      // Optimistic update
+      // Mise à jour optimiste
       setConversation(prev => {
         if (!prev) return prev;
         return {
@@ -151,63 +152,45 @@ const ConversationDetail: React.FC = () => {
         };
       });
 
-      // Reset input
+      // Réinitialiser le champ de message
       setNewMessage('');
 
-      // Scroll to bottom
-      setTimeout(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-      }, 100);
+      // Envoyer le message
+      const response = await fetch('/.netlify/functions/send-message', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          propertyId: propertyId,
+          message: messageData.text,
+          guestPhone: conversation.guestPhone,
+          isHost: true
+        }),
+      });
 
-      // Préparer le payload pour la fonction Netlify
-      const payload = {
-        message: messageData.text,
-        guestPhone: conversation.guestPhone.replace(/\D/g, ''),
-        guestName: conversation.guestName,
-        propertyId: propertyId || '',
-        timestamp: messageData.timestamp.toISOString(),
-        platform: 'whatsapp',
-        isHost: true,
-        messageType: messageData.type
-      };
-
-      // Envoyer via la fonction Netlify
-      const response = await axios.post('/.netlify/functions/send-message', payload);
-
-      if (response.data?.error) {
-        throw new Error(response.data.error);
+      if (!response.ok) {
+        throw new Error('Failed to send message');
       }
 
-      // Mettre à jour le statut du message
-      setConversation(prev => {
-        if (!prev) return prev;
-        const updatedMessages = prev.messages.map(msg => 
-          msg.id === messageData.id 
-            ? { ...msg, status: 'sent' as const }
-            : msg
-        );
-        return {
-          ...prev,
-          messages: updatedMessages
-        };
-      });
+      // Attendre un peu avant de recharger la conversation pour éviter les doublons
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      await fetchConversation();
 
-    } catch (err) {
-      console.error('Error sending message:', err);
-      // Mettre à jour le statut du message en échec
+    } catch (error) {
+      console.error('Error sending message:', error);
+      // Marquer le message comme échoué
       setConversation(prev => {
         if (!prev) return prev;
-        const updatedMessages = prev.messages.map(msg => 
-          msg.id === messageData?.id 
-            ? { ...msg, status: 'failed' as const }
-            : msg
-        );
         return {
           ...prev,
-          messages: updatedMessages
+          messages: prev.messages.map(msg => 
+            msg.id === `temp-${Date.now()}` 
+              ? { ...msg, status: 'failed' }
+              : msg
+          )
         };
       });
-      setError(err instanceof Error ? err.message : 'Failed to send message');
     } finally {
       setSending(false);
     }
