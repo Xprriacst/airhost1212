@@ -88,6 +88,26 @@ const handler: Handler = async (event) => {
       Règles: ${property.get('rules') || ''}
     `;
 
+    // Récupérer et parser les instructions AI
+    let aiInstructions = '';
+    try {
+      const rawInstructions = property.get('AI Instructions');
+      if (rawInstructions) {
+        const instructions = JSON.parse(rawInstructions);
+        // Trier par priorité et ne prendre que les instructions actives
+        const activeInstructions = instructions
+          .filter((inst: any) => inst.isActive)
+          .sort((a: any, b: any) => (a.priority || 0) - (b.priority || 0));
+        
+        // Extraire le contenu
+        aiInstructions = activeInstructions
+          .map((inst: any) => inst.content)
+          .join('\n\n');
+      }
+    } catch (error) {
+      console.error('Error parsing AI Instructions:', error);
+    }
+
     // Récupérer les 5 derniers messages pour le contexte
     const recentMessages = messages
       .slice(-5)
@@ -101,7 +121,15 @@ const handler: Handler = async (event) => {
       messages: [
         {
           role: "system",
-          content: `Tu es un assistant pour un hôte Airbnb. Tu dois répondre aux questions des clients de manière professionnelle, amicale et précise, en te basant sur les informations du logement. Voici les informations du logement:\n${propertyContext}`
+          content: `Tu es un assistant pour un hôte Airbnb. Tu dois répondre aux questions des clients de manière professionnelle, amicale et précise.
+
+Voici les informations du logement:
+${propertyContext}
+
+Instructions spécifiques et connaissances supplémentaires:
+${aiInstructions}
+
+Utilise ces informations pour répondre aux questions des clients. Si une question correspond à une des instructions spécifiques, utilise cette réponse en priorité. Sinon, base-toi sur les informations générales du logement.`
         },
         {
           role: "user",
