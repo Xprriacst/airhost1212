@@ -1,5 +1,6 @@
 import { Handler } from '@netlify/functions';
 import axios from 'axios';
+import { conversationService } from '../../src/services/airtable/conversationService';
 
 const MAKE_WEBHOOK_URL = 'https://hook.eu1.make.com/6nnd7wwqw2srqyar2jwwtqqliyn83gda';
 const MAX_RETRIES = 3;
@@ -63,6 +64,40 @@ export const handler: Handler = async (event) => {
       };
     }
 
+    // Récupérer la conversation
+    console.log('🔍 Fetching conversations for property:', payload.propertyId);
+    const conversations = await conversationService.fetchPropertyConversations(payload.propertyId);
+    const conversation = conversations.find(c => c.guestPhone === payload.guestPhone);
+
+    if (!conversation) {
+      console.error('❌ Conversation not found');
+      return {
+        statusCode: 404,
+        headers: corsHeaders,
+        body: JSON.stringify({ error: 'Conversation not found' })
+      };
+    }
+
+    // Ajouter le message à la conversation
+    const newMessage = {
+      id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      text: payload.message,
+      timestamp: new Date(),
+      sender: 'host',
+      type: 'text',
+      status: 'pending'
+    };
+
+    console.log('📝 Adding message to conversation:', {
+      conversationId: conversation.id,
+      message: newMessage
+    });
+
+    const updatedMessages = [...conversation.messages, newMessage];
+    await conversationService.updateConversation(conversation.id, {
+      Messages: JSON.stringify(updatedMessages)
+    });
+
     // Tentatives d'envoi avec retry
     for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
       try {
@@ -80,12 +115,24 @@ export const handler: Handler = async (event) => {
           data: response.data
         });
 
+        // Marquer le message comme envoyé
+        const sentMessages = updatedMessages.map(msg => 
+          msg.id === newMessage.id 
+            ? { ...msg, status: 'sent' }
+            : msg
+        );
+
+        await conversationService.updateConversation(conversation.id, {
+          Messages: JSON.stringify(sentMessages)
+        });
+
         return {
           statusCode: 200,
           headers: corsHeaders,
           body: JSON.stringify({ 
             success: true,
-            message: 'Message sent successfully'
+            message: 'Message sent successfully',
+            messageId: newMessage.id
           })
         };
       } catch (error) {
@@ -96,6 +143,17 @@ export const handler: Handler = async (event) => {
           console.log(`⏳ Waiting ${delay}ms before next attempt...`);
           await sleep(delay);
         } else {
+          // Marquer le message comme échoué
+          const failedMessages = updatedMessages.map(msg => 
+            msg.id === newMessage.id 
+              ? { ...msg, status: 'failed' }
+              : msg
+          );
+
+          await conversationService.updateConversation(conversation.id, {
+            Messages: JSON.stringify(failedMessages)
+          });
+
           throw error;
         }
       }
