@@ -63,22 +63,36 @@ export default function Conversations() {
   };
 
   return (
-    <div className="min-h-screen max-h-screen w-screen bg-white flex flex-col">
-      {/* Header fixe */}
-      <div className="h-14 bg-white border-b z-10 flex items-center justify-center flex-shrink-0">
-        <h1 className="text-xl font-semibold">AirHost</h1>
+    <div className="flex-1 flex flex-col h-screen overflow-hidden">
+      {/* Header */}
+      <div className="bg-white border-b px-4 h-14 flex items-center flex-shrink-0">
+        <h1 className="text-xl font-semibold text-gray-900">Conversations</h1>
       </div>
 
-      {/* Liste scrollable */}
-      <div className="flex-1 overflow-y-auto">
-        <ConversationList
-          conversations={conversations}
-          autoPilotStates={autoPilotStates}
-          onSelectConversation={handleSelectConversation}
-          onToggleAutoPilot={handleToggleAutoPilot}
-          isLoading={isLoading}
-          error={error}
-        />
+      {/* Liste des conversations */}
+      <div className="flex-1 overflow-y-auto bg-white">
+        {isLoading ? (
+          <div className="flex items-center justify-center h-full">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900" />
+          </div>
+        ) : error ? (
+          <div className="flex items-center justify-center h-full text-red-500">
+            {error}
+          </div>
+        ) : conversations.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-full text-gray-500">
+            <p>Aucune conversation</p>
+          </div>
+        ) : (
+          <div className="divide-y">
+            <ConversationList
+              conversations={conversations}
+              autoPilotStates={autoPilotStates}
+              onSelectConversation={handleSelectConversation}
+              onToggleAutoPilot={handleToggleAutoPilot}
+            />
+          </div>
+        )}
       </div>
     </div>
   );

@@ -39,39 +39,37 @@ function App() {
 
   return (
     <Router>
-      <div className="flex h-screen bg-gray-100">
+      <div className="flex h-screen overflow-hidden">
         {/* Desktop Sidebar - toujours visible et fixe à gauche */}
         {!isMobile && (
-          <div className="fixed left-0 top-0 w-64 h-full bg-gray-900 text-white">
-            <nav className="mt-5">
-              <Link to="/" className="flex items-center px-6 py-3 text-lg font-medium">
+          <aside className="w-64 bg-gray-900 text-white flex-shrink-0">
+            <nav className="h-full flex flex-col py-4">
+              <Link to="/" className="flex items-center px-4 py-2 text-white hover:bg-gray-800">
                 <Home className="w-5 h-5 mr-3" />
                 AirHost Admin
               </Link>
-              <div className="mt-5">
-                <Link to="/properties" className="flex items-center px-6 py-3 text-gray-300 hover:bg-gray-800">
-                  <Building2 className="w-5 h-5 mr-3" />
-                  Propriétés
-                </Link>
-                <Link to="/conversations" className="flex items-center px-6 py-3 text-gray-300 hover:bg-gray-800">
-                  <MessageSquare className="w-5 h-5 mr-3" />
-                  Conversations
-                </Link>
-                <Link to="/emergency-cases" className="flex items-center px-6 py-3 text-gray-300 hover:bg-gray-800">
-                  <AlertTriangle className="w-5 h-5 mr-3" />
-                  Cas d'urgence
-                </Link>
-                <Link to="/chat-sandbox" className="flex items-center px-6 py-3 text-gray-300 hover:bg-gray-800">
-                  <Sparkles className="w-5 h-5 mr-3" />
-                  Chat Sandbox
-                </Link>
-                <Link to="/settings" className="flex items-center px-6 py-3 text-gray-300 hover:bg-gray-800">
-                  <SettingsIcon className="w-5 h-5 mr-3" />
-                  Paramètres
-                </Link>
-              </div>
+              <Link to="/properties" className="flex items-center px-4 py-2 mt-2 text-white hover:bg-gray-800">
+                <Building2 className="w-5 h-5 mr-3" />
+                Propriétés
+              </Link>
+              <Link to="/conversations" className="flex items-center px-4 py-2 text-white hover:bg-gray-800">
+                <MessageSquare className="w-5 h-5 mr-3" />
+                Conversations
+              </Link>
+              <Link to="/emergency-cases" className="flex items-center px-4 py-2 text-white hover:bg-gray-800">
+                <AlertTriangle className="w-5 h-5 mr-3" />
+                Cas d'urgence
+              </Link>
+              <Link to="/chat-sandbox" className="flex items-center px-4 py-2 text-white hover:bg-gray-800">
+                <Sparkles className="w-5 h-5 mr-3" />
+                Chat Sandbox
+              </Link>
+              <Link to="/settings" className="flex items-center px-4 py-2 mt-auto text-white hover:bg-gray-800">
+                <SettingsIcon className="w-5 h-5 mr-3" />
+                Paramètres
+              </Link>
             </nav>
-          </div>
+          </aside>
         )}
 
         {/* Mobile Header avec hamburger */}
@@ -154,7 +152,7 @@ function App() {
         )}
 
         {/* Main content */}
-        <div className={`flex-1 ${!isMobile ? 'ml-64' : 'mt-16'} relative z-10`}>
+        <main className={`flex-1 ${!isMobile ? 'ml-64' : 'mt-16'} relative z-10 overflow-hidden`}>
           <Routes>
             <Route path="/" element={<Navigate to="/conversations" replace />} />
             <Route path="/properties" element={<Properties />} />
@@ -164,7 +162,7 @@ function App() {
             <Route path="/chat-sandbox" element={<ChatSandbox />} />
             <Route path="/settings" element={<Settings />} />
           </Routes>
-        </div>
+        </main>
       </div>
     </Router>
   );
