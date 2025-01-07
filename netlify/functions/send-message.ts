@@ -104,7 +104,14 @@ export const handler: Handler = async (event) => {
         console.log(`📤 Attempt ${attempt}/${MAX_RETRIES} to send message to Make.com`);
         console.log('Sending to URL:', MAKE_WEBHOOK_URL);
         
-        const response = await axios.post(MAKE_WEBHOOK_URL, payload, {
+        // Formater le numéro de téléphone pour Waapi
+        const formattedPhone = payload.guestPhone.replace(/\D/g, '') + '@c.us';
+        const makePayload = {
+          ...payload,
+          guestPhone: formattedPhone
+        };
+        
+        const response = await axios.post(MAKE_WEBHOOK_URL, makePayload, {
           headers: {
             'Content-Type': 'application/json'
           }
