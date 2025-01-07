@@ -77,8 +77,9 @@ const ConversationDetail: React.FC = () => {
   }, [conversationId]);
 
   useEffect(() => {
-    if (conversation?.messages) {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'instant' });
+    // Scroll to bottom instantly when conversation opens
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ block: 'end', behavior: 'instant' as ScrollBehavior });
     }
   }, [conversation?.messages]);
 
@@ -306,6 +307,7 @@ const ConversationDetail: React.FC = () => {
               isLast={index === conversation.messages.length - 1}
             />
           ))}
+          <div ref={messagesEndRef} /> {/* Anchor for scrolling */}
         </div>
       </div>
 

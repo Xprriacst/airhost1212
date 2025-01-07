@@ -68,13 +68,17 @@ function App() {
 
         {/* Mobile Header avec hamburger */}
         {isMobile && (
-          <div className="fixed top-0 left-0 right-0 h-16 bg-white border-b z-20 px-4 flex items-center justify-between">
+          <div className="fixed top-0 left-0 right-0 h-14 bg-white border-b z-20 flex items-center justify-between px-4">
             <button
               onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-              className="p-2 hover:bg-gray-100 rounded-md"
+              className="p-2 hover:bg-gray-50 rounded-full"
             >
               <Menu className="w-6 h-6 text-gray-700" />
             </button>
+            <span className="absolute left-1/2 transform -translate-x-1/2 text-xl font-semibold">
+              AirHost
+            </span>
+            <div className="w-10" /> {/* Spacer pour centrer le titre */}
           </div>
         )}
 
