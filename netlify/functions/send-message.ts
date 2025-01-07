@@ -106,7 +106,12 @@ export const handler: Handler = async (event) => {
         console.log('Original payload:', payload);
         
         // Formater le numéro de téléphone pour Waapi
-        const formattedPhone = payload.guestPhone.replace(/\D/g, '') + '@c.us';
+        const formattedPhone = payload.guestPhone
+          .replace(/\D/g, '')  // Supprimer tous les caractères non numériques
+          .replace(/^0/, '33') // Remplacer le 0 initial par 33
+          .replace(/^33\+?33/, '33') // Éviter les doubles 33
+          + '@c.us';
+        
         const makePayload = {
           chatId: formattedPhone,
           message: payload.message
