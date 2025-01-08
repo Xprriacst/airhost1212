@@ -31,7 +31,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   onClearChat,
 }) => {
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-4 flex flex-col h-[calc(100vh-200px)]">
+    <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-4 flex flex-col h-[600px]">
       <div className="p-4 border-b flex-shrink-0">
         <div className="flex justify-between items-start">
           <div>
