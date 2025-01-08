@@ -99,7 +99,7 @@ const ChatSandbox: React.FC = () => {
   };
 
   return (
-    <div className="p-6 max-w-4xl mx-auto h-screen overflow-y-auto flex flex-col">
+    <div className="p-2 sm:p-6 mx-auto max-w-4xl h-screen overflow-y-auto flex flex-col">
       <div className="mb-6 flex-shrink-0">
         <h1 className="text-2xl font-bold text-gray-900 mb-4">Chat Sandbox</h1>
         <p className="text-gray-600 mb-4">
