@@ -37,16 +37,13 @@ export const aiService = {
       });
 
       const completion = await openai.chat.completions.create({
-        model: "gpt-4-0125-preview",
+        model: "gpt-4o-mini-2024-07-18",  // Version mini optimisée pour les tâches spécifiques
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt }
         ],
         temperature: 0.7,
-        max_tokens: config.maxResponseLength || 150,
-        top_p: 0.9,
-        frequency_penalty: 0.3,
-        presence_penalty: 0.3
+        max_tokens: 500
       });
 
       const response = completion.choices[0]?.message?.content;

@@ -67,28 +67,32 @@ ${conversation.previousMessages.map(msg =>
   }
 
   static buildSystemPrompt(context: AIResponseContext, config: AIConfig = {}): string {
-    return `${this.formatPropertyContext(context)}
+    const propertyContext = `
+      Logement: ${context.property.name}
+      Description: ${context.property.description || ''}
+      Adresse: ${context.property.address || ''}
+      Capacité: ${context.property.capacity || ''} personnes
+      Check-in: ${context.property.checkInInstructions || ''}
+      WiFi: ${context.property.wifiInformation || ''}
+      Règles: ${context.property.rules || ''}
+    `;
 
-${this.formatTimeContext(context)}
+    const aiInstructions = context.property.aiInstructions
+      ?.map(instruction => instruction.content)
+      .join('\n\n') || '';
 
-${this.formatBookingContext(context)}
+    return `Tu es un assistant pour un hôte Airbnb. Tu dois répondre aux questions des clients de manière professionnelle, amicale et précise.
 
-${this.formatConversationHistory(context)}
+Voici les informations du logement:
+${propertyContext}
 
-CONFIGURATION:
-- Langue: ${config.language || 'fr'}
-- Ton: ${config.tone || 'friendly'}
-- Style: ${config.shouldIncludeEmoji ? 'Inclure des emojis appropriés' : 'Sans emoji'}
+Instructions spécifiques et connaissances supplémentaires:
+${aiInstructions}
 
-DIRECTIVES:
-1. Répondez de manière concise et précise
-2. Adaptez le ton selon les instructions du logement
-3. Utilisez le contexte temporel pour personnaliser la réponse
-4. Évitez de répéter les informations déjà fournies
-5. Restez professionnel et bienveillant`;
+Utilise ces informations pour répondre aux questions des clients. Si une question correspond à une des instructions spécifiques, utilise cette réponse en priorité. Sinon, base-toi sur les informations générales du logement.`;
   }
 
   static buildUserPrompt(message: Message): string {
-    return `Message de l'invité: "${message.text}"`;
+    return `Voici les derniers messages de la conversation:\nClient: ${message.text}\n\nGénère une réponse appropriée en tant qu'hôte, en français.`;
   }
 }
