@@ -91,6 +91,11 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
             placeholder="Tapez un message..."
             className="flex-1 rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
             disabled={isGenerating}
+            inputMode="text"
+            autoComplete="off"
+            autoCorrect="off"
+            autoCapitalize="off"
+            spellCheck="false"
           />
           <button
             onClick={onSendMessage}

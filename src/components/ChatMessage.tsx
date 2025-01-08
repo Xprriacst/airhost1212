@@ -1,5 +1,6 @@
 import React from 'react';
 import type { Message } from '../types';
+import { Copy, Check } from 'lucide-react';
 
 interface ChatMessageProps {
   message: Message;
@@ -7,6 +8,8 @@ interface ChatMessageProps {
 }
 
 const ChatMessage: React.FC<ChatMessageProps> = ({ message, isLast }) => {
+  const [copied, setCopied] = React.useState(false);
+  
   // Un message est de "nous" (l'hôte) si :
   // 1. Il vient de l'IA (sender === 'AI')
   // 2. Il vient de l'hôte (sender === 'Host')
@@ -19,6 +22,16 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, isLast }) => {
     minute: '2-digit',
     hour12: false
   });
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(message.text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy text:', err);
+    }
+  };
 
   return (
     <div className={`flex ${isFromUs ? 'justify-end' : 'justify-start'} mb-1`}>
@@ -45,10 +58,23 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, isLast }) => {
 
         {/* Contenu du message */}
         <div className="relative">
-          <p className="text-[15px] leading-[20px] text-gray-800 whitespace-pre-wrap break-words">
+          <p className="text-[15px] leading-[20px] text-gray-800 whitespace-pre-wrap break-words select-text">
             {message.text}
           </p>
-          <div className="flex items-center justify-end -mb-1 mt-1 space-x-1">
+          <div className="flex items-center justify-end -mb-1 mt-1 space-x-2">
+            {isFromUs && (
+              <button
+                onClick={handleCopy}
+                className="p-1 hover:bg-black/5 rounded transition-colors"
+                aria-label={copied ? "Copié !" : "Copier le message"}
+              >
+                {copied ? (
+                  <Check className="w-4 h-4 text-green-600" />
+                ) : (
+                  <Copy className="w-4 h-4 text-gray-500" />
+                )}
+              </button>
+            )}
             <span className="text-[11px] text-gray-500 min-w-[45px]">
               {time}
             </span>
