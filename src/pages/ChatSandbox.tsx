@@ -99,8 +99,8 @@ const ChatSandbox: React.FC = () => {
   };
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
-      <div className="mb-6">
+    <div className="p-6 max-w-4xl mx-auto h-screen overflow-y-auto flex flex-col">
+      <div className="mb-6 flex-shrink-0">
         <h1 className="text-2xl font-bold text-gray-900 mb-4">Chat Sandbox</h1>
         <p className="text-gray-600 mb-4">
           Testez les réponses de l'IA pour différentes propriétés et contextes.
@@ -125,7 +125,7 @@ const ChatSandbox: React.FC = () => {
                 onChange={(e) => setHasBooking(e.target.checked)}
                 className="sr-only peer"
               />
-              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
               <span className="ms-3 text-sm font-medium text-gray-900">A une réservation</span>
             </label>
           </div>
@@ -273,8 +273,8 @@ const ChatSandbox: React.FC = () => {
       </div>
 
       {selectedProperty && (
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-4">
-          <div className="p-4 border-b">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-4 flex-1 min-h-[400px] flex flex-col">
+          <div className="p-4 border-b flex-shrink-0">
             <div className="flex justify-between items-start">
               <div>
                 <h2 className="text-lg font-semibold text-gray-900">{selectedProperty.name}</h2>
@@ -290,7 +290,7 @@ const ChatSandbox: React.FC = () => {
             </div>
           </div>
 
-          <div className="h-[400px] overflow-y-auto p-4 space-y-4">
+          <div className="flex-1 overflow-y-auto p-4 space-y-4">
             {messages.map((message) => (
               <ChatMessage key={message.id} message={message} />
             ))}
