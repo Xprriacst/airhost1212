@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Zap, AlertTriangle, Wrench, Package, HelpCircle, AlertOctagon } from 'lucide-react';
 import type { Message, Conversation, Property, EmergencyTag } from '../types';
@@ -39,6 +39,29 @@ const MobileChat: React.FC = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [customResponse, setCustomResponse] = useState('');
   const [isAutoPilot, setIsAutoPilot] = useState(propertyAutoPilot || false);
+
+  const [isAtBottom, setIsAtBottom] = useState(true);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
+
+  const scrollToBottom = useCallback(() => {
+    if (isAtBottom && messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [isAtBottom]);
+
+  const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
+    const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
+    const bottom = Math.abs(scrollHeight - scrollTop - clientHeight) < 50;
+    setIsAtBottom(bottom);
+  }, []);
+
+  useEffect(() => {
+    // Scroll to bottom only for new messages and if we were already at bottom
+    if (messages.length > 0 && isAtBottom) {
+      scrollToBottom();
+    }
+  }, [messages, scrollToBottom]);
 
   useEffect(() => {
     if (messages.length > 0 && !isAutoPilot) {
@@ -171,10 +194,15 @@ const MobileChat: React.FC = () => {
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto bg-white px-4">
+      <div 
+        ref={messagesContainerRef}
+        onScroll={handleScroll}
+        className="flex-1 overflow-y-auto bg-white px-4"
+      >
         {messages.map((message) => (
           <ChatMessage key={message.id} message={message} />
         ))}
+        <div ref={messagesEndRef} />
         {isGenerating && (
           <div className="flex items-center gap-2 text-gray-500 text-sm">
             <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
