@@ -63,15 +63,6 @@ const MobileChat: React.FC = () => {
     }
   }, [messages, scrollToBottom]);
 
-  useEffect(() => {
-    if (messages.length > 0 && !isAutoPilot) {
-      const lastMessage = messages[messages.length - 1];
-      if (!lastMessage.isUser) {
-        generateAiResponse(lastMessage);
-      }
-    }
-  }, [messages, isAutoPilot]);
-
   const generateAiResponse = async (message: Message) => {
     setIsGenerating(true);
     try {
