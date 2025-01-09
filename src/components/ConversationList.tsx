@@ -97,9 +97,24 @@ export default function ConversationList({
           {/* Message content */}
           <div className="flex-1 min-w-0">
             <div className="flex justify-between items-center">
-              <span className={`font-medium ${conversation.unreadCount > 0 ? 'font-semibold text-black' : 'text-gray-900'}`}>
-                {conversation.guestName}
-              </span>
+              <div className="flex items-center gap-2">
+                <span className={`font-medium ${conversation.unreadCount > 0 ? 'font-semibold text-black' : 'text-gray-900'}`}>
+                  {conversation.guestName}
+                </span>
+                <div 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onToggleAutoPilot(conversation.id);
+                  }}
+                  className={`px-2 py-0.5 text-xs rounded-full border ${
+                    autoPilotStates[conversation.id] 
+                      ? 'bg-blue-50 text-blue-600 border-blue-200' 
+                      : 'bg-gray-50 text-gray-500 border-gray-200'
+                  }`}
+                >
+                  Auto-Pilot
+                </div>
+              </div>
               <div className="flex items-center gap-1">
                 {conversation.unreadCount > 0 && (
                   <div className="bg-green-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">
@@ -116,22 +131,8 @@ export default function ConversationList({
             </div>
           </div>
 
-          {/* Auto-pilot button */}
+          {/* Empty div to replace old Auto-pilot button */}
           <div className="flex items-center">
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onToggleAutoPilot(conversation.id);
-              }}
-              className={`p-2 rounded-lg ${
-                autoPilotStates[conversation.id] 
-                  ? 'text-blue-500 bg-blue-50 hover:bg-blue-100'
-                  : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
-              }`}
-              title={autoPilotStates[conversation.id] ? "Désactiver Auto-pilot" : "Activer Auto-pilot"}
-            >
-              <MessageSquare className="w-5 h-5" />
-            </button>
           </div>
         </div>
       ))}
