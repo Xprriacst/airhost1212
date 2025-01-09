@@ -151,47 +151,27 @@ const MobileChat: React.FC = () => {
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="fixed top-0 left-0 right-0 bg-white border-b z-20">
-        <div className="flex items-center h-14 px-4">
+      <div className="sticky top-0 left-0 right-0 bg-white border-b z-20">
+        <div className="flex items-center gap-2 px-4 py-3">
           <button 
             onClick={() => navigate(-1)}
             className="p-2 -ml-2 hover:bg-gray-50 rounded-full"
           >
             <ArrowLeft className="w-6 h-6 text-gray-700" />
           </button>
-          
-          <div className="flex items-center gap-2 ml-2">
-            <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
-              <span className="text-gray-600 text-sm font-medium">
-                {conversation?.guestName?.charAt(0).toUpperCase()}
-              </span>
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-sm font-medium text-gray-900">
-                  {conversation?.guestName || 'Conversation'}
-                </h2>
-                <div 
-                  onClick={handleToggleAutoPilot}
-                  className={`px-2 py-0.5 text-xs rounded-full border cursor-pointer ${
-                    isAutoPilot 
-                      ? 'bg-blue-50 text-blue-600 border-blue-200' 
-                      : 'bg-gray-50 text-gray-500 border-gray-200'
-                  }`}
-                >
-                  Auto-Pilot
-                </div>
-              </div>
-              <p className="text-xs text-gray-500">
-                {conversation?.checkIn && new Date(conversation.checkIn).toLocaleDateString()} - {conversation?.checkOut && new Date(conversation.checkOut).toLocaleDateString()}
-              </p>
-            </div>
+          <div>
+            <h2 className="font-medium">
+              {conversation?.guestName || 'Conversation'}
+            </h2>
+            <p className="text-xs text-gray-500">
+              {conversation?.checkIn && new Date(conversation.checkIn).toLocaleDateString()} - {conversation?.checkOut && new Date(conversation.checkOut).toLocaleDateString()}
+            </p>
           </div>
         </div>
       </div>
 
-      {/* Messages avec padding en haut et en bas pour la barre de texte */}
-      <div className="flex-1 overflow-y-auto bg-white pt-14 pb-[60px] px-4">
+      {/* Messages */}
+      <div className="flex-1 overflow-y-auto bg-white px-4">
         {messages.map((message) => (
           <ChatMessage key={message.id} message={message} />
         ))}
