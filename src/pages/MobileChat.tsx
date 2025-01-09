@@ -144,62 +144,50 @@ const MobileChat: React.FC = () => {
     }
   };
 
+  const handleToggleAutoPilot = () => {
+    setIsAutoPilot(!isAutoPilot);
+  };
+
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="bg-white border-b px-4 py-3">
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => navigate(-1)}
-              className="p-2 hover:bg-gray-100 rounded-lg"
-            >
-              <ArrowLeft className="w-5 h-5 text-gray-600" />
-            </button>
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-lg font-semibold">Invité : {conversation?.guestName}</h1>
-                {conversation?.emergencyTags?.map((tag) => (
-                  <EmergencyIcon key={tag} tag={tag} />
-                ))}
-              </div>
-              <p className="text-sm text-gray-500">
-                {new Date(conversation?.checkIn).toLocaleDateString()} - {new Date(conversation?.checkOut).toLocaleDateString()}
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={() => setIsAutoPilot(!isAutoPilot)}
-            disabled={!propertyAutoPilot}
-            className={`flex items-center gap-2 px-4 py-2 rounded-full transition-colors ${
-              !propertyAutoPilot 
-                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                : isAutoPilot
-                  ? 'bg-blue-100 text-blue-700'
-                  : 'bg-gray-100 text-gray-600'
-            }`}
+      <div className="fixed top-0 left-0 right-0 bg-white border-b z-20">
+        <div className="flex items-center gap-2 px-4 py-3">
+          <button 
+            onClick={() => navigate(-1)}
+            className="p-2 -ml-2 hover:bg-gray-50 rounded-full"
           >
-            <Zap className={`w-4 h-4 ${
-              !propertyAutoPilot 
-                ? 'text-gray-400'
-                : isAutoPilot 
-                  ? 'text-blue-500' 
-                  : 'text-gray-400'
-            }`} />
-            <span className="text-sm font-medium">
-              {isAutoPilot ? 'Auto-pilot ON' : 'Auto-pilot OFF'}
-            </span>
+            <ArrowLeft className="w-6 h-6 text-gray-700" />
           </button>
-        </div>
-        {!propertyAutoPilot && (
-          <div className="bg-gray-50 text-gray-600 text-sm px-3 py-1 rounded-md">
-            Auto-pilot est désactivé pour cette propriété
+          
+          <div className="flex-1">
+            <div className="flex items-center gap-2">
+              <h2 className="font-semibold text-gray-900">
+                {conversation?.guestName || 'Conversation'}
+              </h2>
+              <div 
+                onClick={handleToggleAutoPilot}
+                className={`px-2 py-0.5 text-xs rounded-full border cursor-pointer ${
+                  isAutoPilot 
+                    ? 'bg-blue-50 text-blue-600 border-blue-200' 
+                    : 'bg-gray-50 text-gray-500 border-gray-200'
+                }`}
+              >
+                Auto-Pilot
+              </div>
+              {conversation?.emergencyTags?.map((tag) => (
+                <EmergencyIcon key={tag} tag={tag} />
+              ))}
+            </div>
+            <p className="text-xs text-gray-500">
+              {conversation?.checkIn && new Date(conversation.checkIn).toLocaleDateString()} - {conversation?.checkOut && new Date(conversation.checkOut).toLocaleDateString()}
+            </p>
           </div>
-        )}
+        </div>
       </div>
 
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      {/* Messages avec padding en haut et en bas pour la barre de texte */}
+      <div className="flex-1 overflow-y-auto bg-white pt-[76px] pb-[60px]">
         {messages.map((message) => (
           <ChatMessage key={message.id} message={message} />
         ))}
