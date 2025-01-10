@@ -36,6 +36,7 @@ const ConversationDetail: React.FC = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const pollingRef = useRef<NodeJS.Timeout>();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const isUpdatingAutoPilot = useRef(false);
   
   const [conversation, setConversation] = useState<Conversation | null>(null);
   const [property, setProperty] = useState<Property | null>(null);
@@ -47,7 +48,7 @@ const ConversationDetail: React.FC = () => {
   const [isAutoPilot, setIsAutoPilot] = useState(false);
 
   const fetchConversation = async () => {
-    if (!conversationId) return;
+    if (!conversationId || isUpdatingAutoPilot.current) return;
 
     try {
       const data = await conversationService.fetchConversationById(conversationId);
@@ -57,8 +58,17 @@ const ConversationDetail: React.FC = () => {
         await conversationService.markConversationAsRead(conversationId);
       }
       
-      setConversation(data);
-      setIsAutoPilot(data.autoPilot || false);
+      // Mettre à jour la conversation mais préserver l'état d'Auto Pilot pendant la mise à jour
+      setConversation(prev => ({
+        ...data,
+        autoPilot: isUpdatingAutoPilot.current ? prev?.autoPilot || false : data.autoPilot
+      }));
+
+      // Ne mettre à jour l'état d'Auto Pilot que si nous ne sommes pas en train de le modifier
+      if (!isUpdatingAutoPilot.current) {
+        setIsAutoPilot(data.autoPilot || false);
+      }
+
       setError(null);
     } catch (err) {
       console.error('Error fetching conversation:', err);
@@ -126,15 +136,26 @@ const ConversationDetail: React.FC = () => {
     if (!conversation) return;
 
     try {
+      isUpdatingAutoPilot.current = true;
+      const newAutoPilotState = !isAutoPilot;
+      
+      // Mise à jour optimiste de l'état local
+      setIsAutoPilot(newAutoPilotState);
+      
+      // Mise à jour dans Airtable
       const updatedConversation = await conversationService.updateConversation(
         conversation.id,
-        { 'Auto Pilot': !isAutoPilot }
+        { 'Auto Pilot': newAutoPilotState }
       );
 
-      setIsAutoPilot(!isAutoPilot);
+      // Mettre à jour la conversation avec les nouvelles données
       setConversation(updatedConversation);
     } catch (err) {
       console.error('Error toggling auto pilot:', err);
+      // Restaurer l'état précédent en cas d'erreur
+      setIsAutoPilot(!isAutoPilot);
+    } finally {
+      isUpdatingAutoPilot.current = false;
     }
   };
 
