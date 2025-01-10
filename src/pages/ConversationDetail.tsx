@@ -1,3 +1,5 @@
+// src/pages/ConversationDetail.tsx
+
 import React, { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Send, Sparkles, Zap } from 'lucide-react';
@@ -7,20 +9,17 @@ import type { Conversation, Message, Property } from '../types';
 
 const POLLING_INTERVAL = 3000;
 
+// Composant d'affichage d'un message
 const Message = ({ message }: { message: Message }) => {
   const isGuest = message.sender === 'guest';
-  
+
   return (
     <div className={`flex ${isGuest ? 'justify-start' : 'justify-end'} mb-2`}>
-      <div 
+      <div
         className={`max-w-[75%] rounded-2xl px-4 py-2 ${
-          isGuest 
-            ? 'bg-gray-100 text-gray-900' 
-            : 'bg-blue-500 text-white'
-        } ${
           isGuest
-            ? 'rounded-tl-sm'
-            : 'rounded-tr-sm'
+            ? 'bg-gray-100 text-gray-900 rounded-tl-sm'
+            : 'bg-blue-500 text-white rounded-tr-sm'
         }`}
       >
         {message.text}
@@ -32,13 +31,20 @@ const Message = ({ message }: { message: Message }) => {
 const ConversationDetail: React.FC = () => {
   const { conversationId, propertyId } = useParams();
   const navigate = useNavigate();
+
+  // Références
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const pollingRef = useRef<NodeJS.Timeout>();
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const skipPollingRef = useRef(false);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const pollingRef = useRef<NodeJS.Timeout>();
+  const skipPollingRef = useRef(false);
+
+  // Pour savoir si on a déjà fait le 1er scroll auto
   const initialScrollDoneRef = useRef(false);
-  
+  // Pour comparer si le nombre de messages a augmenté
+  const prevMessagesLengthRef = useRef(0);
+
+  // States
   const [conversation, setConversation] = useState<Conversation | null>(null);
   const [property, setProperty] = useState<Property | null>(null);
   const [newMessage, setNewMessage] = useState('');
@@ -47,58 +53,54 @@ const ConversationDetail: React.FC = () => {
   const [sending, setSending] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [isAutoPilot, setIsAutoPilot] = useState(false);
-  const [shouldScrollToBottom, setShouldScrollToBottom] = useState(true);
+
+  // Gère si on est proche du bas
   const [isAtBottom, setIsAtBottom] = useState(true);
 
+  // Détecte le scroll pour mettre à jour `isAtBottom`
   const handleScroll = () => {
     if (!messagesContainerRef.current) return;
-    
+
     const { scrollTop, scrollHeight, clientHeight } = messagesContainerRef.current;
-    const isNearBottom = Math.abs(scrollHeight - scrollTop - clientHeight) < 150;
-    
-    if (isNearBottom !== isAtBottom) {
-      setIsAtBottom(isNearBottom);
-      setShouldScrollToBottom(isNearBottom);
-    }
+    // Seuil réduit (20px)
+    const nearBottom = scrollHeight - scrollTop - clientHeight < 20;
+    setIsAtBottom(nearBottom);
   };
 
+  // Permet de scroller en bas
   const scrollToBottom = (smooth = true) => {
     if (messagesEndRef.current) {
-      const behavior = smooth ? 'smooth' : 'auto';
-      try {
-        messagesEndRef.current.scrollIntoView({ 
-          behavior,
-          block: 'end',
-        });
-      } catch (error) {
-        // Fallback pour les navigateurs qui ne supportent pas scrollIntoView avec options
-        if (messagesContainerRef.current) {
-          messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
-        }
-      }
+      messagesEndRef.current.scrollIntoView({
+        behavior: smooth ? 'smooth' : 'auto',
+        block: 'end',
+      });
     }
   };
 
+  // Récupère la conversation sur l'API
   const fetchConversation = async () => {
     if (!conversationId || skipPollingRef.current) return;
 
     try {
       const data = await conversationService.fetchConversationById(conversationId);
-      
+
+      // Marquer comme lu s'il y a des nouveaux messages
       if (data.unreadCount > 0) {
         await conversationService.markConversationAsRead(conversationId);
       }
-      
-      setConversation(prev => {
-        if (prev && prev.messages.length !== data.messages.length && isAtBottom) {
-          setShouldScrollToBottom(true);
-        }
+
+      setConversation((prev) => {
+        // On met à jour seulement si la taille des messages a changé
+        // (ou si c'est la première fois)
+        // pas d'auto-scroll si l'utilisateur n'est pas déjà tout en bas
         return data;
       });
 
+      // Mise à jour de l'état auto-pilot
       if (!skipPollingRef.current) {
         setIsAutoPilot(data.autoPilot || false);
       }
+
       setError(null);
     } catch (err) {
       console.error('Error fetching conversation:', err);
@@ -108,9 +110,11 @@ const ConversationDetail: React.FC = () => {
     }
   };
 
+  // Lance le polling
   useEffect(() => {
     fetchConversation();
     pollingRef.current = setInterval(fetchConversation, POLLING_INTERVAL);
+
     return () => {
       if (pollingRef.current) {
         clearInterval(pollingRef.current);
@@ -118,12 +122,13 @@ const ConversationDetail: React.FC = () => {
     };
   }, [conversationId]);
 
+  // Charge la propriété (optionnel, selon votre logique)
   useEffect(() => {
     const loadProperty = async () => {
       if (!propertyId) return;
       try {
         const properties = await propertyService.getProperties();
-        const foundProperty = properties.find(p => p.id === propertyId);
+        const foundProperty = properties.find((p) => p.id === propertyId);
         if (foundProperty) {
           setProperty(foundProperty);
         }
@@ -134,43 +139,47 @@ const ConversationDetail: React.FC = () => {
     loadProperty();
   }, [propertyId]);
 
+  // Scroll auto : 1) au premier chargement, 2) si nouveaux messages ET on était en bas
   useEffect(() => {
-    if (conversation?.messages) {
-      if (!initialScrollDoneRef.current) {
-        // Scroll initial instantané
-        if (messagesContainerRef.current) {
-          messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
-          initialScrollDoneRef.current = true;
-        }
-      } else if (shouldScrollToBottom) {
-        // Scroll smooth pour les messages suivants
-        scrollToBottom(true);
+    if (!conversation?.messages) return;
+    const messages = conversation.messages;
+
+    // Premier chargement -> scroll en bas
+    if (!initialScrollDoneRef.current && messagesContainerRef.current) {
+      messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+      initialScrollDoneRef.current = true;
+    } else {
+      // S'il y a de nouveaux messages et qu'on était déjà en bas
+      if (
+        messages.length > prevMessagesLengthRef.current &&
+        isAtBottom
+      ) {
+        scrollToBottom();
       }
     }
-  }, [conversation?.messages, shouldScrollToBottom]);
+    // MàJ du ref pour la prochaine comparaison
+    prevMessagesLengthRef.current = messages.length;
+  }, [conversation?.messages, isAtBottom]);
 
+  // Ajuste la hauteur du textarea au fur et à mesure
   useEffect(() => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
     const adjustHeight = () => {
-      const textarea = textareaRef.current;
-      if (textarea) {
-        textarea.style.height = 'auto';
-        const newHeight = Math.min(textarea.scrollHeight, 120);
-        textarea.style.height = `${newHeight}px`;
-      }
+      textarea.style.height = 'auto';
+      const newHeight = Math.min(textarea.scrollHeight, 120);
+      textarea.style.height = `${newHeight}px`;
     };
 
     adjustHeight();
-
-    const textarea = textareaRef.current;
-    if (textarea) {
-      textarea.addEventListener('input', adjustHeight);
-      return () => textarea.removeEventListener('input', adjustHeight);
-    }
+    textarea.addEventListener('input', adjustHeight);
+    return () => textarea.removeEventListener('input', adjustHeight);
   }, [newMessage]);
 
+  // Bascule l'auto-pilot (optionnel, dépend de votre logique)
   const handleToggleAutoPilot = async () => {
     if (!conversation) return;
-
     const newState = !isAutoPilot;
     skipPollingRef.current = true;
     setIsAutoPilot(newState);
@@ -191,49 +200,52 @@ const ConversationDetail: React.FC = () => {
     }
   };
 
+  // Envoi d'un message
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newMessage.trim() || sending) return;
 
     setSending(true);
-    setShouldScrollToBottom(true);
     const tempId = `temp-${Date.now()}`;
-    
+
     try {
       if (!conversation || !conversation.guestPhone) {
         throw new Error('Missing conversation data');
       }
 
+      // Message “temporaire”
       const messageData: Message = {
         id: tempId,
         text: newMessage.trim(),
         timestamp: new Date(),
         sender: 'host',
         type: 'text',
-        status: 'pending'
+        status: 'pending',
       };
 
-      setConversation(prev => {
+      // On l'ajoute tout de suite localement
+      setConversation((prev) => {
         if (!prev) return prev;
         return {
           ...prev,
-          messages: [...prev.messages, messageData]
+          messages: [...prev.messages, messageData],
         };
       });
 
       setNewMessage('');
 
+      // Envoi au backend
       const response = await fetch('/.netlify/functions/send-message', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          propertyId: propertyId,
+          propertyId,
           message: messageData.text,
           guestPhone: conversation.guestPhone,
           isHost: true,
-          conversationId: conversationId
+          conversationId,
         }),
       });
 
@@ -241,18 +253,17 @@ const ConversationDetail: React.FC = () => {
         throw new Error('Failed to send message');
       }
 
+      // On re-fetch la conversation pour voir le message “officiel”
       await fetchConversation();
     } catch (error) {
       console.error('Error sending message:', error);
-      setConversation(prev => {
+      setConversation((prev) => {
         if (!prev) return prev;
         return {
           ...prev,
-          messages: prev.messages.map(msg => 
-            msg.id === tempId
-              ? { ...msg, status: 'failed' }
-              : msg
-          )
+          messages: prev.messages.map((msg) =>
+            msg.id === tempId ? { ...msg, status: 'failed' } : msg
+          ),
         };
       });
     } finally {
@@ -260,6 +271,7 @@ const ConversationDetail: React.FC = () => {
     }
   };
 
+  // Gère la touche "Enter" pour envoyer
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -267,6 +279,7 @@ const ConversationDetail: React.FC = () => {
     }
   };
 
+  // Génération de réponse AI
   const handleGenerateResponse = async () => {
     if (!conversation || sending) return;
 
@@ -278,8 +291,8 @@ const ConversationDetail: React.FC = () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          conversationId: conversationId,
-          propertyId: propertyId,
+          conversationId,
+          propertyId,
         }),
       });
 
@@ -296,6 +309,7 @@ const ConversationDetail: React.FC = () => {
     }
   };
 
+  // Gestion des états de chargement / erreur
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[100dvh]">
@@ -307,9 +321,7 @@ const ConversationDetail: React.FC = () => {
   if (error) {
     return (
       <div className="min-h-[100dvh] p-6">
-        <div className="bg-red-50 text-red-600 p-4 rounded-lg">
-          {error}
-        </div>
+        <div className="bg-red-50 text-red-600 p-4 rounded-lg">{error}</div>
       </div>
     );
   }
@@ -324,11 +336,13 @@ const ConversationDetail: React.FC = () => {
     );
   }
 
+  // Rendu principal
   return (
     <div className="fixed inset-0 flex flex-col bg-white">
+      {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 bg-white border-b">
         <div className="flex items-center gap-2">
-          <button 
+          <button
             onClick={() => navigate(-1)}
             className="p-2 -ml-2 hover:bg-gray-50 rounded-full"
           >
@@ -336,15 +350,19 @@ const ConversationDetail: React.FC = () => {
           </button>
           <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
             <span className="text-gray-600 text-sm font-medium">
-              {conversation?.guestName?.charAt(0).toUpperCase()}
+              {conversation.guestName?.charAt(0).toUpperCase()}
             </span>
           </div>
           <div>
             <h2 className="font-medium">
-              {conversation?.guestName || 'Conversation'}
+              {conversation.guestName || 'Conversation'}
             </h2>
             <p className="text-xs text-gray-500">
-              {conversation?.checkIn && new Date(conversation.checkIn).toLocaleDateString()} - {conversation?.checkOut && new Date(conversation.checkOut).toLocaleDateString()}
+              {conversation.checkIn &&
+                new Date(conversation.checkIn).toLocaleDateString()}
+              {' - '}
+              {conversation.checkOut &&
+                new Date(conversation.checkOut).toLocaleDateString()}
             </p>
           </div>
         </div>
@@ -357,29 +375,32 @@ const ConversationDetail: React.FC = () => {
               : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
           }`}
         >
-          <Zap className={`w-4 h-4 ${isAutoPilot ? 'text-blue-500' : 'text-gray-400'}`} />
+          <Zap
+            className={`w-4 h-4 ${
+              isAutoPilot ? 'text-blue-500' : 'text-gray-400'
+            }`}
+          />
           <span className="text-sm font-medium">
             {isAutoPilot ? 'Auto-pilot ON' : 'Auto-pilot OFF'}
           </span>
         </button>
       </div>
 
-      <div 
+      {/* Conteneur des messages */}
+      <div
         ref={messagesContainerRef}
         onScroll={handleScroll}
-        className="flex-1 overflow-y-auto bg-white h-full"
+        className="flex-1 overflow-y-auto bg-white pb-[60px] h-full"
       >
-        <div className="p-4 space-y-1 pb-[70px]">
-          {conversation?.messages.map((message, index) => (
-            <Message
-              key={message.id || index}
-              message={message}
-            />
+        <div className="p-4 space-y-1">
+          {conversation.messages.map((message, index) => (
+            <Message key={message.id || index} message={message} />
           ))}
-          <div ref={messagesEndRef} className="h-0" />
+          <div ref={messagesEndRef} />
         </div>
       </div>
 
+      {/* Zone de saisie + boutons */}
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t px-4 py-2">
         <div className="flex items-end gap-2">
           <div className="flex-1 min-h-[40px] max-h-[120px] flex items-end bg-white rounded-full border px-4 py-2">
