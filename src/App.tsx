@@ -8,6 +8,7 @@ import Settings from './pages/Settings';
 import ChatSandbox from './pages/ChatSandbox';
 import EmergencyCases from './pages/EmergencyCases';
 import { notificationService } from './services/notificationService';
+import DebugLogger from './components/DebugLogger';
 
 const AppContent = () => {
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
@@ -184,6 +185,7 @@ const AppContent = () => {
           <Route path="/settings" element={<Settings />} />
         </Routes>
       </main>
+      <DebugLogger />
     </div>
   );
 };

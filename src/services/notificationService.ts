@@ -1,3 +1,5 @@
+import { logger } from '../components/DebugLogger';
+
 const convertVapidKey = (base64String: string) => {
   const padding = '='.repeat((4 - base64String.length % 4) % 4);
   const base64 = (base64String + padding)
@@ -15,63 +17,81 @@ const convertVapidKey = (base64String: string) => {
 
 class NotificationService {
   private swRegistration: ServiceWorkerRegistration | null = null;
+  private isInitialized = false;
   private apiUrl: string;
 
   constructor() {
     this.apiUrl = process.env.REACT_APP_API_URL || 'https://airhost1212-production.up.railway.app';
   }
 
-  async init() {
+  async init(): Promise<boolean> {
     try {
-      console.log('Initializing notification service...');
+      logger.log('Initializing notification service...');
       
-      if (!('serviceWorker' in navigator)) {
-        console.error('Service Worker not supported');
+      // Vérifier si les variables d'environnement sont configurées
+      if (!process.env.REACT_APP_VAPID_PUBLIC_KEY || !process.env.REACT_APP_API_URL) {
+        logger.log('Missing environment variables', 'error');
         return false;
       }
+      logger.log('Environment variables are valid.');
 
-      if (!('Notification' in window)) {
-        console.error('Notifications not supported');
+      // Vérifier si le navigateur supporte les notifications
+      if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+        logger.log('Push notifications are not supported', 'warning');
         return false;
       }
+      logger.log('Push notifications are supported');
 
-      // Register Service Worker
-      console.log('Registering service worker...');
-      this.swRegistration = await navigator.serviceWorker.register('/service-worker.js');
-      console.log('Service Worker registered:', this.swRegistration);
+      // Enregistrer le service worker
+      logger.log('Registering service worker...');
+      const registration = await navigator.serviceWorker.register('/service-worker.js');
+      this.swRegistration = registration;
+      this.isInitialized = true;
+      logger.log('Service Worker registered successfully');
 
-      // Check notification permission
-      const permission = await Notification.requestPermission();
-      console.log('Notification permission:', permission);
-      
-      if (permission === 'granted') {
-        await this.subscribeToNotifications();
-        return true;
-      }
-      
-      return false;
+      return true;
     } catch (error) {
-      console.error('Error initializing notifications:', error);
+      logger.log(`Failed to initialize: ${error}`, 'error');
       return false;
     }
   }
 
-  private async subscribeToNotifications() {
+  async requestPermission(): Promise<boolean> {
     try {
-      console.log('Subscribing to notifications...');
-      
+      logger.log('Requesting notification permission...');
+      const permission = await Notification.requestPermission();
+      logger.log(`Notification permission: ${permission}`);
+      return permission === 'granted';
+    } catch (error) {
+      logger.log(`Error requesting permission: ${error}`, 'error');
+      return false;
+    }
+  }
+
+  async subscribeToPush(): Promise<boolean> {
+    try {
       if (!this.swRegistration) {
-        throw new Error('Service Worker registration not found');
+        logger.log('Service Worker not registered', 'error');
+        return false;
       }
 
-      const subscription = await this.swRegistration.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: this.urlBase64ToUint8Array(process.env.REACT_APP_VAPID_PUBLIC_KEY || '')
-      });
+      logger.log('Getting push subscription...');
+      let subscription = await this.swRegistration.pushManager.getSubscription();
 
-      console.log('Push subscription:', subscription);
+      if (!subscription) {
+        logger.log('No subscription found, creating new one...');
+        const vapidPublicKey = process.env.REACT_APP_VAPID_PUBLIC_KEY;
+        const convertedVapidKey = this.urlBase64ToUint8Array(vapidPublicKey);
 
-      // Send subscription to server
+        subscription = await this.swRegistration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: convertedVapidKey
+        });
+        logger.log('Successfully created new subscription');
+      }
+
+      // Envoyer la subscription au serveur
+      logger.log('Sending subscription to server...');
       const response = await fetch(`${this.apiUrl}/subscribe`, {
         method: 'POST',
         headers: {
@@ -84,17 +104,17 @@ class NotificationService {
         throw new Error('Failed to send subscription to server');
       }
 
-      console.log('Subscription sent to server successfully');
+      logger.log('Successfully subscribed to push notifications');
       return true;
     } catch (error) {
-      console.error('Error subscribing to notifications:', error);
+      logger.log(`Failed to subscribe: ${error}`, 'error');
       return false;
     }
   }
 
   async sendNotification(title: string, body: string) {
     try {
-      console.log('Sending notification:', { title, body });
+      logger.log('Sending notification:', { title, body });
       
       const response = await fetch(`${this.apiUrl}/send-notification`, {
         method: 'POST',
@@ -108,10 +128,10 @@ class NotificationService {
         throw new Error('Failed to send notification');
       }
 
-      console.log('Notification sent successfully');
+      logger.log('Notification sent successfully');
       return true;
     } catch (error) {
-      console.error('Error sending notification:', error);
+      logger.log(`Error sending notification: ${error}`, 'error');
       return false;
     }
   }
