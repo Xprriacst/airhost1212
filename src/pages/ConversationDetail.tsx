@@ -36,6 +36,7 @@ const ConversationDetail: React.FC = () => {
   const pollingRef = useRef<NodeJS.Timeout>();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const skipPollingRef = useRef(false);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
   
   const [conversation, setConversation] = useState<Conversation | null>(null);
   const [property, setProperty] = useState<Property | null>(null);
@@ -45,6 +46,23 @@ const ConversationDetail: React.FC = () => {
   const [sending, setSending] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [isAutoPilot, setIsAutoPilot] = useState(false);
+  const [shouldScrollToBottom, setShouldScrollToBottom] = useState(true);
+  const [isAtBottom, setIsAtBottom] = useState(true);
+
+  const handleScroll = () => {
+    if (!messagesContainerRef.current) return;
+    
+    const { scrollTop, scrollHeight, clientHeight } = messagesContainerRef.current;
+    const isNearBottom = scrollHeight - scrollTop - clientHeight < 100;
+    setIsAtBottom(isNearBottom);
+    setShouldScrollToBottom(isNearBottom);
+  };
+
+  const scrollToBottom = () => {
+    if (shouldScrollToBottom && messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
 
   const fetchConversation = async () => {
     if (!conversationId || skipPollingRef.current) return;
@@ -56,7 +74,14 @@ const ConversationDetail: React.FC = () => {
         await conversationService.markConversationAsRead(conversationId);
       }
       
-      setConversation(data);
+      setConversation(prev => {
+        // Si le nombre de messages a changé et qu'on est en bas, on scroll
+        if (prev && prev.messages.length !== data.messages.length && isAtBottom) {
+          setShouldScrollToBottom(true);
+        }
+        return data;
+      });
+
       if (!skipPollingRef.current) {
         setIsAutoPilot(data.autoPilot || false);
       }
@@ -96,9 +121,7 @@ const ConversationDetail: React.FC = () => {
   }, [propertyId]);
 
   useEffect(() => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ block: 'end', behavior: 'instant' as ScrollBehavior });
-    }
+    scrollToBottom();
   }, [conversation?.messages]);
 
   useEffect(() => {
@@ -148,6 +171,7 @@ const ConversationDetail: React.FC = () => {
     if (!newMessage.trim() || sending) return;
 
     setSending(true);
+    setShouldScrollToBottom(true);
     const tempId = `temp-${Date.now()}`;
     
     try {
@@ -315,7 +339,11 @@ const ConversationDetail: React.FC = () => {
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto bg-white pb-[60px]">
+      <div 
+        ref={messagesContainerRef}
+        onScroll={handleScroll}
+        className="flex-1 overflow-y-auto bg-white pb-[60px]"
+      >
         <div className="p-4 space-y-1">
           {conversation?.messages.map((message, index) => (
             <Message
