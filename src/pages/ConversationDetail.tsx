@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Send, Sparkles } from 'lucide-react';
+import { ArrowLeft, Send, Sparkles, Zap } from 'lucide-react';
 import axios from 'axios';
 import { conversationService } from '../services';
 import { propertyService } from '../services/airtable/propertyService';
@@ -44,23 +44,7 @@ const ConversationDetail: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const [generating, setGenerating] = useState(false);
-
-  // Charger la propriété
-  useEffect(() => {
-    const loadProperty = async () => {
-      if (!propertyId) return;
-      try {
-        const properties = await propertyService.getProperties();
-        const foundProperty = properties.find(p => p.id === propertyId);
-        if (foundProperty) {
-          setProperty(foundProperty);
-        }
-      } catch (err) {
-        console.error('Error loading property:', err);
-      }
-    };
-    loadProperty();
-  }, [propertyId]);
+  const [isAutoPilot, setIsAutoPilot] = useState(false);
 
   const fetchConversation = async () => {
     if (!conversationId) return;
@@ -74,6 +58,7 @@ const ConversationDetail: React.FC = () => {
       }
       
       setConversation(data);
+      setIsAutoPilot(data.autoPilot || false);
       setError(null);
     } catch (err) {
       console.error('Error fetching conversation:', err);
@@ -95,34 +80,63 @@ const ConversationDetail: React.FC = () => {
     };
   }, [conversationId]);
 
+  // Charger la propriété
   useEffect(() => {
-    // Scroll to bottom instantly when conversation opens
+    const loadProperty = async () => {
+      if (!propertyId) return;
+      try {
+        const properties = await propertyService.getProperties();
+        const foundProperty = properties.find(p => p.id === propertyId);
+        if (foundProperty) {
+          setProperty(foundProperty);
+        }
+      } catch (err) {
+        console.error('Error loading property:', err);
+      }
+    };
+    loadProperty();
+  }, [propertyId]);
+
+  useEffect(() => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ block: 'end', behavior: 'instant' as ScrollBehavior });
     }
   }, [conversation?.messages]);
 
   useEffect(() => {
-    // Fonction pour ajuster la hauteur
     const adjustHeight = () => {
       const textarea = textareaRef.current;
       if (textarea) {
         textarea.style.height = 'auto';
-        const newHeight = Math.min(textarea.scrollHeight, 120); // Max 5 lignes (24px * 5)
+        const newHeight = Math.min(textarea.scrollHeight, 120);
         textarea.style.height = `${newHeight}px`;
       }
     };
 
-    // Ajuster au chargement
     adjustHeight();
 
-    // Observer les changements de contenu
     const textarea = textareaRef.current;
     if (textarea) {
       textarea.addEventListener('input', adjustHeight);
       return () => textarea.removeEventListener('input', adjustHeight);
     }
   }, [newMessage]);
+
+  const handleToggleAutoPilot = async () => {
+    if (!conversation) return;
+
+    try {
+      const updatedConversation = await conversationService.updateConversation(
+        conversation.id,
+        { 'Auto Pilot': !isAutoPilot }
+      );
+
+      setIsAutoPilot(!isAutoPilot);
+      setConversation(updatedConversation);
+    } catch (err) {
+      console.error('Error toggling auto pilot:', err);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -136,7 +150,6 @@ const ConversationDetail: React.FC = () => {
         throw new Error('Missing conversation data');
       }
 
-      // Créer le message avec un ID temporaire
       const messageData: Message = {
         id: tempId,
         text: newMessage.trim(),
@@ -152,7 +165,6 @@ const ConversationDetail: React.FC = () => {
         checkOut: conversation.checkOut,
       };
 
-      // Mise à jour optimiste
       setConversation(prev => {
         if (!prev) return prev;
         return {
@@ -161,10 +173,8 @@ const ConversationDetail: React.FC = () => {
         };
       });
 
-      // Réinitialiser le champ de message
       setNewMessage('');
 
-      // Envoyer le message
       const response = await fetch('/.netlify/functions/send-message', {
         method: 'POST',
         headers: {
@@ -186,7 +196,6 @@ const ConversationDetail: React.FC = () => {
         throw new Error('Failed to send message');
       }
 
-      // Marquer le message comme envoyé
       setConversation(prev => {
         if (!prev) return prev;
         return {
@@ -199,14 +208,12 @@ const ConversationDetail: React.FC = () => {
         };
       });
 
-      // Attendre un peu plus longtemps avant de recharger la conversation
       await new Promise(resolve => setTimeout(resolve, 5000));
       await fetchConversation();
 
     } catch (error) {
       console.error('Error sending message:', error);
 
-      // Marquer le message comme échoué
       setConversation(prev => {
         if (!prev) return prev;
         return {
@@ -230,10 +237,6 @@ const ConversationDetail: React.FC = () => {
     }
   };
 
-  const handleBack = () => {
-    navigate(-1);
-  };
-
   const handleGenerateResponse = async () => {
     if (!conversation || sending) return;
 
@@ -255,12 +258,10 @@ const ConversationDetail: React.FC = () => {
       }
 
       const data = await response.json();
-      console.log('AI Generated response:', data.response);
       setNewMessage(data.response);
 
     } catch (error) {
       console.error('Error generating response:', error);
-      // TODO: Ajouter une notification d'erreur pour l'utilisateur
     } finally {
       setGenerating(false);
     }
@@ -295,24 +296,23 @@ const ConversationDetail: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen max-h-screen w-screen flex flex-col bg-gray-100">
+    <div className="fixed inset-0 flex flex-col bg-white">
       {/* Header */}
-      <div className="h-14 bg-white border-b z-10 flex items-center px-4 flex-shrink-0">
-        <button 
-          onClick={handleBack}
-          className="p-2 -ml-2 hover:bg-gray-50 rounded-full"
-        >
-          <ArrowLeft className="w-6 h-6 text-gray-700" />
-        </button>
-        
-        <div className="flex items-center ml-2">
-          <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center mr-3">
+      <div className="flex items-center justify-between px-4 py-3 bg-white border-b">
+        <div className="flex items-center gap-2">
+          <button 
+            onClick={() => navigate(-1)}
+            className="p-2 -ml-2 hover:bg-gray-50 rounded-full"
+          >
+            <ArrowLeft className="w-6 h-6 text-gray-700" />
+          </button>
+          <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
             <span className="text-gray-600 text-sm font-medium">
               {conversation?.guestName?.charAt(0).toUpperCase()}
             </span>
           </div>
-          <div className="flex-1">
-            <h2 className="font-semibold text-gray-900">
+          <div>
+            <h2 className="font-medium">
               {conversation?.guestName || 'Conversation'}
             </h2>
             <p className="text-xs text-gray-500">
@@ -320,9 +320,24 @@ const ConversationDetail: React.FC = () => {
             </p>
           </div>
         </div>
+
+        {/* Auto Pilot Toggle */}
+        <button
+          onClick={handleToggleAutoPilot}
+          className={`flex items-center gap-2 px-3 py-1.5 rounded-full transition-colors ${
+            isAutoPilot
+              ? 'bg-blue-100 text-blue-700'
+              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+          }`}
+        >
+          <Zap className={`w-4 h-4 ${isAutoPilot ? 'text-blue-500' : 'text-gray-400'}`} />
+          <span className="text-sm font-medium">
+            {isAutoPilot ? 'Auto-pilot ON' : 'Auto-pilot OFF'}
+          </span>
+        </button>
       </div>
 
-      {/* Messages avec padding en bas pour la barre de texte */}
+      {/* Messages */}
       <div className="flex-1 overflow-y-auto bg-white pb-[60px]">
         <div className="p-4 space-y-1">
           {conversation?.messages.map((message, index) => (
