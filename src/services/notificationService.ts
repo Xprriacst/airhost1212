@@ -29,6 +29,10 @@ class NotificationService {
       logger.log('Initializing notification service...');
       
       // Vérifier si les variables d'environnement sont configurées
+      logger.log('Checking environment variables...');
+      logger.log('API URL:', process.env.REACT_APP_API_URL);
+      logger.log('VAPID key exists:', !!process.env.REACT_APP_VAPID_PUBLIC_KEY);
+      
       if (!process.env.REACT_APP_VAPID_PUBLIC_KEY || !process.env.REACT_APP_API_URL) {
         logger.log('Missing environment variables', 'error');
         return false;
@@ -36,6 +40,10 @@ class NotificationService {
       logger.log('Environment variables are valid.');
 
       // Vérifier si le navigateur supporte les notifications
+      logger.log('Checking browser capabilities...');
+      logger.log('Service Worker support:', 'serviceWorker' in navigator);
+      logger.log('Push Manager support:', 'PushManager' in window);
+      
       if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
         logger.log('Push notifications are not supported', 'warning');
         return false;
@@ -45,6 +53,7 @@ class NotificationService {
       // Enregistrer le service worker
       logger.log('Registering service worker...');
       const registration = await navigator.serviceWorker.register('/service-worker.js');
+      logger.log('Service Worker registration:', registration);
       this.swRegistration = registration;
       this.isInitialized = true;
       logger.log('Service Worker registered successfully');
@@ -52,6 +61,7 @@ class NotificationService {
       return true;
     } catch (error) {
       logger.log(`Failed to initialize: ${error}`, 'error');
+      logger.log('Error stack:', error.stack);
       return false;
     }
   }
