@@ -54,17 +54,28 @@ const ConversationDetail: React.FC = () => {
     if (!messagesContainerRef.current) return;
     
     const { scrollTop, scrollHeight, clientHeight } = messagesContainerRef.current;
-    const isNearBottom = scrollHeight - scrollTop - clientHeight < 100;
-    setIsAtBottom(isNearBottom);
-    setShouldScrollToBottom(isNearBottom);
+    const isNearBottom = Math.abs(scrollHeight - scrollTop - clientHeight) < 150;
+    
+    if (isNearBottom !== isAtBottom) {
+      setIsAtBottom(isNearBottom);
+      setShouldScrollToBottom(isNearBottom);
+    }
   };
 
   const scrollToBottom = (smooth = true) => {
-    if (shouldScrollToBottom && messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ 
-        behavior: smooth ? 'smooth' : 'auto',
-        block: 'end'
-      });
+    if (messagesEndRef.current) {
+      const behavior = smooth ? 'smooth' : 'auto';
+      try {
+        messagesEndRef.current.scrollIntoView({ 
+          behavior,
+          block: 'end',
+        });
+      } catch (error) {
+        // Fallback pour les navigateurs qui ne supportent pas scrollIntoView avec options
+        if (messagesContainerRef.current) {
+          messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+        }
+      }
     }
   };
 
@@ -124,13 +135,17 @@ const ConversationDetail: React.FC = () => {
   }, [propertyId]);
 
   useEffect(() => {
-    if (conversation?.messages && !initialScrollDoneRef.current) {
-      if (messagesContainerRef.current) {
-        messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
-        initialScrollDoneRef.current = true;
+    if (conversation?.messages) {
+      if (!initialScrollDoneRef.current) {
+        // Scroll initial instantané
+        if (messagesContainerRef.current) {
+          messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+          initialScrollDoneRef.current = true;
+        }
+      } else if (shouldScrollToBottom) {
+        // Scroll smooth pour les messages suivants
+        scrollToBottom(true);
       }
-    } else if (shouldScrollToBottom) {
-      scrollToBottom(false);
     }
   }, [conversation?.messages, shouldScrollToBottom]);
 
@@ -352,16 +367,16 @@ const ConversationDetail: React.FC = () => {
       <div 
         ref={messagesContainerRef}
         onScroll={handleScroll}
-        className="flex-1 overflow-y-auto bg-white pb-[60px] h-full"
+        className="flex-1 overflow-y-auto bg-white h-full"
       >
-        <div className="p-4 space-y-1">
+        <div className="p-4 space-y-1 pb-[70px]">
           {conversation?.messages.map((message, index) => (
             <Message
               key={message.id || index}
               message={message}
             />
           ))}
-          <div ref={messagesEndRef} />
+          <div ref={messagesEndRef} className="h-0" />
         </div>
       </div>
 
