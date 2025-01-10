@@ -15,8 +15,35 @@ const messageSchema = z.object({
   timestamp: z.string().optional(),
   checkInDate: z.string().optional(),
   checkOutDate: z.string().optional(),
-  isHost: z.boolean().optional().default(false)
+  isHost: z.boolean().optional().default(false),
+  webhookId: z.string().optional() // ID unique du webhook Make
 });
+
+// Cache pour stocker les messages récents (5 minutes max)
+const recentMessages = new Map<string, number>();
+
+// Cache pour stocker les webhooks traités (5 minutes max)
+const processedWebhooks = new Map<string, number>();
+
+// Nettoyer les messages plus vieux que 5 minutes
+const cleanupOldMessages = () => {
+  const fiveMinutesAgo = Date.now() - 5 * 60 * 1000;
+  for (const [key, timestamp] of recentMessages.entries()) {
+    if (timestamp < fiveMinutesAgo) {
+      recentMessages.delete(key);
+    }
+  }
+};
+
+// Nettoyer les webhooks plus vieux que 5 minutes
+const cleanupOldWebhooks = () => {
+  const fiveMinutesAgo = Date.now() - 5 * 60 * 1000;
+  for (const [key, timestamp] of processedWebhooks.entries()) {
+    if (timestamp < fiveMinutesAgo) {
+      processedWebhooks.delete(key);
+    }
+  }
+};
 
 export const handler: Handler = async (event) => {
   console.log('🚀 Receive Message Function Called');
@@ -143,6 +170,49 @@ export const handler: Handler = async (event) => {
         console.error('❌ Failed to create conversation:', error);
         throw error;
       }
+    }
+
+    // Créer une clé unique pour ce message
+    const messageKey = `${data.propertyId}-${data.guestPhone}-${data.message}`;
+    
+    // Nettoyer les vieux messages
+    cleanupOldMessages();
+    
+    // Vérifier si on a déjà reçu ce message récemment
+    if (recentMessages.has(messageKey)) {
+      console.log('🔄 Duplicate webhook detected, skipping...');
+      return {
+        statusCode: 200,
+        body: JSON.stringify({ 
+          status: 'success',
+          skipped: true,
+          reason: 'duplicate_webhook'
+        }),
+      };
+    }
+    
+    // Marquer ce message comme traité
+    recentMessages.set(messageKey, Date.now());
+
+    // Si Make a fourni un ID de webhook, vérifier s'il a déjà été traité
+    if (data.webhookId) {
+      // Nettoyer les vieux webhooks
+      cleanupOldWebhooks();
+      
+      if (processedWebhooks.has(data.webhookId)) {
+        console.log('🔄 Duplicate Make webhook detected, skipping...', data.webhookId);
+        return {
+          statusCode: 200,
+          body: JSON.stringify({ 
+            status: 'success',
+            skipped: true,
+            reason: 'duplicate_make_webhook'
+          }),
+        };
+      }
+      
+      // Marquer ce webhook comme traité
+      processedWebhooks.set(data.webhookId, Date.now());
     }
 
     // On ajoute le message seulement si la conversation existait déjà
