@@ -37,6 +37,7 @@ const ConversationDetail: React.FC = () => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const skipPollingRef = useRef(false);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const initialScrollDoneRef = useRef(false);
   
   const [conversation, setConversation] = useState<Conversation | null>(null);
   const [property, setProperty] = useState<Property | null>(null);
@@ -58,9 +59,12 @@ const ConversationDetail: React.FC = () => {
     setShouldScrollToBottom(isNearBottom);
   };
 
-  const scrollToBottom = () => {
+  const scrollToBottom = (smooth = true) => {
     if (shouldScrollToBottom && messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+      messagesEndRef.current.scrollIntoView({ 
+        behavior: smooth ? 'smooth' : 'auto',
+        block: 'end'
+      });
     }
   };
 
@@ -75,7 +79,6 @@ const ConversationDetail: React.FC = () => {
       }
       
       setConversation(prev => {
-        // Si le nombre de messages a changé et qu'on est en bas, on scroll
         if (prev && prev.messages.length !== data.messages.length && isAtBottom) {
           setShouldScrollToBottom(true);
         }
@@ -121,8 +124,15 @@ const ConversationDetail: React.FC = () => {
   }, [propertyId]);
 
   useEffect(() => {
-    scrollToBottom();
-  }, [conversation?.messages]);
+    if (conversation?.messages && !initialScrollDoneRef.current) {
+      if (messagesContainerRef.current) {
+        messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+        initialScrollDoneRef.current = true;
+      }
+    } else if (shouldScrollToBottom) {
+      scrollToBottom(false);
+    }
+  }, [conversation?.messages, shouldScrollToBottom]);
 
   useEffect(() => {
     const adjustHeight = () => {
@@ -342,7 +352,7 @@ const ConversationDetail: React.FC = () => {
       <div 
         ref={messagesContainerRef}
         onScroll={handleScroll}
-        className="flex-1 overflow-y-auto bg-white pb-[60px]"
+        className="flex-1 overflow-y-auto bg-white pb-[60px] h-full"
       >
         <div className="p-4 space-y-1">
           {conversation?.messages.map((message, index) => (
