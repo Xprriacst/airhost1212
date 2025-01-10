@@ -1,5 +1,6 @@
 import { base } from './config';
 import { handleServiceError } from '../../utils/error';
+import axios from 'axios';
 import type { Conversation, Message } from '../../types';
 
 const parseMessages = (rawMessages: any): Message[] => {
@@ -42,6 +43,18 @@ const mapAirtableToConversation = (record: any): Conversation => {
     messages: parseMessages(record.get('Messages')),
     unreadCount: record.get('UnreadCount') || 0
   };
+};
+
+const sendNotification = async (title: string, body: string) => {
+  try {
+    const response = await axios.post(`${process.env.REACT_APP_API_URL}/send-notification`, {
+      title,
+      body
+    });
+    console.log('Notification sent:', response.data);
+  } catch (error) {
+    console.error('Error sending notification:', error);
+  }
 };
 
 export const conversationService = {
@@ -128,23 +141,29 @@ export const conversationService = {
     try {
       if (!base) throw new Error('Airtable is not configured');
 
-      const formattedData: Record<string, any> = {};
-      
-      if (data.Messages !== undefined) {
-        formattedData.Messages = data.Messages;
-      }
-      
-      if (data.unreadCount !== undefined) {
-        formattedData.UnreadCount = data.unreadCount;
+      // Si nous avons des messages, envoyons une notification pour le dernier message
+      if (data.Messages) {
+        const messages = JSON.parse(data.Messages);
+        if (Array.isArray(messages) && messages.length > 0) {
+          const lastMessage = messages[messages.length - 1];
+          // N'envoyons une notification que si le message vient du client
+          if (lastMessage.sender === 'guest') {
+            await sendNotification(
+              'Nouveau message',
+              `${lastMessage.text}`
+            );
+          }
+        }
       }
 
-      const response = await base('Conversations')
-        .update(conversationId, formattedData);
+      const record = await base('Conversations').update(conversationId, {
+        ...data,
+        'Last Updated': new Date().toISOString()
+      });
 
-      return mapAirtableToConversation(response);
+      return mapAirtableToConversation(record);
     } catch (error) {
-      console.error('Error updating conversation:', error);
-      throw error;
+      throw handleServiceError(error);
     }
   },
 
