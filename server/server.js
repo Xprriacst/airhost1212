@@ -12,6 +12,7 @@ const __dirname = dirname(__filename);
 dotenv.config();
 
 const app = express();
+const port = process.env.PORT || 8080;
 
 // Middleware
 app.use(cors({
@@ -76,6 +77,7 @@ app.post('/subscribe', (req, res) => {
 // Send notification route
 app.post('/send-notification', async (req, res) => {
   console.log('Received notification request:', req.body);
+  console.log('Current subscriptions:', Array.from(subscriptions));
   
   if (!req.body || !req.body.title || !req.body.body) {
     console.error('Invalid notification data received');
@@ -87,20 +89,26 @@ app.post('/send-notification', async (req, res) => {
     body: req.body.body
   };
 
-  console.log('Sending notification to', subscriptions.size, 'subscribers');
+  console.log('Preparing notification:', notification);
   
   const payload = JSON.stringify({
     title: notification.title,
     body: notification.body,
-    icon: '/logo192.png'
+    icon: '/logo192.png',
+    timestamp: new Date().getTime()
   });
 
   console.log('Sending notifications to', subscriptions.size, 'subscribers');
+  console.log('Notification payload:', payload);
   
   const notifications = Array.from(subscriptions).map(subscription => {
+    console.log('Sending to subscription:', subscription.endpoint);
     return webpush.sendNotification(subscription, payload)
+      .then(() => {
+        console.log('Successfully sent to:', subscription.endpoint);
+      })
       .catch(error => {
-        console.error('Error sending notification:', error);
+        console.error('Error sending to', subscription.endpoint, ':', error);
         if (error.statusCode === 410) {
           console.log('Subscription expired, removing:', subscription.endpoint);
           subscriptions.delete(subscription);
@@ -109,15 +117,17 @@ app.post('/send-notification', async (req, res) => {
       });
   });
 
-  Promise.all(notifications)
-    .then(() => {
-      console.log('All notifications sent successfully');
-      res.status(200).json({ message: 'Notifications sent' });
-    })
-    .catch(error => {
-      console.error('Error in Promise.all:', error);
-      res.status(500).json({ message: 'Error sending notifications' });
+  try {
+    await Promise.all(notifications);
+    console.log('All notifications sent successfully');
+    res.status(200).json({ message: 'Notifications sent' });
+  } catch (error) {
+    console.error('Error in Promise.all:', error);
+    res.status(500).json({ 
+      message: 'Error sending notifications',
+      error: error.message 
     });
+  }
 });
 
 // Health check endpoint for Railway
@@ -150,15 +160,20 @@ app.get('/health', (req, res) => {
   });
 });
 
-const PORT = process.env.PORT || 5000;
-const server = app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Server is running on port ${PORT}`);
+// Start server
+app.listen(port, () => {
+  console.log(`Server is running on port ${port}`);
+  console.log('Environment:', process.env.NODE_ENV);
+  console.log('CORS origin:', process.env.NODE_ENV === 'production' 
+    ? 'https://whimsical-beignet-91329f.netlify.app'
+    : 'http://localhost:3000'
+  );
 });
 
 // Gestion gracieuse de l'arrêt
 process.on('SIGTERM', () => {
   console.log('SIGTERM received. Shutting down gracefully...');
-  server.close(() => {
+  app.close(() => {
     console.log('Server closed');
     process.exit(0);
   });
@@ -166,7 +181,7 @@ process.on('SIGTERM', () => {
 
 process.on('SIGINT', () => {
   console.log('SIGINT received. Shutting down gracefully...');
-  server.close(() => {
+  app.close(() => {
     console.log('Server closed');
     process.exit(0);
   });
