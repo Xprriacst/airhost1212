@@ -45,10 +45,10 @@ const MobileChat: React.FC = () => {
   const messagesContainerRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = useCallback(() => {
-    if (isAtBottom && messagesEndRef.current) {
+    if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
     }
-  }, [isAtBottom]);
+  }, []);
 
   const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
     const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
@@ -56,10 +56,13 @@ const MobileChat: React.FC = () => {
     setIsAtBottom(bottom);
   }, []);
 
+  // Scroll to bottom only when sending a new message
   useEffect(() => {
-    // Scroll to bottom only for new messages and if we were already at bottom
-    if (messages.length > 0 && isAtBottom) {
-      scrollToBottom();
+    if (messages.length > 0) {
+      const lastMessage = messages[messages.length - 1];
+      if (lastMessage.isUser) {
+        scrollToBottom();
+      }
     }
   }, [messages, scrollToBottom]);
 
