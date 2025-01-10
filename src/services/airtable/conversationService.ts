@@ -150,10 +150,21 @@ export const conversationService = {
 
   async incrementUnreadCount(conversationId: string): Promise<void> {
     try {
+      if (!base) throw new Error('Airtable is not configured');
+
+      // Récupérer le compteur actuel
       const conversation = await this.fetchConversationById(conversationId);
       const currentCount = conversation.unreadCount || 0;
+      const newCount = currentCount + 1;
+
+      // Mettre à jour directement dans Airtable
+      await base('Conversations').update(conversationId, {
+        'UnreadCount': newCount
+      });
+
+      // Mettre à jour localement via updateConversation
       await this.updateConversation(conversationId, {
-        unreadCount: currentCount + 1
+        unreadCount: newCount
       });
     } catch (error) {
       console.error('Error incrementing unread count:', error);
@@ -163,6 +174,14 @@ export const conversationService = {
 
   async markConversationAsRead(conversationId: string): Promise<void> {
     try {
+      if (!base) throw new Error('Airtable is not configured');
+
+      // Mettre à jour directement dans Airtable
+      await base('Conversations').update(conversationId, {
+        'UnreadCount': 0
+      });
+
+      // Mettre à jour localement via updateConversation
       await this.updateConversation(conversationId, {
         unreadCount: 0
       });
