@@ -50,6 +50,13 @@ class NotificationService {
       }
       logger.log('Push notifications are supported');
 
+      // Demander la permission pour les notifications
+      const permissionGranted = await this.requestPermission();
+      if (!permissionGranted) {
+        logger.log('Failed to get notification permission');
+        return false;
+      }
+
       // Désinscrire tous les service workers existants
       logger.log('Unregistering existing service workers...');
       const registrations = await navigator.serviceWorker.getRegistrations();
@@ -81,6 +88,13 @@ class NotificationService {
       this.isInitialized = true;
       logger.log('Service Worker registered and activated successfully');
 
+      // S'abonner aux notifications push immédiatement
+      const subscribed = await this.subscribeToPush();
+      if (!subscribed) {
+        logger.log('Failed to subscribe to push notifications', 'warning');
+        return false;
+      }
+
       return true;
     } catch (error) {
       logger.log(`Failed to initialize: ${error}`, 'error');
@@ -92,9 +106,32 @@ class NotificationService {
   async requestPermission(): Promise<boolean> {
     try {
       logger.log('Requesting notification permission...');
-      const permission = await Notification.requestPermission();
-      logger.log(`Notification permission: ${permission}`);
-      return permission === 'granted';
+      
+      // Vérifier si les notifications sont déjà bloquées
+      if (Notification.permission === 'denied') {
+        logger.log('Notifications are blocked. Please enable them in your browser settings.', 'warning');
+        // Afficher un message à l'utilisateur avec les instructions pour débloquer
+        alert('Les notifications sont bloquées. Pour les activer :\n\n' +
+              '1. Cliquez sur l\'icône de cadenas/info à gauche de la barre d\'adresse\n' +
+              '2. Trouvez le paramètre "Notifications"\n' +
+              '3. Changez-le de "Bloquer" à "Autoriser"\n' +
+              '4. Rafraîchissez la page');
+        return false;
+      }
+
+      // Si la permission n'est pas encore accordée, la demander
+      if (Notification.permission !== 'granted') {
+        const permission = await Notification.requestPermission();
+        logger.log('Permission response:', permission);
+        
+        if (permission !== 'granted') {
+          logger.log('Notification permission was not granted', 'warning');
+          return false;
+        }
+      }
+
+      logger.log('Notification permission granted');
+      return true;
     } catch (error) {
       logger.log(`Error requesting permission: ${error}`, 'error');
       return false;
