@@ -45,9 +45,10 @@ const mapAirtableToConversation = (record: any): Conversation => {
 
 const sendNotification = async (title: string, body: string) => {
   try {
+    console.log('Sending notification:', { title, body });
     const response = await axios.post(`${process.env.REACT_APP_API_URL}/send-notification`, {
       title,
-      body
+      body,
     });
     console.log('Notification sent:', response.data);
   } catch (error) {
@@ -146,8 +147,13 @@ export const conversationService = {
         const messages = JSON.parse(data.Messages);
         if (Array.isArray(messages) && messages.length > 0) {
           const lastMessage = messages[messages.length - 1];
-          if (lastMessage.sender === 'guest' && lastMessage.platform !== 'whatsapp') {
-            await sendNotification('Nouveau message', lastMessage.text);
+          if (lastMessage.sender === 'guest' && 
+              lastMessage.platform !== 'whatsapp' && 
+              lastMessage.text?.trim()) {
+            await sendNotification(
+              'Nouveau message', 
+              lastMessage.text
+            );
           }
         }
       }

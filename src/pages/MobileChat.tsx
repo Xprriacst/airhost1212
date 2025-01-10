@@ -67,10 +67,7 @@ const MobileChat: React.FC = () => {
   useEffect(() => {
     if (messages.length > 0) {
       const lastMessage = messages[messages.length - 1];
-      if (!lastMessage.isUser) {
-        // Si le message vient du client, envoyer une notification
-        notificationService.sendNotification(lastMessage.text);
-      }
+      // Suppression de l'envoi de notification ici car il est géré dans conversationService
     }
   }, [messages]);
 
