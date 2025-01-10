@@ -161,12 +161,21 @@ export const handler: Handler = async (event) => {
 
     // Vérifier si le message n'existe pas déjà (éviter les doublons)
     const isDuplicate = conversation.messages.some(msg => {
-      // Si le message a exactement le même texte et timestamp proche
+      // Si le message a exactement le même texte et timestamp proche (dans les 10 secondes)
       const isTextMatch = msg.text === newMessage.text;
-      const isTimeMatch = Math.abs(new Date(msg.timestamp).getTime() - new Date(newMessage.timestamp).getTime()) < 5000;
+      const timeDiff = Math.abs(new Date(msg.timestamp).getTime() - new Date(newMessage.timestamp).getTime());
+      const isTimeMatch = timeDiff < 10000; // 10 secondes
       
       // Si c'est un message qu'on a envoyé nous-même
       const isOurMessage = msg.sender === 'host' && msg.text === data.message;
+      
+      if (isTextMatch && isTimeMatch) {
+        console.log('⚠️ Duplicate message detected:', {
+          existingMessage: msg,
+          newMessage,
+          timeDiff
+        });
+      }
       
       return (isTextMatch && isTimeMatch) || isOurMessage;
     });

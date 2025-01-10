@@ -78,17 +78,22 @@ class NotificationService {
       logger.log('Getting push subscription...');
       let subscription = await this.swRegistration.pushManager.getSubscription();
 
-      if (!subscription) {
-        logger.log('No subscription found, creating new one...');
-        const vapidPublicKey = process.env.REACT_APP_VAPID_PUBLIC_KEY;
-        const convertedVapidKey = this.urlBase64ToUint8Array(vapidPublicKey);
-
-        subscription = await this.swRegistration.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: convertedVapidKey
-        });
-        logger.log('Successfully created new subscription');
+      // Si on a déjà une souscription, on la supprime pour éviter les doublons
+      if (subscription) {
+        logger.log('Found existing subscription, unsubscribing...');
+        await subscription.unsubscribe();
+        logger.log('Successfully unsubscribed');
       }
+
+      logger.log('Creating new subscription...');
+      const vapidPublicKey = process.env.REACT_APP_VAPID_PUBLIC_KEY;
+      const convertedVapidKey = this.urlBase64ToUint8Array(vapidPublicKey);
+
+      subscription = await this.swRegistration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: convertedVapidKey
+      });
+      logger.log('Successfully created new subscription');
 
       // Envoyer la subscription au serveur
       logger.log('Sending subscription to server...');
