@@ -38,34 +38,60 @@ webpush.setVapidDetails(
 // Store subscriptions (in memory for demo, use a database in production)
 const subscriptions = new Set();
 
+// Health check endpoint
+app.get('/health', (req, res) => {
+  console.log('Health check requested');
+  res.json({ status: 'ok' });
+});
+
 // Subscribe route
 app.post('/subscribe', (req, res) => {
-  console.log('Received subscription request:', req.body);
+  console.log('Received subscription request from origin:', req.headers.origin);
+  console.log('Request headers:', req.headers);
+  console.log('Request body:', req.body);
+  
   const subscription = req.body;
   
   if (!subscription || !subscription.endpoint) {
     console.error('Invalid subscription object received');
-    return res.status(400).json({ message: 'Invalid subscription' });
+    return res.status(400).json({ 
+      message: 'Invalid subscription',
+      received: subscription 
+    });
   }
 
-  subscriptions.add(subscription);
-  console.log('Subscription added. Total subscriptions:', subscriptions.size);
-  res.status(201).json({ message: 'Subscription added' });
+  try {
+    subscriptions.add(subscription);
+    console.log('Subscription added successfully');
+    res.status(201).json({ message: 'Subscription added successfully' });
+  } catch (error) {
+    console.error('Error adding subscription:', error);
+    res.status(500).json({ 
+      message: 'Internal server error',
+      error: error.message 
+    });
+  }
 });
 
 // Send notification route
-app.post('/send-notification', (req, res) => {
+app.post('/send-notification', async (req, res) => {
   console.log('Received notification request:', req.body);
-  const { title, body } = req.body;
   
-  if (!title || !body) {
-    console.error('Missing title or body in notification request');
+  if (!req.body || !req.body.title || !req.body.body) {
+    console.error('Invalid notification data received');
     return res.status(400).json({ message: 'Title and body are required' });
   }
 
+  const notification = {
+    title: req.body.title,
+    body: req.body.body
+  };
+
+  console.log('Sending notification to', subscriptions.size, 'subscribers');
+  
   const payload = JSON.stringify({
-    title,
-    body,
+    title: notification.title,
+    body: notification.body,
     icon: '/logo192.png'
   });
 
