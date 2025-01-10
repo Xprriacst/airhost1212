@@ -5,6 +5,7 @@ import type { Message, Conversation, Property, EmergencyTag } from '../types';
 import { aiService } from '../services/aiService';
 import { conversationService } from '../services/conversationService';
 import { messageService } from '../services/messageService';
+import { notificationService } from '../services/notificationService';
 import ChatMessage from '../components/ChatMessage';
 import ResponseSuggestion from '../components/ResponseSuggestion';
 
@@ -62,6 +63,16 @@ const MobileChat: React.FC = () => {
   useEffect(() => {
     scrollToBottom();
   }, [scrollToBottom, shouldScrollToBottom]);
+
+  useEffect(() => {
+    if (messages.length > 0) {
+      const lastMessage = messages[messages.length - 1];
+      if (!lastMessage.isUser) {
+        // Si le message vient du client, envoyer une notification
+        notificationService.sendNotification(lastMessage.text);
+      }
+    }
+  }, [messages]);
 
   const generateAiResponse = async (message: Message) => {
     setIsGenerating(true);

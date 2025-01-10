@@ -7,6 +7,7 @@ import ConversationDetail from './pages/ConversationDetail';
 import Settings from './pages/Settings';
 import ChatSandbox from './pages/ChatSandbox';
 import EmergencyCases from './pages/EmergencyCases';
+import { notificationService } from './services/notificationService';
 
 const AppContent = () => {
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
@@ -32,6 +33,20 @@ const AppContent = () => {
     document.getElementsByTagName('head')[0].appendChild(meta);
   }, []);
 
+  useEffect(() => {
+    const initNotifications = async () => {
+      const isInitialized = await notificationService.init();
+      if (isInitialized) {
+        const isPermissionGranted = await notificationService.requestPermission();
+        if (isPermissionGranted) {
+          await notificationService.subscribeToPush();
+        }
+      }
+    };
+
+    initNotifications();
+  }, []);
+
   const handleLinkClick = () => {
     if (isMobile) {
       setIsSidebarOpen(false);
@@ -45,37 +60,37 @@ const AppContent = () => {
       {/* Desktop Sidebar - toujours visible et fixe à gauche */}
       {!isMobile && (
         <aside className="w-64 bg-gray-900 text-white flex-shrink-0">
-          <nav className="h-full flex flex-col py-6">
-            <div className="flex items-center px-6 py-2 text-white">
-              <Home className="w-5 h-5 mr-3" />
-              AirHost Admin
-            </div>
-            
-            <div className="mt-6 space-y-1">
-              <Link to="/conversations" className="flex items-center px-6 py-2 text-gray-300 hover:bg-gray-800 hover:text-white">
-                <MessageSquare className="w-5 h-5 mr-3" />
-                Conversations
-              </Link>
-              <Link to="/properties" className="flex items-center px-6 py-2 text-gray-300 hover:bg-gray-800 hover:text-white">
-                <Building2 className="w-5 h-5 mr-3" />
-                Propriétés
-              </Link>
-              <Link to="/emergency-cases" className="flex items-center px-6 py-2 text-gray-300 hover:bg-gray-800 hover:text-white">
-                <AlertTriangle className="w-5 h-5 mr-3" />
-                Cas d'urgence
-              </Link>
-              <Link to="/chat-sandbox" className="flex items-center px-6 py-2 text-gray-300 hover:bg-gray-800 hover:text-white">
-                <Sparkles className="w-5 h-5 mr-3" />
-                Chat Sandbox
-              </Link>
-            </div>
-
-            <Link to="/settings" className="flex items-center px-6 py-2 mt-auto text-gray-300 hover:bg-gray-800 hover:text-white">
-              <SettingsIcon className="w-5 h-5 mr-3" />
-              Paramètres
+        <nav className="h-full flex flex-col py-6">
+          <div className="flex items-center px-6 py-2 text-white">
+            <Home className="w-5 h-5 mr-3" />
+            AirHost Admin
+          </div>
+          
+          <div className="mt-6 space-y-1">
+            <Link to="/conversations" className="flex items-center px-6 py-2 text-gray-300 hover:bg-gray-800 hover:text-white">
+              <MessageSquare className="w-5 h-5 mr-3" />
+              Conversations
             </Link>
-          </nav>
-        </aside>
+            <Link to="/properties" className="flex items-center px-6 py-2 text-gray-300 hover:bg-gray-800 hover:text-white">
+              <Building2 className="w-5 h-5 mr-3" />
+              Propriétés
+            </Link>
+            <Link to="/emergency-cases" className="flex items-center px-6 py-2 text-gray-300 hover:bg-gray-800 hover:text-white">
+              <AlertTriangle className="w-5 h-5 mr-3" />
+              Cas d'urgence
+            </Link>
+            <Link to="/chat-sandbox" className="flex items-center px-6 py-2 text-gray-300 hover:bg-gray-800 hover:text-white">
+              <Sparkles className="w-5 h-5 mr-3" />
+              Chat Sandbox
+            </Link>
+          </div>
+
+          <Link to="/settings" className="flex items-center px-6 py-2 mt-auto text-gray-300 hover:bg-gray-800 hover:text-white">
+            <SettingsIcon className="w-5 h-5 mr-3" />
+            Paramètres
+          </Link>
+        </nav>
+      </aside>
       )}
 
       {/* Mobile Header avec hamburger */}

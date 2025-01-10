@@ -1,11 +1,18 @@
 [phases.setup]
 nixPkgs = ["nodejs", "wget"]
+aptPkgs = ["curl"]
 
 [phases.install]
-cmds = ["npm ci"]
+cmds = ["npm ci --only=production"]
 
 [phases.build]
 cmds = ["npm run build"]
 
 [start]
-cmd = "npm start"
+cmd = "node server.js"
+onFailure = "restart"
+
+[start.healthcheck]
+interval = "30s"
+timeout = "300s"
+retries = 5
