@@ -16,7 +16,7 @@ const app = express();
 // Middleware
 app.use(cors({
   origin: process.env.NODE_ENV === 'production' 
-    ? 'https://airhost1212.netlify.app'  // Remplacer par votre domaine Netlify
+    ? 'https://whimsical-beignet-91329f.netlify.app'
     : 'http://localhost:3000',
   methods: ['GET', 'POST'],
   credentials: true
@@ -30,7 +30,7 @@ const vapidKeys = {
 };
 
 webpush.setVapidDetails(
-  'mailto:your-email@example.com',  // Remplacer par votre email
+  'mailto:alexandre.errasti@gmail.com',
   vapidKeys.publicKey,
   vapidKeys.privateKey
 );
