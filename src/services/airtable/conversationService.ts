@@ -11,11 +11,9 @@ const parseMessages = (rawMessages: any): Message[] => {
       ? JSON.parse(rawMessages) 
       : rawMessages;
 
-    // Convertir et normaliser les messages
     return messages.map(msg => ({
       ...msg,
       timestamp: new Date(msg.timestamp),
-      // Convertir les anciens formats vers le nouveau format sender
       sender: msg.sender === 'Host' || msg.sender === 'host' 
         ? 'host' 
         : 'guest',
@@ -136,32 +134,30 @@ export const conversationService = {
 
   async updateConversation(
     conversationId: string, 
-    data: { Messages?: string; unreadCount?: number }
+    data: { Messages?: string; unreadCount?: number; 'Auto Pilot'?: boolean }
   ): Promise<Conversation> {
     try {
       if (!base) throw new Error('Airtable is not configured');
 
       const formattedData: Record<string, any> = {};
       
-      // Si nous avons des messages, envoyons une notification pour le dernier message
       if (data.Messages) {
         formattedData.Messages = data.Messages;
         const messages = JSON.parse(data.Messages);
         if (Array.isArray(messages) && messages.length > 0) {
           const lastMessage = messages[messages.length - 1];
-          // N'envoyons une notification que si le message vient du client et n'est pas de WhatsApp
           if (lastMessage.sender === 'guest' && lastMessage.platform !== 'whatsapp') {
-            await sendNotification(
-              'Nouveau message',
-              `${lastMessage.text}`
-            );
+            await sendNotification('Nouveau message', lastMessage.text);
           }
         }
       }
 
-      // Ajouter les autres champs
       if (data.unreadCount !== undefined) {
         formattedData.UnreadCount = data.unreadCount;
+      }
+
+      if (data['Auto Pilot'] !== undefined) {
+        formattedData['Auto Pilot'] = data['Auto Pilot'];
       }
 
       const record = await base('Conversations').update(conversationId, formattedData);
