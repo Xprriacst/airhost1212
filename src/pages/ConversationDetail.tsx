@@ -37,7 +37,6 @@ const ConversationDetail: React.FC = () => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const skipPollingRef = useRef(false);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
-  const isInitialLoadRef = useRef(true);
   
   const [conversation, setConversation] = useState<Conversation | null>(null);
   const [property, setProperty] = useState<Property | null>(null);
@@ -59,12 +58,9 @@ const ConversationDetail: React.FC = () => {
     setShouldScrollToBottom(isNearBottom);
   };
 
-  const scrollToBottom = (instant = false) => {
+  const scrollToBottom = () => {
     if (shouldScrollToBottom && messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ 
-        behavior: instant ? 'instant' : 'smooth',
-        block: 'end'
-      });
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   };
 
@@ -79,6 +75,7 @@ const ConversationDetail: React.FC = () => {
       }
       
       setConversation(prev => {
+        // Si le nombre de messages a changé et qu'on est en bas, on scroll
         if (prev && prev.messages.length !== data.messages.length && isAtBottom) {
           setShouldScrollToBottom(true);
         }
@@ -124,15 +121,8 @@ const ConversationDetail: React.FC = () => {
   }, [propertyId]);
 
   useEffect(() => {
-    if (conversation?.messages) {
-      if (isInitialLoadRef.current) {
-        scrollToBottom(true);
-        isInitialLoadRef.current = false;
-      } else if (shouldScrollToBottom) {
-        scrollToBottom(false);
-      }
-    }
-  }, [conversation?.messages, shouldScrollToBottom]);
+    scrollToBottom();
+  }, [conversation?.messages]);
 
   useEffect(() => {
     const adjustHeight = () => {
