@@ -150,7 +150,7 @@ export const conversationService = {
         if (Array.isArray(messages) && messages.length > 0) {
           const lastMessage = messages[messages.length - 1];
           // N'envoyons une notification que si le message vient du client et n'est pas de WhatsApp
-          if (lastMessage.sender === 'guest' && !lastMessage.platform) {
+          if (lastMessage.sender === 'guest' && lastMessage.platform !== 'whatsapp') {
             await sendNotification(
               'Nouveau message',
               `${lastMessage.text}`
