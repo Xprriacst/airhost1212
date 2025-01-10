@@ -41,14 +41,16 @@ const MobileChat: React.FC = () => {
   const [isAutoPilot, setIsAutoPilot] = useState(propertyAutoPilot || false);
 
   const [isAtBottom, setIsAtBottom] = useState(true);
+  const [shouldScrollToBottom, setShouldScrollToBottom] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = useCallback(() => {
-    if (messagesEndRef.current) {
+    if (messagesEndRef.current && shouldScrollToBottom) {
       messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+      setShouldScrollToBottom(false);
     }
-  }, []);
+  }, [shouldScrollToBottom]);
 
   const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
     const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
@@ -56,15 +58,10 @@ const MobileChat: React.FC = () => {
     setIsAtBottom(bottom);
   }, []);
 
-  // Scroll to bottom only when sending a new message
+  // Only scroll when explicitly requested
   useEffect(() => {
-    if (messages.length > 0) {
-      const lastMessage = messages[messages.length - 1];
-      if (lastMessage.isUser) {
-        scrollToBottom();
-      }
-    }
-  }, [messages, scrollToBottom]);
+    scrollToBottom();
+  }, [scrollToBottom, shouldScrollToBottom]);
 
   const generateAiResponse = async (message: Message) => {
     setIsGenerating(true);
@@ -81,6 +78,7 @@ const MobileChat: React.FC = () => {
   const handleSendMessage = async (text: string) => {
     if (!text.trim()) return;
 
+    setShouldScrollToBottom(true);
     const newMessage: Message = {
       id: Date.now().toString(),
       text,
@@ -129,6 +127,7 @@ const MobileChat: React.FC = () => {
       setIsGenerating(true);
       try {
         const response = await aiService.generateResponse(newMessage, {} as Property);
+        setShouldScrollToBottom(true);
         const aiMessage: Message = {
           id: Date.now().toString(),
           text: response,
