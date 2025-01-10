@@ -3,19 +3,23 @@ console.log('Service Worker Loaded');
 
 self.addEventListener('install', (event) => {
   console.log('Service Worker installing.');
+  // Force l'activation immédiate du service worker
+  event.waitUntil(self.skipWaiting());
 });
 
 self.addEventListener('activate', (event) => {
   console.log('Service Worker activated.');
+  // Prend le contrôle de toutes les pages immédiatement
+  event.waitUntil(clients.claim());
 });
 
 self.addEventListener('push', function(event) {
-  console.log('Push event received:', event);
-  console.log('Push data:', event.data ? event.data.text() : 'no data');
+  console.log('[Service Worker] Push event received');
+  console.log('[Service Worker] Push data:', event.data ? event.data.text() : 'no data');
   
   try {
     const data = event.data.json();
-    console.log('Notification data parsed:', data);
+    console.log('[Service Worker] Notification data parsed:', data);
     
     const options = {
       body: data.body,
@@ -35,27 +39,27 @@ self.addEventListener('push', function(event) {
       ]
     };
 
-    console.log('Showing notification with options:', options);
+    console.log('[Service Worker] Showing notification with options:', options);
 
     event.waitUntil(
       self.registration.showNotification(data.title, options)
-        .then(() => console.log('Notification shown successfully'))
-        .catch(error => console.error('Error showing notification:', error))
+        .then(() => console.log('[Service Worker] Notification shown successfully'))
+        .catch(error => console.error('[Service Worker] Error showing notification:', error))
     );
   } catch (error) {
-    console.error('Error processing push event:', error);
-    console.error('Error stack:', error.stack);
+    console.error('[Service Worker] Error processing push event:', error);
+    console.error('[Service Worker] Error stack:', error.stack);
   }
 });
 
 self.addEventListener('notificationclick', function(event) {
-  console.log('Notification clicked:', event);
-  console.log('Action clicked:', event.action);
+  console.log('[Service Worker] Notification clicked:', event);
+  console.log('[Service Worker] Action clicked:', event.action);
   
   event.notification.close();
   event.waitUntil(
     clients.openWindow('/')
-      .then(() => console.log('Window opened successfully'))
-      .catch(error => console.error('Error opening window:', error))
+      .then(() => console.log('[Service Worker] Window opened successfully'))
+      .catch(error => console.error('[Service Worker] Error opening window:', error))
   );
 });

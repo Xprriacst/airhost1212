@@ -50,13 +50,36 @@ class NotificationService {
       }
       logger.log('Push notifications are supported');
 
+      // Désinscrire tous les service workers existants
+      logger.log('Unregistering existing service workers...');
+      const registrations = await navigator.serviceWorker.getRegistrations();
+      for (let registration of registrations) {
+        await registration.unregister();
+      }
+      logger.log('All service workers unregistered');
+
       // Enregistrer le service worker
       logger.log('Registering service worker...');
-      const registration = await navigator.serviceWorker.register('/service-worker.js');
+      const registration = await navigator.serviceWorker.register('/service-worker.js', {
+        scope: '/'
+      });
       logger.log('Service Worker registration:', registration);
+      
+      // Attendre que le service worker soit activé
+      if (registration.installing) {
+        logger.log('Waiting for service worker to be installed...');
+        await new Promise<void>((resolve) => {
+          registration.installing?.addEventListener('statechange', (e) => {
+            if ((e.target as ServiceWorker).state === 'activated') {
+              resolve();
+            }
+          });
+        });
+      }
+      
       this.swRegistration = registration;
       this.isInitialized = true;
-      logger.log('Service Worker registered successfully');
+      logger.log('Service Worker registered and activated successfully');
 
       return true;
     } catch (error) {
