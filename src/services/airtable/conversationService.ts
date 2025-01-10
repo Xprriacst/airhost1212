@@ -149,8 +149,8 @@ export const conversationService = {
         const messages = JSON.parse(data.Messages);
         if (Array.isArray(messages) && messages.length > 0) {
           const lastMessage = messages[messages.length - 1];
-          // N'envoyons une notification que si le message vient du client
-          if (lastMessage.sender === 'guest') {
+          // N'envoyons une notification que si le message vient du client et n'est pas de WhatsApp
+          if (lastMessage.sender === 'guest' && !lastMessage.platform) {
             await sendNotification(
               'Nouveau message',
               `${lastMessage.text}`
@@ -163,8 +163,6 @@ export const conversationService = {
       if (data.unreadCount !== undefined) {
         formattedData.UnreadCount = data.unreadCount;
       }
-
-      formattedData['Last Updated'] = new Date().toISOString();
 
       const record = await base('Conversations').update(conversationId, formattedData);
       return mapAirtableToConversation(record);
