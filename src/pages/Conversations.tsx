@@ -27,12 +27,25 @@ export default function Conversations() {
           fetchedConversations = await conversationService.fetchAllConversations();
         }
         
+        // Trier les conversations par date du dernier message et unreadCount
+        fetchedConversations.sort((a, b) => {
+          // D'abord par unreadCount
+          if (b.unreadCount !== a.unreadCount) {
+            return b.unreadCount - a.unreadCount;
+          }
+          // Ensuite par date du dernier message
+          const aLastMessage = a.messages[a.messages.length - 1];
+          const bLastMessage = b.messages[b.messages.length - 1];
+          if (!aLastMessage || !bLastMessage) return 0;
+          return new Date(bLastMessage.timestamp).getTime() - new Date(aLastMessage.timestamp).getTime();
+        });
+
         setConversations(fetchedConversations);
 
         // Initialize auto-pilot states
         const initialStates = fetchedConversations.reduce((acc, conv) => ({
           ...acc,
-          [conv.id]: false
+          [conv.id]: conv.autoPilot || false
         }), {});
         setAutoPilotStates(initialStates);
       } catch (err) {
@@ -45,8 +58,8 @@ export default function Conversations() {
 
     fetchConversations();
 
-    // Rafraîchir les conversations toutes les 5 secondes
-    const interval = setInterval(fetchConversations, 5000);
+    // Rafraîchir les conversations toutes les 3 secondes
+    const interval = setInterval(fetchConversations, 3000);
 
     return () => clearInterval(interval);
   }, [propertyId]);

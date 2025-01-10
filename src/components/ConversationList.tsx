@@ -42,6 +42,14 @@ export default function ConversationList({
   isLoading,
   error 
 }: ConversationListProps) {
+  // Force re-render when conversations change
+  const [, forceUpdate] = React.useState({});
+  
+  React.useEffect(() => {
+    // Force a re-render when conversations change
+    forceUpdate({});
+  }, [conversations]);
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -100,18 +108,18 @@ export default function ConversationList({
               <span className={`font-medium ${conversation.unreadCount > 0 ? 'font-semibold text-black' : 'text-gray-900'}`}>
                 {conversation.guestName}
               </span>
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-2">
                 {conversation.unreadCount > 0 && (
-                  <div className="bg-green-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">
+                  <div className="bg-green-500 text-white rounded-full min-w-[20px] h-5 flex items-center justify-center text-xs px-1.5">
                     {conversation.unreadCount}
                   </div>
                 )}
-                <span className="text-xs text-gray-500 ml-1">
+                <span className="text-xs text-gray-500">
                   {formatTimestamp(conversation.messages[conversation.messages.length - 1]?.timestamp)}
                 </span>
               </div>
             </div>
-            <div className={`mt-0.5 text-sm truncate ${conversation.unreadCount > 0 ? 'text-gray-900' : 'text-gray-500'}`}>
+            <div className={`mt-0.5 text-sm truncate ${conversation.unreadCount > 0 ? 'text-gray-900 font-medium' : 'text-gray-500'}`}>
               {conversation.messages[conversation.messages.length - 1]?.text || 'Aucun message'}
             </div>
           </div>
