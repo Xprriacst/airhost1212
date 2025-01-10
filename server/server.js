@@ -65,7 +65,54 @@ app.post('/send-notification', async (req, res) => {
   res.status(200).json({ message: 'Notifications sent' });
 });
 
+// Health check endpoint for Railway
+app.get('/health', (req, res) => {
+  // Donner un peu de temps au serveur pour démarrer
+  const startupGracePeriod = 60000; // 60 secondes
+  const serverUptime = process.uptime() * 1000;
+  
+  if (serverUptime < startupGracePeriod) {
+    return res.status(200).json({
+      status: 'starting',
+      uptime: serverUptime,
+      message: 'Server is starting up'
+    });
+  }
+
+  // Vérifier les clés VAPID seulement après la période de grâce
+  if (!vapidKeys.publicKey || !vapidKeys.privateKey) {
+    return res.status(503).json({ 
+      status: 'error',
+      message: 'VAPID keys not configured'
+    });
+  }
+
+  res.status(200).json({ 
+    status: 'healthy',
+    uptime: serverUptime,
+    timestamp: new Date().toISOString(),
+    subscriptions: subscriptions.size
+  });
+});
+
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
+const server = app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server is running on port ${PORT}`);
+});
+
+// Gestion gracieuse de l'arrêt
+process.on('SIGTERM', () => {
+  console.log('SIGTERM received. Shutting down gracefully...');
+  server.close(() => {
+    console.log('Server closed');
+    process.exit(0);
+  });
+});
+
+process.on('SIGINT', () => {
+  console.log('SIGINT received. Shutting down gracefully...');
+  server.close(() => {
+    console.log('Server closed');
+    process.exit(0);
+  });
 });
