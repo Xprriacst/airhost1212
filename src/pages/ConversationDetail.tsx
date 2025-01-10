@@ -1,7 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Send, Sparkles, Zap } from 'lucide-react';
-import axios from 'axios';
 import { conversationService } from '../services';
 import { propertyService } from '../services/airtable/propertyService';
 import type { Conversation, Message, Property } from '../types';
@@ -36,7 +35,7 @@ const ConversationDetail: React.FC = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const pollingRef = useRef<NodeJS.Timeout>();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const isUpdatingAutoPilot = useRef(false);
+  const skipPollingRef = useRef(false);
   
   const [conversation, setConversation] = useState<Conversation | null>(null);
   const [property, setProperty] = useState<Property | null>(null);
@@ -48,27 +47,19 @@ const ConversationDetail: React.FC = () => {
   const [isAutoPilot, setIsAutoPilot] = useState(false);
 
   const fetchConversation = async () => {
-    if (!conversationId || isUpdatingAutoPilot.current) return;
+    if (!conversationId || skipPollingRef.current) return;
 
     try {
       const data = await conversationService.fetchConversationById(conversationId);
       
-      // Réinitialiser le compteur de messages non lus
       if (data.unreadCount > 0) {
         await conversationService.markConversationAsRead(conversationId);
       }
       
-      // Mettre à jour la conversation mais préserver l'état d'Auto Pilot pendant la mise à jour
-      setConversation(prev => ({
-        ...data,
-        autoPilot: isUpdatingAutoPilot.current ? prev?.autoPilot || false : data.autoPilot
-      }));
-
-      // Ne mettre à jour l'état d'Auto Pilot que si nous ne sommes pas en train de le modifier
-      if (!isUpdatingAutoPilot.current) {
+      setConversation(data);
+      if (!skipPollingRef.current) {
         setIsAutoPilot(data.autoPilot || false);
       }
-
       setError(null);
     } catch (err) {
       console.error('Error fetching conversation:', err);
@@ -80,9 +71,7 @@ const ConversationDetail: React.FC = () => {
 
   useEffect(() => {
     fetchConversation();
-
     pollingRef.current = setInterval(fetchConversation, POLLING_INTERVAL);
-
     return () => {
       if (pollingRef.current) {
         clearInterval(pollingRef.current);
@@ -90,7 +79,6 @@ const ConversationDetail: React.FC = () => {
     };
   }, [conversationId]);
 
-  // Charger la propriété
   useEffect(() => {
     const loadProperty = async () => {
       if (!propertyId) return;
@@ -135,27 +123,23 @@ const ConversationDetail: React.FC = () => {
   const handleToggleAutoPilot = async () => {
     if (!conversation) return;
 
+    const newState = !isAutoPilot;
+    skipPollingRef.current = true;
+    setIsAutoPilot(newState);
+
     try {
-      isUpdatingAutoPilot.current = true;
-      const newAutoPilotState = !isAutoPilot;
-      
-      // Mise à jour optimiste de l'état local
-      setIsAutoPilot(newAutoPilotState);
-      
-      // Mise à jour dans Airtable
       const updatedConversation = await conversationService.updateConversation(
         conversation.id,
-        { 'Auto Pilot': newAutoPilotState }
+        { 'Auto Pilot': newState }
       );
-
-      // Mettre à jour la conversation avec les nouvelles données
       setConversation(updatedConversation);
     } catch (err) {
       console.error('Error toggling auto pilot:', err);
-      // Restaurer l'état précédent en cas d'erreur
-      setIsAutoPilot(!isAutoPilot);
+      setIsAutoPilot(!newState);
     } finally {
-      isUpdatingAutoPilot.current = false;
+      setTimeout(() => {
+        skipPollingRef.current = false;
+      }, 1000);
     }
   };
 
@@ -177,13 +161,7 @@ const ConversationDetail: React.FC = () => {
         timestamp: new Date(),
         sender: 'host',
         type: 'text',
-        status: 'pending',
-        conversationId: conversationId,
-        propertyId: propertyId,
-        guestName: conversation.guestName,
-        guestPhone: conversation.guestPhone,
-        checkIn: conversation.checkIn,
-        checkOut: conversation.checkOut,
+        status: 'pending'
       };
 
       setConversation(prev => {
@@ -206,10 +184,7 @@ const ConversationDetail: React.FC = () => {
           message: messageData.text,
           guestPhone: conversation.guestPhone,
           isHost: true,
-          conversationId: conversationId,
-          guestName: conversation.guestName,
-          checkIn: conversation.checkIn,
-          checkOut: conversation.checkOut,
+          conversationId: conversationId
         }),
       });
 
@@ -217,24 +192,9 @@ const ConversationDetail: React.FC = () => {
         throw new Error('Failed to send message');
       }
 
-      setConversation(prev => {
-        if (!prev) return prev;
-        return {
-          ...prev,
-          messages: prev.messages.map(msg => 
-            msg.id === tempId
-              ? { ...msg, status: 'sent' }
-              : msg
-          )
-        };
-      });
-
-      await new Promise(resolve => setTimeout(resolve, 5000));
       await fetchConversation();
-
     } catch (error) {
       console.error('Error sending message:', error);
-
       setConversation(prev => {
         if (!prev) return prev;
         return {
@@ -280,7 +240,6 @@ const ConversationDetail: React.FC = () => {
 
       const data = await response.json();
       setNewMessage(data.response);
-
     } catch (error) {
       console.error('Error generating response:', error);
     } finally {
@@ -318,7 +277,6 @@ const ConversationDetail: React.FC = () => {
 
   return (
     <div className="fixed inset-0 flex flex-col bg-white">
-      {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 bg-white border-b">
         <div className="flex items-center gap-2">
           <button 
@@ -342,7 +300,6 @@ const ConversationDetail: React.FC = () => {
           </div>
         </div>
 
-        {/* Auto Pilot Toggle */}
         <button
           onClick={handleToggleAutoPilot}
           className={`flex items-center gap-2 px-3 py-1.5 rounded-full transition-colors ${
@@ -358,7 +315,6 @@ const ConversationDetail: React.FC = () => {
         </button>
       </div>
 
-      {/* Messages */}
       <div className="flex-1 overflow-y-auto bg-white pb-[60px]">
         <div className="p-4 space-y-1">
           {conversation?.messages.map((message, index) => (
@@ -371,7 +327,6 @@ const ConversationDetail: React.FC = () => {
         </div>
       </div>
 
-      {/* Input avec bouton IA */}
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t px-4 py-2">
         <div className="flex items-end gap-2">
           <div className="flex-1 min-h-[40px] max-h-[120px] flex items-end bg-white rounded-full border px-4 py-2">
