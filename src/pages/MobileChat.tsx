@@ -163,24 +163,22 @@ const MobileChat: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="fixed inset-0 flex flex-col bg-white">
       {/* Header */}
-      <div className="sticky top-0 left-0 right-0 bg-white border-b z-20">
-        <div className="flex items-center gap-2 px-4 py-3">
-          <button 
-            onClick={() => navigate(-1)}
-            className="p-2 -ml-2 hover:bg-gray-50 rounded-full"
-          >
-            <ArrowLeft className="w-6 h-6 text-gray-700" />
-          </button>
-          <div>
-            <h2 className="font-medium">
-              {conversation?.guestName || 'Conversation'}
-            </h2>
-            <p className="text-xs text-gray-500">
-              {conversation?.checkIn && new Date(conversation.checkIn).toLocaleDateString()} - {conversation?.checkOut && new Date(conversation.checkOut).toLocaleDateString()}
-            </p>
-          </div>
+      <div className="flex items-center gap-2 px-4 py-3 bg-white border-b">
+        <button 
+          onClick={() => navigate(-1)}
+          className="p-2 -ml-2 hover:bg-gray-50 rounded-full"
+        >
+          <ArrowLeft className="w-6 h-6 text-gray-700" />
+        </button>
+        <div>
+          <h2 className="font-medium">
+            {conversation?.guestName || 'Conversation'}
+          </h2>
+          <p className="text-xs text-gray-500">
+            {conversation?.checkIn && new Date(conversation.checkIn).toLocaleDateString()} - {conversation?.checkOut && new Date(conversation.checkOut).toLocaleDateString()}
+          </p>
         </div>
       </div>
 
@@ -188,7 +186,7 @@ const MobileChat: React.FC = () => {
       <div 
         ref={messagesContainerRef}
         onScroll={handleScroll}
-        className="flex-1 overflow-y-auto bg-white px-4"
+        className="flex-1 overflow-y-auto px-4"
       >
         {messages.map((message) => (
           <ChatMessage key={message.id} message={message} />
@@ -204,13 +202,15 @@ const MobileChat: React.FC = () => {
 
       {/* Response Suggestion */}
       {!isAutoPilot && suggestedResponse && (
-        <ResponseSuggestion
-          text={suggestedResponse}
-          onAccept={handleAcceptSuggestion}
-          onEdit={handleEditSuggestion}
-          onRefresh={handleRefreshSuggestion}
-          isLoading={isGenerating}
-        />
+        <div className="border-t bg-white">
+          <ResponseSuggestion
+            text={suggestedResponse}
+            onAccept={handleAcceptSuggestion}
+            onEdit={handleEditSuggestion}
+            onRefresh={handleRefreshSuggestion}
+            isLoading={isGenerating}
+          />
+        </div>
       )}
 
       {/* Input Area */}
