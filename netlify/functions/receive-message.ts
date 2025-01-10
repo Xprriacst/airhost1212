@@ -284,6 +284,26 @@ export const handler: Handler = async (event) => {
     // Incrémenter le compteur de messages non lus si le message vient du guest
     if (!data.isHost) {
       await conversationService.incrementUnreadCount(conversation.id);
+
+      // Envoyer la notification seulement si ce n'est pas un doublon et que c'est un message du guest
+      if (!data.platform || data.platform !== 'whatsapp') {
+        console.log('📱 Sending notification...');
+        try {
+          const response = await fetch(`${process.env.REACT_APP_API_URL}/send-notification`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              title: 'Nouveau message',
+              body: data.message
+            })
+          });
+          console.log('Notification sent:', await response.json());
+        } catch (error) {
+          console.error('Failed to send notification:', error);
+        }
+      }
     }
 
     console.log('📨 Message added to conversation');
