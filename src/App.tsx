@@ -58,12 +58,23 @@ const AppContent = () => {
 
   useEffect(() => {
     const initNotifications = async () => {
-      const isInitialized = await notificationService.init();
-      if (isInitialized) {
-        const isPermissionGranted = await notificationService.requestPermission();
-        if (isPermissionGranted) {
-          await notificationService.subscribeToPush();
+      try {
+        const isInitialized = await notificationService.init();
+        if (isInitialized) {
+          const isPermissionGranted = await notificationService.requestPermission();
+          if (isPermissionGranted) {
+            const isSubscribed = await notificationService.subscribeToPush();
+            if (!isSubscribed) {
+              console.error('Failed to subscribe to push notifications');
+            }
+          } else {
+            console.log('Notification permission was denied');
+          }
+        } else {
+          console.error('Failed to initialize notification service');
         }
+      } catch (error) {
+        console.error('Error initializing notifications:', error);
       }
     };
 

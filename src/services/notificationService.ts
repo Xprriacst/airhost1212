@@ -78,15 +78,34 @@ class NotificationService {
       logger.log('Getting push subscription...');
       let subscription = await this.swRegistration.pushManager.getSubscription();
 
-      // Si on a déjà une souscription, on la supprime pour éviter les doublons
+      // Si on a déjà une souscription valide, on la réutilise
       if (subscription) {
-        logger.log('Found existing subscription, unsubscribing...');
-        await subscription.unsubscribe();
-        logger.log('Successfully unsubscribed');
+        logger.log('Found existing subscription, reusing it');
+        // Envoyer la subscription existante au serveur
+        const response = await fetch(`${this.apiUrl}/subscribe`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(subscription)
+        });
+
+        if (!response.ok) {
+          logger.log('Failed to send existing subscription to server, creating new one');
+          await subscription.unsubscribe();
+        } else {
+          logger.log('Successfully reused existing subscription');
+          return true;
+        }
       }
 
       logger.log('Creating new subscription...');
       const vapidPublicKey = process.env.REACT_APP_VAPID_PUBLIC_KEY;
+      if (!vapidPublicKey) {
+        logger.log('Missing VAPID public key', 'error');
+        return false;
+      }
+      
       const convertedVapidKey = this.urlBase64ToUint8Array(vapidPublicKey);
 
       subscription = await this.swRegistration.pushManager.subscribe({
