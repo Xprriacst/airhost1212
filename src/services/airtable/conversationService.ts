@@ -141,8 +141,11 @@ export const conversationService = {
     try {
       if (!base) throw new Error('Airtable is not configured');
 
+      const formattedData: Record<string, any> = {};
+      
       // Si nous avons des messages, envoyons une notification pour le dernier message
       if (data.Messages) {
+        formattedData.Messages = data.Messages;
         const messages = JSON.parse(data.Messages);
         if (Array.isArray(messages) && messages.length > 0) {
           const lastMessage = messages[messages.length - 1];
@@ -156,11 +159,14 @@ export const conversationService = {
         }
       }
 
-      const record = await base('Conversations').update(conversationId, {
-        ...data,
-        'Last Updated': new Date().toISOString()
-      });
+      // Ajouter les autres champs
+      if (data.unreadCount !== undefined) {
+        formattedData.UnreadCount = data.unreadCount;
+      }
 
+      formattedData['Last Updated'] = new Date().toISOString();
+
+      const record = await base('Conversations').update(conversationId, formattedData);
       return mapAirtableToConversation(record);
     } catch (error) {
       throw handleServiceError(error);
