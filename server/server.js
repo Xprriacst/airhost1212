@@ -38,31 +38,60 @@ webpush.setVapidDetails(
 // Store subscriptions (in memory for demo, use a database in production)
 const subscriptions = new Set();
 
-// Routes
+// Subscribe route
 app.post('/subscribe', (req, res) => {
+  console.log('Received subscription request:', req.body);
   const subscription = req.body;
+  
+  if (!subscription || !subscription.endpoint) {
+    console.error('Invalid subscription object received');
+    return res.status(400).json({ message: 'Invalid subscription' });
+  }
+
   subscriptions.add(subscription);
-  res.status(201).json({});
+  console.log('Subscription added. Total subscriptions:', subscriptions.size);
+  res.status(201).json({ message: 'Subscription added' });
 });
 
-app.post('/send-notification', async (req, res) => {
-  const { message } = req.body;
+// Send notification route
+app.post('/send-notification', (req, res) => {
+  console.log('Received notification request:', req.body);
+  const { title, body } = req.body;
   
-  const notifications = [];
-  
-  for (const subscription of subscriptions) {
-    try {
-      await webpush.sendNotification(subscription, JSON.stringify({
-        title: 'Nouveau message',
-        body: message
-      }));
-    } catch (error) {
-      console.error('Error sending notification:', error);
-      subscriptions.delete(subscription);
-    }
+  if (!title || !body) {
+    console.error('Missing title or body in notification request');
+    return res.status(400).json({ message: 'Title and body are required' });
   }
+
+  const payload = JSON.stringify({
+    title,
+    body,
+    icon: '/logo192.png'
+  });
+
+  console.log('Sending notifications to', subscriptions.size, 'subscribers');
   
-  res.status(200).json({ message: 'Notifications sent' });
+  const notifications = Array.from(subscriptions).map(subscription => {
+    return webpush.sendNotification(subscription, payload)
+      .catch(error => {
+        console.error('Error sending notification:', error);
+        if (error.statusCode === 410) {
+          console.log('Subscription expired, removing:', subscription.endpoint);
+          subscriptions.delete(subscription);
+        }
+        return null;
+      });
+  });
+
+  Promise.all(notifications)
+    .then(() => {
+      console.log('All notifications sent successfully');
+      res.status(200).json({ message: 'Notifications sent' });
+    })
+    .catch(error => {
+      console.error('Error in Promise.all:', error);
+      res.status(500).json({ message: 'Error sending notifications' });
+    });
 });
 
 // Health check endpoint for Railway

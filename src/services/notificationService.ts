@@ -22,83 +22,113 @@ class NotificationService {
   }
 
   async init() {
-    if ('serviceWorker' in navigator && 'PushManager' in window) {
-      try {
-        this.swRegistration = await navigator.serviceWorker.register('/service-worker.js');
-        console.log('Service Worker registered');
-        return true;
-      } catch (error) {
-        console.error('Service Worker registration failed:', error);
+    try {
+      console.log('Initializing notification service...');
+      
+      if (!('serviceWorker' in navigator)) {
+        console.error('Service Worker not supported');
         return false;
       }
-    }
-    return false;
-  }
 
-  async requestPermission() {
-    try {
+      if (!('Notification' in window)) {
+        console.error('Notifications not supported');
+        return false;
+      }
+
+      // Register Service Worker
+      console.log('Registering service worker...');
+      this.swRegistration = await navigator.serviceWorker.register('/service-worker.js');
+      console.log('Service Worker registered:', this.swRegistration);
+
+      // Check notification permission
       const permission = await Notification.requestPermission();
-      return permission === 'granted';
+      console.log('Notification permission:', permission);
+      
+      if (permission === 'granted') {
+        await this.subscribeToNotifications();
+        return true;
+      }
+      
+      return false;
     } catch (error) {
-      console.error('Error requesting notification permission:', error);
+      console.error('Error initializing notifications:', error);
       return false;
     }
   }
 
-  async subscribeToPush() {
-    if (!this.swRegistration) return null;
-
+  private async subscribeToNotifications() {
     try {
-      let subscription = await this.swRegistration.pushManager.getSubscription();
+      console.log('Subscribing to notifications...');
       
-      if (subscription) {
-        return subscription;
+      if (!this.swRegistration) {
+        throw new Error('Service Worker registration not found');
       }
 
-      // Vous devrez générer vos propres clés VAPID
-      // Utilisez https://web-push-codelab.glitch.me/
-      const vapidPublicKey = process.env.REACT_APP_VAPID_PUBLIC_KEY;
-      
-      if (!vapidPublicKey) {
-        console.error('VAPID public key not found');
-        return null;
-      }
-
-      const convertedVapidKey = convertVapidKey(vapidPublicKey);
-      
-      subscription = await this.swRegistration.pushManager.subscribe({
+      const subscription = await this.swRegistration.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: convertedVapidKey
+        applicationServerKey: this.urlBase64ToUint8Array(process.env.REACT_APP_VAPID_PUBLIC_KEY || '')
       });
 
-      // Envoyer la souscription au serveur
-      await fetch(`${this.apiUrl}/subscribe`, {
+      console.log('Push subscription:', subscription);
+
+      // Send subscription to server
+      const response = await fetch(`${this.apiUrl}/subscribe`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(subscription),
+        body: JSON.stringify(subscription)
       });
 
-      return subscription;
+      if (!response.ok) {
+        throw new Error('Failed to send subscription to server');
+      }
+
+      console.log('Subscription sent to server successfully');
+      return true;
     } catch (error) {
-      console.error('Failed to subscribe to push notifications:', error);
-      return null;
+      console.error('Error subscribing to notifications:', error);
+      return false;
     }
   }
 
-  async sendNotification(message: string) {
+  async sendNotification(title: string, body: string) {
     try {
-      await fetch(`${this.apiUrl}/send-notification`, {
+      console.log('Sending notification:', { title, body });
+      
+      const response = await fetch(`${this.apiUrl}/send-notification`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ message }),
+        body: JSON.stringify({ title, body })
       });
+
+      if (!response.ok) {
+        throw new Error('Failed to send notification');
+      }
+
+      console.log('Notification sent successfully');
+      return true;
     } catch (error) {
-      console.error('Failed to send notification:', error);
+      console.error('Error sending notification:', error);
+      return false;
     }
+  }
+
+  private urlBase64ToUint8Array(base64String: string) {
+    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+    const base64 = (base64String + padding)
+      .replace(/\-/g, '+')
+      .replace(/_/g, '/');
+
+    const rawData = window.atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+
+    for (let i = 0; i < rawData.length; ++i) {
+      outputArray[i] = rawData.charCodeAt(i);
+    }
+    return outputArray;
   }
 }
 
