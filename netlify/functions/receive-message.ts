@@ -119,27 +119,6 @@ export const handler: Handler = async (event) => {
 
     const data = messageSchema.parse(body);
 
-    // Si Make a fourni un ID de webhook, vérifier s'il a déjà été traité
-    if (data.webhookId) {
-      // Nettoyer les vieux webhooks
-      cleanupOldWebhooks();
-      
-      if (processedWebhooks.has(data.webhookId)) {
-        console.log('🔄 Duplicate Make webhook detected, skipping...', data.webhookId);
-        return {
-          statusCode: 200,
-          body: JSON.stringify({ 
-            status: 'success',
-            skipped: true,
-            reason: 'duplicate_make_webhook'
-          }),
-        };
-      }
-      
-      // Marquer ce webhook comme traité
-      processedWebhooks.set(data.webhookId, Date.now());
-    }
-
     // Si propertyId n'est pas fourni, on utilise une valeur par défaut
     const propertyId = data.propertyId || process.env.DEFAULT_PROPERTY_ID;
     console.log('🏠 Using property ID:', propertyId);
@@ -197,8 +176,7 @@ export const handler: Handler = async (event) => {
             text: data.message,
             timestamp: new Date(),
             sender: data.isHost ? 'host' : 'guest',
-            type: 'text',
-            webhookId: data.webhookId
+            type: 'text'
           }]),
           'Auto Pilot': false
         });
@@ -219,74 +197,19 @@ export const handler: Handler = async (event) => {
       }
     }
 
-    // Créer une clé unique pour ce message
-    const messageKey = `${data.propertyId}-${data.guestPhone}-${data.message}`;
-    
-    // Nettoyer les vieux messages
-    cleanupOldMessages();
-    
-    // Vérifier si on a déjà reçu ce message récemment
-    if (recentMessages.has(messageKey)) {
-      console.log('🔄 Duplicate webhook detected, skipping...');
-      return {
-        statusCode: 200,
-        body: JSON.stringify({ 
-          status: 'success',
-          skipped: true,
-          reason: 'duplicate_webhook'
-        }),
-      };
-    }
-    
-    // Marquer ce message comme traité
-    recentMessages.set(messageKey, Date.now());
-
     // On ajoute le message seulement si la conversation existait déjà
     const newMessage = {
       id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       text: data.message,
       timestamp: new Date(data.timestamp || Date.now()),
       sender: data.isHost ? 'host' : 'guest',
-      type: 'text',
-      webhookId: data.webhookId
+      type: 'text'
     };
 
     console.log('📨 Adding new message to conversation:', {
       conversationId: conversation.id,
       message: newMessage
     });
-
-    // Vérification des doublons avec une fenêtre de 5 secondes
-    const isDuplicate = conversation.messages.some(msg => {
-      const isTextMatch = msg.text === newMessage.text;
-      const timeDiff = Math.abs(new Date(msg.timestamp).getTime() - new Date(newMessage.timestamp).getTime());
-      const isTimeMatch = timeDiff < 5000; // 5 secondes
-      const isSameWebhook = msg.webhookId === data.webhookId;
-      const isOurMessage = msg.sender === 'host' && msg.text === data.message;
-      
-      if (isTextMatch && isTimeMatch) {
-        console.log('⚠️ Duplicate message detected:', {
-          existingMessage: msg,
-          newMessage,
-          timeDiff
-        });
-      }
-      
-      return (isTextMatch && isTimeMatch) || isSameWebhook || isOurMessage;
-    });
-
-    if (isDuplicate) {
-      console.log('⚠️ Duplicate or self-sent message detected, skipping...');
-      return {
-        statusCode: 200,
-        body: JSON.stringify({ 
-          status: 'success',
-          conversationId: conversation.id,
-          messageId: newMessage.id,
-          duplicate: true
-        }),
-      };
-    }
 
     // Si le message vient de nous (via Make), on ne l'ajoute pas
     if (data.isHost) {
@@ -317,9 +240,6 @@ export const handler: Handler = async (event) => {
     }
 
     console.log('📨 Message added to conversation');
-
-    // Note: Désactivation temporaire de la réponse automatique de l'IA
-    // La réponse de l'IA sera gérée par le frontend quand l'autoPilot sera activé
 
     return {
       statusCode: 200,
