@@ -1,0 +1,16 @@
+{
+  "name": "AirHost Admin",
+  "short_name": "AirHost",
+  "description": "Admin dashboard for managing Airbnb properties and automated responses",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#ff385c",
+  "icons": [
+    {
+      "src": "airbnb.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}
