@@ -29,7 +29,6 @@ import ChatSandbox from './pages/ChatSandbox';
 import EmergencyCases from './pages/EmergencyCases';
 
 import { notificationService } from './services/notificationService';
-// import DebugLogger from './components/DebugLogger'; // On peut aussi commenter l'import si on ne s’en sert plus
 
 const AppContent = () => {
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
@@ -56,28 +55,38 @@ const AppContent = () => {
     document.getElementsByTagName('head')[0].appendChild(meta);
   }, []);
 
+  // Initialisation des notifications
   useEffect(() => {
     const initNotifications = async () => {
       try {
+        console.log('🔔 Initializing notification service...');
         const isInitialized = await notificationService.init();
+        
         if (isInitialized) {
+          console.log('✅ Notification service initialized');
           const isPermissionGranted = await notificationService.requestPermission();
+          
           if (isPermissionGranted) {
+            console.log('✅ Notification permission granted');
             const isSubscribed = await notificationService.subscribeToPush();
-            if (!isSubscribed) {
-              console.error('Failed to subscribe to push notifications');
+            
+            if (isSubscribed) {
+              console.log('✅ Successfully subscribed to push notifications');
+            } else {
+              console.error('❌ Failed to subscribe to push notifications');
             }
           } else {
-            console.log('Notification permission was denied');
+            console.log('⚠️ Notification permission was denied');
           }
         } else {
-          console.error('Failed to initialize notification service');
+          console.error('❌ Failed to initialize notification service');
         }
       } catch (error) {
-        console.error('Error initializing notifications:', error);
+        console.error('❌ Error initializing notifications:', error);
       }
     };
 
+    // Appeler l'initialisation immédiatement
     initNotifications();
   }, []);
 
@@ -243,11 +252,6 @@ const AppContent = () => {
           <Route path="/settings" element={<Settings />} />
         </Routes>
       </main>
-
-      {/* Composant DebugLogger commenté pour supprimer le bouton Debug */}
-      {/*
-        <DebugLogger />
-      */}
     </div>
   );
 };
