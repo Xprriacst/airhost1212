@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Settings2, User, Calendar, Clock, Send, RefreshCw } from 'lucide-react';
+import { Send, RefreshCw, Calendar, Clock, User, Settings2 } from 'lucide-react';
 import type { Message, Property } from '../types';
 import type { BookingContext, AIConfig } from '../services/ai/types';
 import { aiService } from '../services/ai/aiService';
@@ -8,10 +8,97 @@ import PropertySelect from '../components/PropertySelect';
 import { useProperties } from '../hooks/useProperties';
 
 const ChatSandbox: React.FC = () => {
-  // ... state declarations restent identiques ...
+  const { properties, isLoading: loadingProperties, error: propertiesError } = useProperties();
+  const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [newMessage, setNewMessage] = useState('');
+  const [isGenerating, setIsGenerating] = useState(false);
+  
+  // Contexte temporel
+  const [messageDate, setMessageDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [messageTime, setMessageTime] = useState<string>(new Date().toTimeString().slice(0, 5));
+  
+  // Contexte de réservation
+  const [hasBooking, setHasBooking] = useState(false);
+  const [checkIn, setCheckIn] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [checkOut, setCheckOut] = useState<string>(
+    new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+  );
+  const [guestCount, setGuestCount] = useState<number>(2);
+  const [specialRequests, setSpecialRequests] = useState<string[]>([]);
+
+  // Configuration de l'IA
+  const [aiConfig, setAiConfig] = useState<AIConfig>({
+    language: 'fr',
+    tone: 'friendly',
+    shouldIncludeEmoji: true,
+    maxResponseLength: 150
+  });
+
+  // Affichage des paramètres avancés
+  const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
+
+  const handleSendMessage = async () => {
+    if (!newMessage.trim() || !selectedProperty) return;
+
+    const messageTimestamp = new Date(`${messageDate}T${messageTime}`);
+    const guestMessage: Message = {
+      id: Date.now().toString(),
+      text: newMessage,
+      isUser: false,
+      timestamp: messageTimestamp,
+      sender: 'Guest'
+    };
+
+    setMessages(prev => [...prev, guestMessage]);
+    setNewMessage('');
+    setIsGenerating(true);
+
+    try {
+      const bookingContext: BookingContext = {
+        hasBooking,
+        checkIn: hasBooking ? checkIn : undefined,
+        checkOut: hasBooking ? checkOut : undefined,
+        guestCount: hasBooking ? guestCount : undefined,
+        specialRequests: hasBooking ? specialRequests : undefined
+      };
+
+      const response = await aiService.generateResponse(
+        guestMessage,
+        selectedProperty,
+        bookingContext,
+        messages,
+        aiConfig
+      );
+      
+      const aiMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        text: response,
+        isUser: true,
+        timestamp: new Date(messageTimestamp.getTime() + 1000),
+        sender: 'AI Assistant'
+      };
+      setMessages(prev => [...prev, aiMessage]);
+    } catch (error) {
+      console.error('Error generating response:', error);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const clearChat = () => {
+    setMessages([]);
+  };
+
+  const handleAddSpecialRequest = () => {
+    const request = prompt('Entrez une demande spéciale:');
+    if (request) {
+      setSpecialRequests(prev => [...prev, request]);
+    }
+  };
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-hidden">
+    <div className="flex flex-col h-full overflow-hidden">
       {/* Header fixe */}
       <div className="flex-shrink-0 bg-white border-b px-4 py-3">
         <h1 className="text-xl font-bold text-gray-900">Chat Sandbox</h1>
@@ -20,7 +107,7 @@ const ChatSandbox: React.FC = () => {
         </p>
       </div>
 
-      {/* Zone de configuration scrollable */}
+      {/* Zone scrollable */}
       <div className="flex-1 overflow-y-auto">
         <div className="p-4 space-y-4">
           <PropertySelect
@@ -48,7 +135,7 @@ const ChatSandbox: React.FC = () => {
 
           {hasBooking && (
             <div className="bg-gray-50 p-4 rounded-lg space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4">
                 <div className="flex items-center gap-2">
                   <Calendar className="w-5 h-5 text-gray-400 flex-shrink-0" />
                   <div className="flex-1 min-w-0">
@@ -75,7 +162,7 @@ const ChatSandbox: React.FC = () => {
                 </div>
               </div>
 
-              <div className="flex flex-col sm:flex-row gap-4">
+              <div className="space-y-4">
                 <div className="flex items-center gap-2">
                   <User className="w-5 h-5 text-gray-400 flex-shrink-0" />
                   <div>
@@ -90,7 +177,7 @@ const ChatSandbox: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="flex-1 min-w-0">
+                <div className="min-w-0">
                   <label className="block text-sm text-gray-700 mb-1">Demandes spéciales</label>
                   <div className="flex flex-wrap gap-2">
                     {specialRequests.map((request, index) => (
@@ -129,7 +216,7 @@ const ChatSandbox: React.FC = () => {
 
           {showAdvancedSettings && (
             <div className="bg-gray-50 p-4 rounded-lg space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Langue</label>
                   <select
@@ -156,7 +243,7 @@ const ChatSandbox: React.FC = () => {
                 </div>
               </div>
 
-              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+              <div className="space-y-4">
                 <label className="relative inline-flex items-center cursor-pointer">
                   <input
                     type="checkbox"
@@ -194,7 +281,7 @@ const ChatSandbox: React.FC = () => {
                   <p className="text-sm text-gray-500">{selectedProperty.address}</p>
                 </div>
                 <button
-                  onClick={() => setMessages([])}
+                  onClick={clearChat}
                   className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900"
                 >
                   <RefreshCw className="w-4 h-4" />
@@ -216,14 +303,14 @@ const ChatSandbox: React.FC = () => {
             </div>
 
             <div className="p-4 border-t space-y-4">
-              <div className="flex flex-wrap gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="flex items-center gap-2">
                   <Calendar className="w-5 h-5 text-gray-400" />
                   <input
                     type="date"
                     value={messageDate}
                     onChange={(e) => setMessageDate(e.target.value)}
-                    className="rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                    className="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                   />
                 </div>
                 <div className="flex items-center gap-2">
@@ -232,7 +319,7 @@ const ChatSandbox: React.FC = () => {
                     type="time"
                     value={messageTime}
                     onChange={(e) => setMessageTime(e.target.value)}
-                    className="rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                    className="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                   />
                 </div>
               </div>
