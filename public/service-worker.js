@@ -1,7 +1,7 @@
 /* eslint-disable no-restricted-globals */
 console.log('🚀 Service Worker Loading...');
 
-// Cache des ressources statiques
+// Configuration
 const CACHE_NAME = 'airhost-static-v1';
 const ASSETS_TO_CACHE = [
   '/',
@@ -14,11 +14,9 @@ const ASSETS_TO_CACHE = [
 self.addEventListener('install', (event) => {
   console.log('🔧 Service Worker installing...');
   
-  // Force l'activation immédiate
   event.waitUntil(
     Promise.all([
       self.skipWaiting(),
-      // Mise en cache des ressources statiques
       caches.open(CACHE_NAME).then((cache) => {
         console.log('📦 Caching static assets...');
         return cache.addAll(ASSETS_TO_CACHE);
@@ -31,11 +29,9 @@ self.addEventListener('install', (event) => {
 self.addEventListener('activate', (event) => {
   console.log('✨ Service Worker activating...');
   
-  // Prend le contrôle immédiatement
   event.waitUntil(
     Promise.all([
       clients.claim(),
-      // Nettoyage des anciens caches
       caches.keys().then((cacheNames) => {
         return Promise.all(
           cacheNames
@@ -50,134 +46,160 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Gestion des notifications push
+// Gestion des notifications push avec meilleure gestion d'erreurs
 self.addEventListener('push', (event) => {
-  console.log('📬 Push event received');
-  
+  console.log('📬 Push event received', event);
+
   try {
-    // Vérifier si l'événement contient des données
+    // Vérification des données
     if (!event.data) {
       console.warn('⚠️ Push event has no data');
       return;
     }
 
-    // Parser les données
+    // Parser les données avec gestion d'erreur
     let data;
     try {
       data = event.data.json();
       console.log('📦 Push data parsed:', data);
-    } catch (error) {
-      console.error('❌ Failed to parse push data:', error);
+    } catch (parseError) {
+      console.warn('⚠️ Failed to parse JSON, using text fallback');
       data = {
         title: 'Nouveau message',
-        body: event.data.text()
+        body: event.data.text(),
+        timestamp: Date.now()
       };
     }
 
-    // Options de notification par défaut
-    const defaultOptions = {
+    // Validation des données minimales requises
+    if (!data.title && !data.body) {
+      console.error('❌ Push data missing required fields');
+      return;
+    }
+
+    // Configuration complète des notifications
+    const notificationOptions = {
+      body: data.body,
       icon: '/logo192.png',
       badge: '/logo192.png',
+      timestamp: data.timestamp || Date.now(),
       vibrate: [200, 100, 200],
       requireInteraction: true,
-      tag: 'message',
+      tag: data.tag || 'message',
       renotify: true,
+      silent: false,
+      data: {
+        url: data.url || '/',
+        ...data.data
+      },
       actions: [
         {
           action: 'open',
           title: 'Ouvrir'
+        },
+        {
+          action: 'close',
+          title: 'Fermer'
         }
-      ],
-      data: {
-        url: '/',
-        ...data.data
-      }
+      ]
     };
 
-    // Fusionner avec les options reçues
-    const options = {
-      ...defaultOptions,
-      body: data.body,
-      timestamp: data.timestamp || Date.now(),
-    };
-
-    console.log('🔔 Showing notification:', {
-      title: data.title,
-      options
-    });
-
-    // Afficher la notification
+    // Afficher la notification avec gestion complète des erreurs
     event.waitUntil(
-      self.registration.showNotification(data.title, options)
-        .then(() => {
+      (async () => {
+        try {
+          // Vérifier la permission
+          if (Notification.permission !== 'granted') {
+            throw new Error('Notification permission not granted');
+          }
+
+          // Afficher la notification
+          await self.registration.showNotification(data.title, notificationOptions);
           console.log('✅ Notification shown successfully');
-          // Envoyer un message à l'application
-          return self.clients.matchAll()
-            .then((clients) => {
-              clients.forEach((client) => {
-                client.postMessage({
-                  type: 'NOTIFICATION_SHOWN',
-                  payload: data
-                });
-              });
+
+          // Notifier tous les clients
+          const clients = await self.clients.matchAll();
+          clients.forEach((client) => {
+            client.postMessage({
+              type: 'NOTIFICATION_SHOWN',
+              payload: {
+                title: data.title,
+                body: data.body,
+                timestamp: notificationOptions.timestamp
+              }
             });
-        })
-        .catch((error) => {
-          console.error('❌ Error showing notification:', error);
+          });
+        } catch (error) {
+          console.error('❌ Failed to show notification:', error);
           throw error;
-        })
+        }
+      })()
     );
   } catch (error) {
-    console.error('❌ Error handling push event:', error);
+    console.error('❌ Critical error in push handler:', error);
     console.error('Stack:', error.stack);
   }
 });
 
-// Gestion des clics sur les notifications
+// Gestion améliorée des clics sur les notifications
 self.addEventListener('notificationclick', (event) => {
-  console.log('🖱️ Notification clicked:', event);
-  
-  // Fermer la notification
+  console.log('🖱️ Notification clicked:', {
+    action: event.action,
+    notification: event.notification
+  });
+
   event.notification.close();
 
-  // Récupérer l'URL cible
+  if (event.action === 'close') {
+    return;
+  }
+
   const targetUrl = event.notification.data?.url || '/';
-  console.log('🎯 Target URL:', targetUrl);
+  console.log('🎯 Opening URL:', targetUrl);
 
-  // Gérer le clic
   event.waitUntil(
-    // Chercher les fenêtres ouvertes
-    self.clients.matchAll({
-      type: 'window',
-      includeUncontrolled: true
-    })
-    .then((clientList) => {
-      // Chercher si une fenêtre est déjà ouverte sur l'URL cible
-      const hadWindowToFocus = clientList.some((client) => {
-        if (client.url === targetUrl && 'focus' in client) {
-          return client.focus();
-        }
-        return false;
-      });
+    (async () => {
+      try {
+        // Rechercher une fenêtre existante
+        const windowClients = await self.clients.matchAll({
+          type: 'window',
+          includeUncontrolled: true
+        });
 
-      // Si aucune fenêtre n'est ouverte, en ouvrir une nouvelle
-      if (!hadWindowToFocus) {
-        console.log('🔗 Opening new window');
-        return self.clients.openWindow(targetUrl)
-          .then((client) => {
-            if (client) {
-              return client.focus();
-            }
-          });
+        // Tenter de réutiliser une fenêtre existante
+        for (const client of windowClients) {
+          if (client.url === targetUrl && 'focus' in client) {
+            await client.focus();
+            return;
+          }
+        }
+
+        // Si aucune fenêtre correspondante n'est trouvée, en ouvrir une nouvelle
+        const client = await self.clients.openWindow(targetUrl);
+        if (client) {
+          await client.focus();
+        }
+      } catch (error) {
+        console.error('❌ Error handling notification click:', error);
       }
-    })
-    .catch((error) => {
-      console.error('❌ Error handling notification click:', error);
-    })
+    })()
   );
 });
 
 // Gestion de la fermeture des notifications
 self.addEventListener('notificationclose', (event) => {
-  console.log('🚫 Notification closed:', event);
+  console.log('🚫 Notification closed:', {
+    title: event.notification.title,
+    timestamp: event.notification.timestamp
+  });
+});
+
+// Gestion des erreurs non capturées
+self.addEventListener('error', (event) => {
+  console.error('💥 Unhandled error in service worker:', event.error);
+});
+
+// Gestion des rejets de promesse non capturés
+self.addEventListener('unhandledrejection', (event) => {
+  console.error('💥 Unhandled promise rejection:', event.reason);
 });
