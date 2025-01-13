@@ -50,8 +50,8 @@ const sendNotification = async (title: string, body: string) => {
   try {
     console.log('📱 Sending notification:', { title, body });
     
-    // Utiliser l'endpoint /notify au lieu de /send-notification
-    const response = await fetch(`${process.env.REACT_APP_API_URL}/notify`, {
+    // Utiliser l'URL complète du serveur Railway
+    const response = await fetch('https://airhost1212-production.up.railway.app/notify', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -60,13 +60,14 @@ const sendNotification = async (title: string, body: string) => {
     });
 
     if (!response.ok) {
-      throw new Error(`Failed to send notification: ${response.status}`);
+      throw new Error(`Failed to send notification: ${response.status} ${response.statusText}`);
     }
 
     const data = await response.json();
-    console.log('Notification sent:', data);
+    console.log('✅ Notification sent:', data);
   } catch (error) {
-    console.error('Failed to send notification:', error);
+    console.error('❌ Failed to send notification:', error);
+    // Ne pas relancer l'erreur pour éviter d'interrompre le traitement du message
   }
 };
 
