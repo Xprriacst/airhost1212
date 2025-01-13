@@ -91,48 +91,52 @@ const EmergencyCases: React.FC = () => {
   ]);
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Tags de conversation</h1>
-          <p className="text-gray-600 mt-1">
-            Tagger les messages des voyageurs pour remonter à votre équipe
-          </p>
+    <div className="flex-1 flex flex-col h-full overflow-hidden">
+      {/* Header fixe */}
+      <div className="flex-shrink-0 bg-white border-b px-4 py-3">
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-xl font-bold text-gray-900">Tags de conversation</h1>
+            <p className="text-sm text-gray-600 mt-1">
+              Tagger les messages des voyageurs pour remonter à votre équipe
+            </p>
+          </div>
+          <button className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700">
+            <Plus className="w-5 h-5 mr-2" />
+            Nouveau tag
+          </button>
         </div>
-        <button
-          className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
-        >
-          <Plus className="w-5 h-5 mr-2" />
-          Nouveau tag
-        </button>
       </div>
 
-      <div className="grid gap-4">
-        {emergencyCases.map((emergencyCase) => {
-          const IconComponent = emergencyCase.icon;
-          return (
-            <div
-              key={emergencyCase.id}
-              className="bg-white rounded-lg border border-gray-200 p-4 hover:border-gray-300 transition-colors"
-            >
-              <div className="flex items-start gap-4">
-                <div className={`p-2 rounded-lg bg-gray-50 ${emergencyCase.iconColor}`}>
-                  <IconComponent className="w-5 h-5" />
+      {/* Contenu scrollable */}
+      <div className="flex-1 overflow-y-auto p-4">
+        <div className="grid gap-4">
+          {emergencyCases.map((emergencyCase) => {
+            const IconComponent = emergencyCase.icon;
+            return (
+              <div
+                key={emergencyCase.id}
+                className="bg-white rounded-lg border border-gray-200 p-4 hover:border-gray-300 transition-colors"
+              >
+                <div className="flex items-start gap-4">
+                  <div className={`p-2 rounded-lg bg-gray-50 ${emergencyCase.iconColor}`}>
+                    <IconComponent className="w-5 h-5" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-medium text-gray-900">{emergencyCase.name}</h3>
+                    <p className="text-sm text-gray-500 mt-1">{emergencyCase.description}</p>
+                  </div>
+                  <button className="p-2 text-gray-400 hover:text-gray-500">
+                    <span className="sr-only">Plus d'options</span>
+                    <svg className="w-5 h-5" viewBox="0 0 20 20" fill="currentColor">
+                      <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
+                    </svg>
+                  </button>
                 </div>
-                <div className="flex-1">
-                  <h3 className="font-medium text-gray-900">{emergencyCase.name}</h3>
-                  <p className="text-sm text-gray-500 mt-1">{emergencyCase.description}</p>
-                </div>
-                <button className="p-2 text-gray-400 hover:text-gray-500">
-                  <span className="sr-only">Plus d'options</span>
-                  <svg className="w-5 h-5" viewBox="0 0 20 20" fill="currentColor">
-                    <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
-                  </svg>
-                </button>
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
     </div>
   );
