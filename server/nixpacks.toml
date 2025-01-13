@@ -3,7 +3,7 @@ nixPkgs = ["nodejs", "wget"]
 aptPkgs = ["curl"]
 
 [phases.install]
-cmds = ["npm ci --only=production"]
+cmds = ["npm install --production"]
 
 [phases.build]
 cmds = ["npm run build"]
