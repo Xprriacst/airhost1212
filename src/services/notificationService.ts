@@ -138,93 +138,85 @@ class NotificationService {
     }
   }
 
-  async subscribeToPush(): Promise<boolean> {
-    try {
-      if (!this.swRegistration) {
-        logger.log('Service Worker not registered', 'error');
-        return false;
-      }
-
-      logger.log('Getting push subscription...');
-      let subscription = await this.swRegistration.pushManager.getSubscription();
-
-      // Si on a déjà une souscription valide, on la réutilise
-      if (subscription) {
-        logger.log('Found existing subscription, reusing it');
-        logger.log('Subscription details:', subscription);
-        
-        try {
-          // Envoyer la subscription existante au serveur
-          const response = await fetch(`${this.apiUrl}/subscribe`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              subscription,
-              timestamp: Date.now()
-            })
-          });
-
-          if (!response.ok) {
-            logger.log('Failed to send existing subscription to server, creating new one');
-            await subscription.unsubscribe();
-          } else {
-            logger.log('Successfully reused existing subscription');
-            return true;
-          }
-        } catch (error) {
-          logger.log('Error sending subscription to server:', error);
-          await subscription.unsubscribe();
-        }
-      }
-
-      logger.log('Creating new subscription...');
-      const vapidPublicKey = process.env.REACT_APP_VAPID_PUBLIC_KEY;
-      if (!vapidPublicKey) {
-        logger.log('Missing VAPID public key', 'error');
-        return false;
-      }
-      
-      logger.log('Converting VAPID key...');
-      const convertedVapidKey = this.urlBase64ToUint8Array(vapidPublicKey);
-      logger.log('VAPID key converted successfully');
-
-      logger.log('Requesting push subscription...');
-      subscription = await this.swRegistration.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: convertedVapidKey
-      });
-      logger.log('Successfully created new subscription');
-      logger.log('New subscription details:', subscription);
-
-      // Envoyer la subscription au serveur
-      logger.log('Sending subscription to server...');
-      const response = await fetch(`${this.apiUrl}/subscribe`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          subscription,
-          timestamp: Date.now()
-        })
-      });
-
-      if (!response.ok) {
-        const text = await response.text();
-        logger.log('Server response:', text);
-        throw new Error('Failed to send subscription to server');
-      }
-
-      logger.log('Successfully subscribed to push notifications');
-      return true;
-    } catch (error) {
-      logger.log(`Failed to subscribe: ${error}`, 'error');
-      logger.log('Error stack:', error.stack);
+async subscribeToPush(): Promise<boolean> {
+  try {
+    if (!this.swRegistration) {
+      logger.log('Service Worker not registered', 'error');
       return false;
     }
+
+    logger.log('Getting push subscription...');
+    let subscription = await this.swRegistration.pushManager.getSubscription();
+
+    // Si on a déjà une souscription valide, on la réutilise
+    if (subscription) {
+      logger.log('Found existing subscription, reusing it');
+      
+      try {
+        const response = await fetch(`${this.apiUrl}/subscribe`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            subscription: subscription.toJSON(), // Convertir en JSON
+            timestamp: Date.now()
+          }),
+          credentials: 'include' // Ajouter cette ligne
+        });
+
+        if (!response.ok) {
+          throw new Error(`Server responded with ${response.status}`);
+        }
+        
+        logger.log('Successfully reused existing subscription');
+        return true;
+      } catch (error) {
+        logger.log('Failed to send existing subscription to server:', error);
+        await subscription.unsubscribe();
+      }
+    }
+
+    // Créer une nouvelle souscription
+    logger.log('Creating new subscription...');
+    const vapidPublicKey = process.env.REACT_APP_VAPID_PUBLIC_KEY;
+    if (!vapidPublicKey) {
+      logger.log('Missing VAPID public key', 'error');
+      return false;
+    }
+
+    const convertedVapidKey = this.urlBase64ToUint8Array(vapidPublicKey);
+    
+    subscription = await this.swRegistration.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: convertedVapidKey
+    });
+
+    // Envoyer la souscription au serveur
+    const response = await fetch(`${this.apiUrl}/subscribe`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        subscription: subscription.toJSON(),
+        timestamp: Date.now()
+      }),
+      credentials: 'include'
+    });
+
+    if (!response.ok) {
+      throw new Error(`Server responded with ${response.status}`);
+    }
+
+    logger.log('Successfully subscribed to push notifications');
+    return true;
+  } catch (error) {
+    logger.log(`Failed to subscribe: ${error}`, 'error');
+    return false;
   }
+}
+
 
   async sendNotification(title: string, body: string) {
     try {
