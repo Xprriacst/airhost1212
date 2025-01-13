@@ -45,6 +45,31 @@ const cleanupOldWebhooks = () => {
   }
 };
 
+// Fonction pour envoyer une notification
+const sendNotification = async (title: string, body: string) => {
+  try {
+    console.log('📱 Sending notification:', { title, body });
+    
+    // Utiliser l'endpoint /notify au lieu de /send-notification
+    const response = await fetch(`${process.env.REACT_APP_API_URL}/notify`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ title, body })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to send notification: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log('Notification sent:', data);
+  } catch (error) {
+    console.error('Failed to send notification:', error);
+  }
+};
+
 export const handler: Handler = async (event) => {
   console.log('🚀 Receive Message Function Called');
   console.log('Method:', event.httpMethod);
@@ -93,6 +118,27 @@ export const handler: Handler = async (event) => {
     }
 
     const data = messageSchema.parse(body);
+
+    // Si Make a fourni un ID de webhook, vérifier s'il a déjà été traité
+    if (data.webhookId) {
+      // Nettoyer les vieux webhooks
+      cleanupOldWebhooks();
+      
+      if (processedWebhooks.has(data.webhookId)) {
+        console.log('🔄 Duplicate Make webhook detected, skipping...', data.webhookId);
+        return {
+          statusCode: 200,
+          body: JSON.stringify({ 
+            status: 'success',
+            skipped: true,
+            reason: 'duplicate_make_webhook'
+          }),
+        };
+      }
+      
+      // Marquer ce webhook comme traité
+      processedWebhooks.set(data.webhookId, Date.now());
+    }
 
     // Si propertyId n'est pas fourni, on utilise une valeur par défaut
     const propertyId = data.propertyId || process.env.DEFAULT_PROPERTY_ID;
@@ -195,27 +241,6 @@ export const handler: Handler = async (event) => {
     // Marquer ce message comme traité
     recentMessages.set(messageKey, Date.now());
 
-    // Si Make a fourni un ID de webhook, vérifier s'il a déjà été traité
-    if (data.webhookId) {
-      // Nettoyer les vieux webhooks
-      cleanupOldWebhooks();
-      
-      if (processedWebhooks.has(data.webhookId)) {
-        console.log('🔄 Duplicate Make webhook detected, skipping...', data.webhookId);
-        return {
-          statusCode: 200,
-          body: JSON.stringify({ 
-            status: 'success',
-            skipped: true,
-            reason: 'duplicate_make_webhook'
-          }),
-        };
-      }
-      
-      // Marquer ce webhook comme traité
-      processedWebhooks.set(data.webhookId, Date.now());
-    }
-
     // On ajoute le message seulement si la conversation existait déjà
     const newMessage = {
       id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
@@ -231,11 +256,11 @@ export const handler: Handler = async (event) => {
       message: newMessage
     });
 
-    // Vérification des doublons avec une fenêtre de 1 seconde
+    // Vérification des doublons avec une fenêtre de 5 secondes
     const isDuplicate = conversation.messages.some(msg => {
       const isTextMatch = msg.text === newMessage.text;
       const timeDiff = Math.abs(new Date(msg.timestamp).getTime() - new Date(newMessage.timestamp).getTime());
-      const isTimeMatch = timeDiff < 1000; // 1 seconde
+      const isTimeMatch = timeDiff < 5000; // 5 secondes
       const isSameWebhook = msg.webhookId === data.webhookId;
       const isOurMessage = msg.sender === 'host' && msg.text === data.message;
       
@@ -287,22 +312,7 @@ export const handler: Handler = async (event) => {
 
       // Envoyer la notification seulement si ce n'est pas un message WhatsApp
       if (!data.platform || data.platform !== 'whatsapp') {
-        console.log('📱 Sending notification...');
-        try {
-          const response = await fetch(`${process.env.REACT_APP_API_URL}/send-notification`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              title: 'Nouveau message',
-              body: data.message
-            })
-          });
-          console.log('Notification sent:', await response.json());
-        } catch (error) {
-          console.error('Failed to send notification:', error);
-        }
+        await sendNotification('Nouveau message', data.message);
       }
     }
 
