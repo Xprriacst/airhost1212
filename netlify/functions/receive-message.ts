@@ -151,7 +151,8 @@ export const handler: Handler = async (event) => {
             text: data.message,
             timestamp: new Date(),
             sender: data.isHost ? 'host' : 'guest',
-            type: 'text'
+            type: 'text',
+            webhookId: data.webhookId
           }]),
           'Auto Pilot': false
         });
@@ -221,7 +222,8 @@ export const handler: Handler = async (event) => {
       text: data.message,
       timestamp: new Date(data.timestamp || Date.now()),
       sender: data.isHost ? 'host' : 'guest',
-      type: 'text'
+      type: 'text',
+      webhookId: data.webhookId
     };
 
     console.log('📨 Adding new message to conversation:', {
@@ -229,14 +231,12 @@ export const handler: Handler = async (event) => {
       message: newMessage
     });
 
-    // Vérifier si le message n'existe pas déjà (éviter les doublons)
+    // Vérification des doublons avec une fenêtre de 1 seconde
     const isDuplicate = conversation.messages.some(msg => {
-      // Si le message a exactement le même texte et timestamp proche (dans les 10 secondes)
       const isTextMatch = msg.text === newMessage.text;
       const timeDiff = Math.abs(new Date(msg.timestamp).getTime() - new Date(newMessage.timestamp).getTime());
-      const isTimeMatch = timeDiff < 10000; // 10 secondes
-      
-      // Si c'est un message qu'on a envoyé nous-même
+      const isTimeMatch = timeDiff < 1000; // 1 seconde
+      const isSameWebhook = msg.webhookId === data.webhookId;
       const isOurMessage = msg.sender === 'host' && msg.text === data.message;
       
       if (isTextMatch && isTimeMatch) {
@@ -247,7 +247,7 @@ export const handler: Handler = async (event) => {
         });
       }
       
-      return (isTextMatch && isTimeMatch) || isOurMessage;
+      return (isTextMatch && isTimeMatch) || isSameWebhook || isOurMessage;
     });
 
     if (isDuplicate) {
@@ -285,7 +285,7 @@ export const handler: Handler = async (event) => {
     if (!data.isHost) {
       await conversationService.incrementUnreadCount(conversation.id);
 
-      // Envoyer la notification seulement si ce n'est pas un doublon et que c'est un message du guest
+      // Envoyer la notification seulement si ce n'est pas un message WhatsApp
       if (!data.platform || data.platform !== 'whatsapp') {
         console.log('📱 Sending notification...');
         try {
