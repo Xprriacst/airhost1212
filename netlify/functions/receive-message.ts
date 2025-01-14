@@ -16,7 +16,7 @@ const messageSchema = z.object({
   checkInDate: z.string().optional(),
   checkOutDate: z.string().optional(),
   isHost: z.boolean().optional().default(false),
-  webhookId: z.string().optional() // ID unique du webhook Make
+  webhookId: z.string().optional()
 });
 
 // Cache pour stocker les messages récents (5 minutes max)
@@ -46,17 +46,21 @@ const cleanupOldWebhooks = () => {
 };
 
 // Fonction pour envoyer une notification
-const sendNotification = async (title: string, body: string) => {
+const sendNotification = async (title: string, body: string, messageId: string) => {
   try {
-    console.log('📱 Sending notification:', { title, body });
+    console.log('📱 Sending notification:', { title, body, messageId });
     
-    // Utiliser l'URL complète du serveur Railway
     const response = await fetch('https://airhost1212-production.up.railway.app/notify', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ title, body })
+      body: JSON.stringify({ 
+        title, 
+        body,
+        messageId,
+        timestamp: new Date().toISOString()
+      })
     });
 
     if (!response.ok) {
@@ -67,7 +71,6 @@ const sendNotification = async (title: string, body: string) => {
     console.log('✅ Notification sent:', data);
   } catch (error) {
     console.error('❌ Failed to send notification:', error);
-    // Ne pas relancer l'erreur pour éviter d'interrompre le traitement du message
   }
 };
 
@@ -89,11 +92,7 @@ export const handler: Handler = async (event) => {
   }
 
   if (event.httpMethod !== 'POST') {
-    console.warn('❌ Method not allowed:', event.httpMethod);
-    return {
-      statusCode: 405,
-      body: JSON.stringify({ error: 'Method not allowed' }),
-    };
+    return { statusCode: 405, body: JSON.stringify({ error: 'Method not allowed' }) };
   }
 
   try {
@@ -101,165 +100,121 @@ export const handler: Handler = async (event) => {
     const body = JSON.parse(event.body || '{}');
     console.log('📦 Parsed body:', JSON.stringify(body, null, 2));
 
-    try {
-      const data = messageSchema.parse(body);
-      console.log('✅ Validated data:', JSON.stringify(data, null, 2));
-    } catch (validationError) {
-      console.error('❌ Validation error:', validationError);
-      if (validationError instanceof z.ZodError) {
-        return {
-          statusCode: 400,
-          body: JSON.stringify({
-            error: 'Validation failed',
-            details: validationError.errors
-          })
-        };
-      }
-      throw validationError;
+    const data = messageSchema.parse(body);
+    console.log('✅ Validated data:', JSON.stringify(data, null, 2));
+
+    // Nettoyage des caches
+    cleanupOldMessages();
+    cleanupOldWebhooks();
+
+    // Vérification du webhook ID pour éviter les doublons
+    if (data.webhookId && processedWebhooks.has(data.webhookId)) {
+      console.log('🔄 Duplicate webhook detected, skipping...');
+      return {
+        statusCode: 200,
+        body: JSON.stringify({ 
+          status: 'success',
+          skipped: true,
+          reason: 'duplicate_webhook'
+        }),
+      };
     }
 
-    const data = messageSchema.parse(body);
-
-    // Si propertyId n'est pas fourni, on utilise une valeur par défaut
-    const propertyId = data.propertyId || process.env.DEFAULT_PROPERTY_ID;
-    console.log('🏠 Using property ID:', propertyId);
+    if (data.webhookId) {
+      processedWebhooks.set(data.webhookId, Date.now());
+    }
     
+    const propertyId = data.propertyId || process.env.DEFAULT_PROPERTY_ID;
     if (!propertyId) {
-      console.error('❌ No propertyId provided and no default set');
-      return {
-        statusCode: 400,
-        body: JSON.stringify({ error: 'Property ID is required' }),
-      };
+      return { statusCode: 400, body: JSON.stringify({ error: 'Property ID is required' }) };
     }
 
     // Recherche de la propriété
-    console.log('🔍 Searching for property:', propertyId);
     const properties = await propertyService.getProperties();
-    console.log('📋 Found properties:', properties.length);
-    
     const property = properties.find((p) => p.id === propertyId);
-
     if (!property) {
-      console.error('❌ Property not found for ID:', propertyId);
-      return {
-        statusCode: 404,
-        body: JSON.stringify({ error: 'Property not found' }),
-      };
+      return { statusCode: 404, body: JSON.stringify({ error: 'Property not found' }) };
     }
 
-    console.log('✅ Found property:', {
-      id: property.id,
-      name: property.name
-    });
-
-    // Récupération des conversations pour cette propriété
-    console.log('📝 Fetching conversations for property:', propertyId);
+    // Récupération des conversations
     const conversations = await conversationService.fetchPropertyConversations(propertyId);
-    console.log('📝 Found conversations:', conversations.length);
+    let conversation = conversations.find((conv) => conv.guestPhone === data.guestPhone);
 
-    // Vérification si une conversation existe pour ce numéro de téléphone
-    let conversation = conversations.find(
-      (conv) => conv.guestPhone === data.guestPhone
-    );
-
-    if (conversation) {
-      console.log('📝 Found existing conversation:', conversation.id);
-    } else {
-      console.log('🔄 Creating new conversation');
-      try {
-        conversation = await conversationService.addConversation({
-          Properties: [propertyId],
-          'Guest Name': data.guestName || 'Guest',
-          'Guest Email': data.guestEmail || '',
-          'Guest phone number': data.guestPhone,
-          Messages: JSON.stringify([{
-            id: Date.now().toString(),
-            text: data.message,
-            timestamp: new Date(),
-            sender: data.isHost ? 'host' : 'guest',
-            type: 'text'
-          }]),
-          'Auto Pilot': false
-        });
-        console.log('✅ New conversation created:', conversation.id);
-        
-        // Si on vient de créer la conversation avec le message, pas besoin de l'ajouter à nouveau
-        return {
-          statusCode: 200,
-          body: JSON.stringify({ 
-            status: 'success',
-            conversationId: conversation.id,
-            messageId: conversation.messages[0].id
-          }),
-        };
-      } catch (error) {
-        console.error('❌ Failed to create conversation:', error);
-        throw error;
-      }
-    }
-
-    // On ajoute le message seulement si la conversation existait déjà
-    const newMessage = {
-      id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      text: data.message,
-      timestamp: new Date(data.timestamp || Date.now()),
-      sender: data.isHost ? 'host' : 'guest',
-      type: 'text'
-    };
-
-    console.log('📨 Adding new message to conversation:', {
-      conversationId: conversation.id,
-      message: newMessage
-    });
-
-    // Si le message vient de nous (via Make), on ne l'ajoute pas
-    if (data.isHost) {
-      console.log('⚠️ Host message received via webhook, skipping...');
+    // Création d'une nouvelle conversation si nécessaire
+    if (!conversation) {
+      conversation = await conversationService.addConversation({
+        Properties: [propertyId],
+        'Guest Name': data.guestName || 'Guest',
+        'Guest Email': data.guestEmail || '',
+        'Guest phone number': data.guestPhone,
+        'Check-in Date': data.checkInDate,
+        'Check-out Date': data.checkOutDate,
+        Messages: JSON.stringify([{
+          id: Date.now().toString(),
+          text: data.message,
+          timestamp: new Date(),
+          sender: data.isHost ? 'host' : 'guest',
+          type: 'text'
+        }]),
+        'Auto Pilot': false
+      });
+      
       return {
         statusCode: 200,
         body: JSON.stringify({ 
           status: 'success',
           conversationId: conversation.id,
-          skipped: true
+          messageId: conversation.messages[0].id
         }),
       };
     }
 
-    const updatedMessages = [...(conversation.messages || []), newMessage];
-    await conversationService.updateConversation(conversation.id, {
-      Messages: JSON.stringify(updatedMessages),
-    });
-
-    // Incrémenter le compteur de messages non lus si le message vient du guest
+    // Ajout du message à une conversation existante
     if (!data.isHost) {
+      const newMessage = {
+        id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        text: data.message,
+        timestamp: new Date(data.timestamp || Date.now()),
+        sender: 'guest',
+        type: 'text'
+      };
+
+      const updatedMessages = [...(conversation.messages || []), newMessage];
+      await conversationService.updateConversation(conversation.id, {
+        Messages: JSON.stringify(updatedMessages),
+      });
+
+      // Incrémenter le compteur et envoyer la notification
       await conversationService.incrementUnreadCount(conversation.id);
+      await sendNotification(
+        'Nouveau message', 
+        data.message,
+        newMessage.id
+      );
 
-      // Envoyer la notification seulement si ce n'est pas un message WhatsApp
-      if (!data.platform || data.platform !== 'whatsapp') {
-        await sendNotification('Nouveau message', data.message);
-      }
+      return {
+        statusCode: 200,
+        body: JSON.stringify({ 
+          status: 'success',
+          conversationId: conversation.id,
+          messageId: newMessage.id
+        }),
+      };
     }
-
-    console.log('📨 Message added to conversation');
 
     return {
       statusCode: 200,
       body: JSON.stringify({ 
         status: 'success',
         conversationId: conversation.id,
-        messageId: newMessage.id
+        skipped: true
       }),
     };
+
   } catch (error) {
-    console.error('🚨 Error processing message:', {
-      error: error,
-      message: error.message,
-      stack: error.stack,
-      name: error.name
-    });
+    console.error('🚨 Error processing message:', error);
     
     if (error instanceof z.ZodError) {
-      console.error('🚨 Validation errors:', error.errors);
       return {
         statusCode: 400,
         body: JSON.stringify({ 
@@ -269,7 +224,6 @@ export const handler: Handler = async (event) => {
       };
     }
 
-    // Log any Airtable specific error details
     if (error.error) {
       console.error('🚨 Airtable error details:', {
         type: error.error.type,
@@ -277,7 +231,7 @@ export const handler: Handler = async (event) => {
         statusCode: error.statusCode
       });
     }
-
+    
     return {
       statusCode: 500,
       body: JSON.stringify({ 
