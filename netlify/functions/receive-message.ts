@@ -203,7 +203,7 @@ export const handler: Handler = async (event) => {
           sender: data.isHost ? 'host' : 'guest',
           type: 'text'
         }]),
-        'Auto Pilot': false
+        'Auto-Pilot': false // Correction du nom du champ Auto Pilot
       });
       
       return {
@@ -233,7 +233,7 @@ export const handler: Handler = async (event) => {
       if (conversation) {
         // Désactiver l'Auto-Pilot
         await conversationService.updateConversation(conversation.id, {
-          'Auto-Pilot': false,
+          'Auto Pilot': false,
           'Last Emergency': detectedEmergency.name,
           'Emergency Detected At': new Date().toISOString()
         });
