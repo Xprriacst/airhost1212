@@ -1,6 +1,7 @@
 import { Handler } from '@netlify/functions';
 import Airtable from 'airtable';
 import OpenAI from 'openai';
+import axios from 'axios';
 import { EmergencyDetectionService } from '../../src/services/emergencyDetectionService';
 
 // Configuration Airtable
@@ -71,6 +72,23 @@ const getEmergencyCases = async () => {
       notifyHost: true,
     }
   ];
+};
+
+const sendNotification = async (title: string, body: string, messageId?: string) => {
+  console.log('📱 Sending notification:', { title, body, messageId });
+  
+  try {
+    const response = await axios.post(
+      'https://airhost1212-production.up.railway.app/notify',
+      { title, body, messageId }
+    );
+    
+    console.log('✅ Notification sent:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('Error sending notification:', error);
+    throw error;
+  }
 };
 
 const handler: Handler = async (event) => {

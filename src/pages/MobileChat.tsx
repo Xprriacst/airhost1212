@@ -40,6 +40,7 @@ const MobileChat: React.FC = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [customResponse, setCustomResponse] = useState('');
   const [isAutoPilot, setIsAutoPilot] = useState(propertyAutoPilot || false);
+  const [emergencyAlert, setEmergencyAlert] = useState<{ message: string; type: string } | null>(null);
 
   const [isAtBottom, setIsAtBottom] = useState(true);
   const [shouldScrollToBottom, setShouldScrollToBottom] = useState(false);
@@ -135,6 +136,16 @@ const MobileChat: React.FC = () => {
       setIsGenerating(true);
       try {
         const response = await aiService.generateResponse(newMessage, {} as Property);
+        
+        // Vérifier si c'est une réponse d'urgence
+        if (response.includes('⚠️ Mode Auto-Pilot désactivé')) {
+          setIsAutoPilot(false);
+          setEmergencyAlert({
+            message: response,
+            type: 'emergency'
+          });
+        }
+        
         setShouldScrollToBottom(true);
         const aiMessage: Message = {
           id: Date.now().toString(),
@@ -198,6 +209,25 @@ const MobileChat: React.FC = () => {
         onScroll={handleScroll}
         className="flex-1 overflow-y-auto px-4"
       >
+        {emergencyAlert && (
+          <div className="sticky top-0 z-50 p-4 mb-4 bg-red-50 border border-red-200 rounded-lg">
+            <div className="flex items-start gap-3">
+              <AlertOctagon className="w-5 h-5 text-red-600 mt-0.5" />
+              <div className="flex-1">
+                <p className="text-red-700 whitespace-pre-line">{emergencyAlert.message}</p>
+              </div>
+              <button 
+                onClick={() => setEmergencyAlert(null)}
+                className="p-1 hover:bg-red-100 rounded"
+              >
+                <span className="sr-only">Fermer</span>
+                <svg className="w-4 h-4 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        )}
         {messages.map((message) => (
           <ChatMessage key={message.id} message={message} />
         ))}

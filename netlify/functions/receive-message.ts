@@ -186,11 +186,23 @@ export const handler: Handler = async (event) => {
 
       // Incrémenter le compteur et envoyer la notification
       await conversationService.incrementUnreadCount(conversation.id);
-      await sendNotification(
-        'Nouveau message', 
-        data.message,
-        newMessage.id
-      );
+      console.log('Sending notification:', {
+        title: 'Nouveau message',
+        body: data.message
+      });
+      await fetch('https://airhost1212-production.up.railway.app/notify', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          title: 'Nouveau message',
+          body: data.message,
+          messageId: newMessage.id,
+          timestamp: new Date().toISOString()
+        })
+      });
+      console.log('✅ Notification sent');
 
       return {
         statusCode: 200,
