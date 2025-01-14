@@ -6,7 +6,7 @@ const bodyParser = require('body-parser');
 const app = express();
 const port = process.env.PORT || 8080;
 
-// Configuration CORS améliorée
+// Configuration CORS
 const corsOptions = {
   origin: process.env.NODE_ENV === 'production' 
     ? ['https://whimsical-beignet-91329f.netlify.app', 'https://airhost1212.netlify.app']
@@ -14,143 +14,112 @@ const corsOptions = {
   methods: ['GET', 'POST', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true,
-  maxAge: 86400 // Cache CORS preflight pour 24h
+  maxAge: 86400
 };
 
 app.use(cors(corsOptions));
-app.use(bodyParser.json({ limit: '1mb' }));
+app.use(bodyParser.json());
 
-// Validation des variables d'environnement
-const requiredEnvVars = ['VAPID_PUBLIC_KEY', 'VAPID_PRIVATE_KEY'];
-for (const varName of requiredEnvVars) {
-  if (!process.env[varName]) {
-    console.error(`❌ Missing required environment variable: ${varName}`);
-    process.exit(1);
+// Cache des notifications récentes pour éviter les doublons
+const recentNotifications = new Map();
+const NOTIFICATION_TTL = 5000; // 5 secondes
+
+// Nettoyage périodique du cache
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, timestamp] of recentNotifications.entries()) {
+    if (now - timestamp > NOTIFICATION_TTL) {
+      recentNotifications.delete(key);
+    }
   }
-}
+}, 10000);
 
 // Configuration VAPID
+if (!process.env.VAPID_PUBLIC_KEY || !process.env.VAPID_PRIVATE_KEY) {
+  console.error('❌ Missing VAPID keys');
+  process.exit(1);
+}
+
 webpush.setVapidDetails(
   'mailto:contact@airhost.com',
   process.env.VAPID_PUBLIC_KEY,
   process.env.VAPID_PRIVATE_KEY
 );
 
-// Gestion des souscriptions avec TTL
+// Stockage des souscriptions
 const subscriptions = new Map();
 const SUBSCRIPTION_TTL = 24 * 60 * 60 * 1000; // 24h
-const CLEANUP_INTERVAL = 60 * 60 * 1000; // 1h
 
-// Nettoyage périodique amélioré
-const cleanupSubscriptions = () => {
+// Nettoyage périodique des souscriptions
+setInterval(() => {
   const now = Date.now();
-  let cleaned = 0;
-  
   for (const [endpoint, data] of subscriptions.entries()) {
     if (now - data.timestamp > SUBSCRIPTION_TTL) {
       subscriptions.delete(endpoint);
-      cleaned++;
     }
   }
-  
-  if (cleaned > 0) {
-    console.log(`🧹 Cleaned ${cleaned} expired subscriptions`);
-  }
-};
+}, 60 * 60 * 1000);
 
-setInterval(cleanupSubscriptions, CLEANUP_INTERVAL);
-
-// Middleware de logging
-app.use((req, res, next) => {
-  console.log(`${req.method} ${req.path} - ${new Date().toISOString()}`);
-  next();
-});
-
-// Route de santé améliorée
+// Route de santé
 app.get('/health', (req, res) => {
-  const uptime = process.uptime();
-  const memory = process.memoryUsage();
-  
-  res.status(200).json({
+  res.status(200).json({ 
     status: 'ok',
-    timestamp: new Date().toISOString(),
-    uptime: uptime,
     subscriptions: subscriptions.size,
-    memory: {
-      heapUsed: Math.round(memory.heapUsed / 1024 / 1024) + 'MB',
-      heapTotal: Math.round(memory.heapTotal / 1024 / 1024) + 'MB'
-    }
+    uptime: process.uptime()
   });
 });
 
-// Route d'abonnement améliorée
+// Route d'abonnement
 app.post('/subscribe', async (req, res) => {
-  console.log('📝 New subscription request received');
-  
   try {
     const { subscription } = req.body;
     
-    // Validation stricte
-    if (!subscription?.endpoint || !subscription?.keys?.auth || !subscription?.keys?.p256dh) {
-      return res.status(400).json({
-        error: 'Invalid subscription data',
-        details: 'Missing required subscription fields'
-      });
+    if (!subscription?.endpoint) {
+      return res.status(400).json({ error: 'Invalid subscription data' });
     }
-
-    // Mise à jour ou création
-    const existingSub = subscriptions.get(subscription.endpoint);
-    const isUpdate = Boolean(existingSub);
 
     subscriptions.set(subscription.endpoint, {
       subscription,
-      timestamp: Date.now(),
-      userAgent: req.get('user-agent')
+      timestamp: Date.now()
     });
 
     // Notification de test
     try {
-      const testPayload = JSON.stringify({
+      await webpush.sendNotification(subscription, JSON.stringify({
         title: 'Notifications activées !',
         body: 'Vous recevrez désormais les messages de vos voyageurs.',
-        icon: '/logo192.png',
-        timestamp: Date.now(),
-        tag: 'welcome'
-      });
-
-      await webpush.sendNotification(subscription, testPayload);
-      console.log('✅ Test notification sent successfully');
+        icon: '/logo192.png'
+      }));
     } catch (error) {
       console.warn('⚠️ Test notification failed:', error.message);
-      // On continue même si la notification de test échoue
     }
 
-    res.status(isUpdate ? 200 : 201).json({
-      message: `Subscription ${isUpdate ? 'updated' : 'added'} successfully`,
-      active: true
-    });
+    res.status(201).json({ message: 'Subscription successful' });
   } catch (error) {
     console.error('❌ Subscription error:', error);
-    res.status(500).json({
-      error: 'Subscription failed',
-      details: error.message
-    });
+    res.status(500).json({ error: 'Subscription failed' });
   }
 });
 
 // Route de notification améliorée
 app.post('/notify', async (req, res) => {
-  console.log('📨 New notification request');
+  console.log('📨 Notification request received:', req.body);
   
   try {
-    const { title, body, data = {}, tag, requireInteraction = true } = req.body;
+    const { title, body, messageId } = req.body;
 
-    // Validation
-    if (!title?.trim() || !body?.trim()) {
-      return res.status(400).json({
-        error: 'Invalid notification data',
-        details: 'Title and body are required and must not be empty'
-      });
+    if (!title || !body) {
+      console.log('❌ Missing title or body');
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    // Vérifier si on a déjà traité cette notification récemment
+    if (messageId) {
+      const key = `${messageId}`;
+      if (recentNotifications.has(key)) {
+        console.log('⚠️ Duplicate notification detected, still sending');
+      }
+      recentNotifications.set(key, Date.now());
     }
 
     if (subscriptions.size === 0) {
@@ -160,103 +129,49 @@ app.post('/notify', async (req, res) => {
       });
     }
 
-    // Préparation du payload
     const payload = JSON.stringify({
       title,
       body,
       icon: '/logo192.png',
       badge: '/logo192.png',
       timestamp: Date.now(),
-      tag,
-      requireInteraction,
-      data: {
-        url: '/',
-        ...data
-      },
-      actions: [
-        {
-          action: 'open',
-          title: 'Ouvrir'
-        },
-        {
-          action: 'close',
-          title: 'Fermer'
-        }
-      ]
+      data: { url: '/' },
+      actions: [{ action: 'open', title: 'Ouvrir' }]
     });
 
-    // Envoi avec gestion des erreurs améliorée
     const results = await Promise.allSettled(
       Array.from(subscriptions.entries()).map(async ([endpoint, { subscription }]) => {
         try {
           await webpush.sendNotification(subscription, payload);
           return { success: true, endpoint };
         } catch (error) {
-          const isExpired = error.statusCode === 404 || error.statusCode === 410;
-          
-          if (isExpired) {
+          if (error.statusCode === 404 || error.statusCode === 410) {
             subscriptions.delete(endpoint);
-            console.log(`🗑️ Removed expired subscription: ${endpoint}`);
           }
-          
-          return {
-            success: false,
-            endpoint,
-            error: error.message,
-            expired: isExpired
-          };
+          return { success: false, endpoint, error: error.message };
         }
       })
     );
 
-    // Analyse des résultats
     const succeeded = results.filter(r => r.status === 'fulfilled' && r.value.success).length;
-    const failed = results.filter(r => r.status === 'rejected' || !r.value?.success).length;
-    const expired = results.filter(r => r.status === 'fulfilled' && r.value.expired).length;
 
-    console.log(`📊 Notification results: ${succeeded} sent, ${failed} failed, ${expired} expired`);
-
-    res.json({
-      status: 'success',
+    console.log('✅ Notification processed successfully');
+    res.status(200).json({
+      success: true,
       sent: succeeded,
-      failed,
-      expired,
-      remaining: subscriptions.size,
-      results: results.map(r => r.value || r.reason)
+      total: subscriptions.size
     });
+
   } catch (error) {
-    console.error('❌ Notification error:', error);
-    res.status(500).json({
-      error: 'Notification failed',
-      details: error.message
-    });
+    console.error('❌ Error processing notification:', error);
+    res.status(500).json({ error: 'Notification failed' });
   }
 });
 
-// Gestion des erreurs globale
-app.use((err, req, res, next) => {
-  console.error('💥 Unhandled error:', err);
-  res.status(500).json({
-    error: 'Internal server error',
-    message: process.env.NODE_ENV === 'development' ? err.message : 'An unexpected error occurred'
-  });
-});
-
-// Démarrage du serveur
-const server = app.listen(port, () => {
+app.listen(port, () => {
   console.log(`
-🚀 Server is running on port ${port}
+🚀 Server running on port ${port}
 🌍 Environment: ${process.env.NODE_ENV}
-🔒 CORS origins: ${JSON.stringify(corsOptions.origin)}
-📝 Active subscriptions: ${subscriptions.size}
+🔒 CORS: ${JSON.stringify(corsOptions.origin)}
   `);
-});
-
-// Gestion gracieuse de l'arrêt
-process.on('SIGTERM', () => {
-  console.log('SIGTERM received. Shutting down gracefully...');
-  server.close(() => {
-    console.log('Server closed');
-    process.exit(0);
-  });
 });
