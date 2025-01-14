@@ -1,6 +1,7 @@
 import { Handler } from '@netlify/functions';
 import Airtable from 'airtable';
 import OpenAI from 'openai';
+import { EmergencyDetectionService } from '../../src/services/emergencyDetectionService';
 
 // Configuration Airtable
 const airtable = new Airtable({ apiKey: process.env.VITE_AIRTABLE_API_KEY });
@@ -9,6 +10,30 @@ const base = airtable.base(process.env.VITE_AIRTABLE_BASE_ID || '');
 const openai = new OpenAI({
   apiKey: process.env.VITE_OPENAI_API_KEY,
 });
+
+// Récupérer les cas d'urgence depuis Airtable
+const getEmergencyCases = async () => {
+  return new Promise((resolve, reject) => {
+    base('EmergencyCases').select({
+      view: 'Grid view'
+    }).firstPage((err, records) => {
+      if (err) {
+        console.error('Error fetching emergency cases:', err);
+        reject(err);
+        return;
+      }
+      const cases = records?.map(record => ({
+        id: record.id,
+        name: record.get('name'),
+        description: record.get('description'),
+        severity: record.get('severity'),
+        autoDisablePilot: record.get('autoDisablePilot'),
+        notifyHost: record.get('notifyHost'),
+      })) || [];
+      resolve(cases);
+    });
+  });
+};
 
 const handler: Handler = async (event) => {
   console.log('Generate AI response function started');
@@ -86,6 +111,46 @@ const handler: Handler = async (event) => {
     } catch (error) {
       console.error('Error parsing messages:', error);
       messages = [];
+    }
+
+    // Récupérer le dernier message du client
+    const lastMessage = messages[messages.length - 1];
+    if (lastMessage && lastMessage.sender === 'guest') {
+      // Récupérer les cas d'urgence
+      const emergencyCases = await getEmergencyCases();
+      const emergencyDetectionService = new EmergencyDetectionService(emergencyCases);
+
+      // Analyser le message pour détecter un cas d'urgence
+      const detectedEmergency = await emergencyDetectionService.analyzeMessage(lastMessage.text);
+
+      // Si un cas d'urgence est détecté et qu'il nécessite la désactivation de l'Auto-Pilot
+      if (detectedEmergency?.autoDisablePilot) {
+        // Mettre à jour le statut Auto-Pilot dans la conversation
+        await new Promise((resolve, reject) => {
+          base('Conversations').update(conversationId, {
+            'Auto-Pilot': false,
+            'Last Emergency': detectedEmergency.name,
+            'Emergency Detected At': new Date().toISOString()
+          }, (err) => {
+            if (err) {
+              console.error('Error updating conversation:', err);
+              reject(err);
+              return;
+            }
+            resolve(null);
+          });
+        });
+
+        // Retourner un message spécial pour informer de la désactivation
+        return {
+          statusCode: 200,
+          body: JSON.stringify({
+            response: `⚠️ Mode Auto-Pilot désactivé : ${detectedEmergency.name} détecté.\n\nUn hôte va prendre en charge votre demande dans les plus brefs délais.`,
+            emergencyDetected: true,
+            emergencyType: detectedEmergency.name
+          }),
+        };
+      }
     }
     
     console.log('Parsed messages:', messages);
