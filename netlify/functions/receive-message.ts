@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { propertyService } from '../../src/services/airtable/propertyService';
 import { conversationService } from '../../src/services/airtable/conversationService';
 import { aiService } from '../../src/services/ai/aiService';
+import { EmergencyDetectionService } from '../../src/services/emergencyDetectionService';
 
 // Schéma de validation pour les messages entrants
 const messageSchema = z.object({
@@ -72,6 +73,52 @@ const sendNotification = async (title: string, body: string, messageId: string) 
   } catch (error) {
     console.error('❌ Failed to send notification:', error);
   }
+};
+
+// Récupérer les cas d'urgence (hardcodés pour l'instant)
+const getEmergencyCases = async () => {
+  return [
+    {
+      id: '1',
+      name: 'Urgences',
+      description: 'Quand un voyageur vous envoie un message concernant une urgence',
+      severity: 'high',
+      autoDisablePilot: true,
+      notifyHost: true,
+    },
+    {
+      id: '2',
+      name: 'Voyageur mécontent',
+      description: 'Quand un voyageur exprime son mécontentement',
+      severity: 'high',
+      autoDisablePilot: true,
+      notifyHost: true,
+    },
+    {
+      id: '3',
+      name: "Impossible d'accéder au logement",
+      description: 'Quand les voyageurs ne peuvent pas accéder au logement',
+      severity: 'high',
+      autoDisablePilot: true,
+      notifyHost: true,
+    },
+    {
+      id: '4',
+      name: 'Appareil en panne',
+      description: "Quand un voyageur signale qu'un appareil ne fonctionne pas",
+      severity: 'medium',
+      autoDisablePilot: true,
+      notifyHost: true,
+    },
+    {
+      id: '5',
+      name: 'Problème de stock',
+      description: 'Quand un voyageur signale un manque de produits essentiels',
+      severity: 'medium',
+      autoDisablePilot: true,
+      notifyHost: true,
+    }
+  ];
 };
 
 export const handler: Handler = async (event) => {
@@ -169,6 +216,32 @@ export const handler: Handler = async (event) => {
       };
     }
 
+    // Détecter si c'est un cas d'urgence
+    const emergencyCases = await getEmergencyCases();
+    const emergencyDetectionService = new EmergencyDetectionService(emergencyCases);
+    const detectedEmergency = await emergencyDetectionService.analyzeMessage(data.message);
+
+    // Si c'est un cas d'urgence, désactiver l'Auto-Pilot
+    if (detectedEmergency?.autoDisablePilot) {
+      console.log('🚨 Emergency detected:', detectedEmergency.name);
+      
+      // Récupérer toutes les conversations pour ce logement
+      console.log('Fetching conversations for property:', data.propertyId);
+      const conversations = await conversationService.fetchPropertyConversations(propertyId);
+      const conversation = conversations.find((conv) => conv.guestPhone === data.guestPhone);
+
+      if (conversation) {
+        // Désactiver l'Auto-Pilot
+        await conversationService.updateConversation(conversation.id, {
+          'Auto-Pilot': false,
+          'Last Emergency': detectedEmergency.name,
+          'Emergency Detected At': new Date().toISOString()
+        });
+        
+        console.log('✅ Auto-Pilot disabled for conversation:', conversation.id);
+      }
+    }
+
     // Ajout du message à une conversation existante
     if (!data.isHost) {
       const newMessage = {
@@ -190,18 +263,7 @@ export const handler: Handler = async (event) => {
         title: 'Nouveau message',
         body: data.message
       });
-      await fetch('https://airhost1212-production.up.railway.app/notify', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ 
-          title: 'Nouveau message',
-          body: data.message,
-          messageId: newMessage.id,
-          timestamp: new Date().toISOString()
-        })
-      });
+      await sendNotification('Nouveau message', data.message, newMessage.id);
       console.log('✅ Notification sent');
 
       return {
