@@ -11,28 +11,66 @@ const openai = new OpenAI({
   apiKey: process.env.VITE_OPENAI_API_KEY,
 });
 
-// Récupérer les cas d'urgence depuis Airtable
+// Récupérer les cas d'urgence (hardcodés pour l'instant)
 const getEmergencyCases = async () => {
-  return new Promise((resolve, reject) => {
-    base('EmergencyCases').select({
-      view: 'Grid view'
-    }).firstPage((err, records) => {
-      if (err) {
-        console.error('Error fetching emergency cases:', err);
-        reject(err);
-        return;
-      }
-      const cases = records?.map(record => ({
-        id: record.id,
-        name: record.get('name'),
-        description: record.get('description'),
-        severity: record.get('severity'),
-        autoDisablePilot: record.get('autoDisablePilot'),
-        notifyHost: record.get('notifyHost'),
-      })) || [];
-      resolve(cases);
-    });
-  });
+  return [
+    {
+      id: '1',
+      name: 'Urgences',
+      description: 'Quand un voyageur vous envoie un message concernant une urgence',
+      severity: 'high',
+      autoDisablePilot: true,
+      notifyHost: true,
+    },
+    {
+      id: '2',
+      name: 'Voyageur mécontent',
+      description: 'Quand un voyageur exprime son mécontentement',
+      severity: 'high',
+      autoDisablePilot: true,
+      notifyHost: true,
+    },
+    {
+      id: '3',
+      name: "Impossible d'accéder au logement",
+      description: 'Quand les voyageurs ne peuvent pas accéder au logement',
+      severity: 'high',
+      autoDisablePilot: true,
+      notifyHost: true,
+    },
+    {
+      id: '4',
+      name: 'Appareil en panne',
+      description: "Quand un voyageur signale qu'un appareil ne fonctionne pas",
+      severity: 'medium',
+      autoDisablePilot: true,
+      notifyHost: true,
+    },
+    {
+      id: '5',
+      name: 'Problème de stock',
+      description: 'Il manque des draps, des serviettes ou autres consommables',
+      severity: 'medium',
+      autoDisablePilot: true,
+      notifyHost: true,
+    },
+    {
+      id: '6',
+      name: 'Réponse inconnue',
+      description: 'Si HostAI ne sait pas quoi répondre au voyageur',
+      severity: 'low',
+      autoDisablePilot: true,
+      notifyHost: false,
+    },
+    {
+      id: '7',
+      name: 'Chauffage',
+      description: 'Demande de réglage du chauffage',
+      severity: 'medium',
+      autoDisablePilot: true,
+      notifyHost: true,
+    }
+  ];
 };
 
 const handler: Handler = async (event) => {
@@ -206,7 +244,7 @@ const handler: Handler = async (event) => {
     console.log('Calling OpenAI API...');
     // Générer la réponse avec GPT
     const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini-2024-07-18",  // Version mini optimisée pour les tâches spécifiques
+      model: "gpt-4",  // Utilisation du modèle standard gpt-4
       messages: [
         {
           role: "system",
