@@ -88,7 +88,7 @@ export const handler: Handler = async (event) => {
     const guestPhone = formatPhoneNumber(data.data.message._data.from);
     console.log('📱 Formatted phone number:', guestPhone);
 
-    // Transférer le message au endpoint receive-message
+    // Préparer le payload pour receive-message selon son schéma
     const messagePayload = {
       propertyId: 'rec7L9Jpo7DhgVoBR', // ID de la propriété par défaut
       message: data.data.message._data.body,
