@@ -389,7 +389,7 @@ const ConversationDetail: React.FC = () => {
         {/* Scroll anchor */}
         <div ref={messagesEndRef} style={{ height: 1, width: '100%' }} />
         
-        {isGenerating && (
+        {generating && (
           <div className="flex items-center gap-2 text-gray-500 text-sm">
             <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
             L'IA est en train d'écrire...
