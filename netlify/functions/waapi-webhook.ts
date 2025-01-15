@@ -25,6 +25,19 @@ const wapiMessageSchema = z.object({
   })
 });
 
+// Cache pour stocker les messages récents (5 minutes max)
+const recentMessages = new Map<string, number>();
+
+// Nettoyer les messages plus vieux que 5 minutes
+const cleanupOldMessages = () => {
+  const fiveMinutesAgo = Date.now() - 5 * 60 * 1000;
+  for (const [key, timestamp] of recentMessages.entries()) {
+    if (timestamp < fiveMinutesAgo) {
+      recentMessages.delete(key);
+    }
+  }
+};
+
 // Fonction pour formater le numéro de téléphone
 const formatPhoneNumber = (phone: string): string => {
   // Supprimer tout ce qui n'est pas un chiffre
@@ -78,6 +91,30 @@ export const handler: Handler = async (event) => {
       };
     }
 
+    // Vérifier si c'est un doublon
+    const messageId = data.data.message._data.id._serialized;
+    const messageTimestamp = data.data.message._data.t;
+    const dedupeKey = `${messageId}-${messageTimestamp}`;
+
+    // Nettoyer les vieux messages
+    cleanupOldMessages();
+
+    // Vérifier si on a déjà traité ce message
+    if (recentMessages.has(dedupeKey)) {
+      console.log('⏭️ Skipping duplicate message:', dedupeKey);
+      return {
+        statusCode: 200,
+        body: JSON.stringify({
+          status: 'success',
+          skipped: true,
+          reason: 'duplicate_message'
+        })
+      };
+    }
+
+    // Ajouter le message au cache
+    recentMessages.set(dedupeKey, Date.now());
+
     // Construire l'URL absolue pour receive-message
     const host = event.headers.host;
     const protocol = event.headers['x-forwarded-proto'] || 'https';
@@ -88,14 +125,14 @@ export const handler: Handler = async (event) => {
     const guestPhone = formatPhoneNumber(data.data.message._data.from);
     console.log('📱 Formatted phone number:', guestPhone);
 
-    // Préparer le payload pour receive-message selon son schéma
+    // Préparer le payload pour receive-message
     const messagePayload = {
       propertyId: 'rec7L9Jpo7DhgVoBR', // ID de la propriété par défaut
       message: data.data.message._data.body,
       guestPhone,
       platform: 'whatsapp',
-      webhookId: `${Date.now()}--${data.data.message._data.id._serialized}`,
-      waMessageId: data.data.message._data.id._serialized,
+      webhookId: `${Date.now()}--${messageId}`,
+      waMessageId: messageId,
       waNotifyName: data.data.message._data.notifyName,
       timestamp: new Date(data.data.message._data.t * 1000).toISOString()
     };
