@@ -2,8 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Send, Sparkles, Zap } from 'lucide-react';
 import { conversationService } from '../services';
-import { propertyService } from '../services/airtable/propertyService';
-import type { Conversation, Message, Property } from '../types';
+import type { Conversation, Message } from '../types';
 
 const POLLING_INTERVAL = 3000;
 
@@ -11,15 +10,14 @@ const ConversationDetail: React.FC = () => {
   const { conversationId, propertyId } = useParams();
   const navigate = useNavigate();
 
-  // DOM references
+  // Références DOM
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // States
+  // États
   const [conversation, setConversation] = useState<Conversation | null>(null);
-  const [property, setProperty] = useState<Property | null>(null);
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -27,9 +25,7 @@ const ConversationDetail: React.FC = () => {
   const [generating, setGenerating] = useState(false);
   const [isAutoPilot, setIsAutoPilot] = useState(false);
 
-  /**
-   * Fetch the conversation from your backend or Airtable service
-   */
+  // Réinitialisation du compteur de messages non lus lors de la récupération de la conversation
   const fetchConversation = async () => {
     if (!conversationId) return;
     try {
@@ -37,6 +33,9 @@ const ConversationDetail: React.FC = () => {
       setConversation(data);
       setIsAutoPilot(data.autoPilot || false);
       setError(null);
+
+      // Réinitialiser le compteur de messages non lus
+      await conversationService.resetUnreadCount(conversationId);
     } catch (err) {
       console.error('Error fetching conversation:', err);
       setError('Failed to load conversation');
@@ -45,9 +44,6 @@ const ConversationDetail: React.FC = () => {
     }
   };
 
-  /**
-   * Set up polling to refresh the conversation
-   */
   useEffect(() => {
     fetchConversation();
 
@@ -62,18 +58,12 @@ const ConversationDetail: React.FC = () => {
     };
   }, [conversationId]);
 
-  /**
-   * Scroll to the bottom when messages change
-   */
   useEffect(() => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: 'auto' });
     }
   }, [conversation?.messages]);
 
-  /**
-   * Auto-resize the textarea as newMessage grows
-   */
   useEffect(() => {
     const textarea = textareaRef.current;
     if (!textarea) return;
@@ -87,9 +77,6 @@ const ConversationDetail: React.FC = () => {
     adjustHeight();
   }, [newMessage]);
 
-  /**
-   * Toggle the Auto Pilot setting and update Airtable
-   */
   const handleToggleAutoPilot = async () => {
     if (!conversationId || !conversation) return;
 
@@ -97,23 +84,16 @@ const ConversationDetail: React.FC = () => {
     setIsAutoPilot(newValue);
 
     try {
-      // Call your conversationService to update Airtable
-      // Make sure the field name matches what you have in Airtable
       const updated = await conversationService.updateConversation(conversationId, {
         'Auto Pilot': newValue,
       });
-      // Merge updated conversation data (if returned by your API)
       setConversation(updated);
     } catch (err) {
       console.error('Error updating Auto Pilot:', err);
-      // Revert local state if update fails
       setIsAutoPilot(!newValue);
     }
   };
 
-  /**
-   * Generate an AI response (example placeholder function)
-   */
   const handleGenerateResponse = async () => {
     if (!conversationId || !propertyId) return;
     setGenerating(true);
@@ -138,9 +118,6 @@ const ConversationDetail: React.FC = () => {
     }
   };
 
-  /**
-   * Send a new message
-   */
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newMessage.trim() || sending) return;
@@ -161,7 +138,6 @@ const ConversationDetail: React.FC = () => {
         throw new Error('Missing conversation data');
       }
 
-      // Update local state right away
       setConversation((prev) => {
         if (!prev) return prev;
         return {
@@ -171,14 +147,12 @@ const ConversationDetail: React.FC = () => {
       });
       setNewMessage('');
 
-      // Scroll to the newly added message
       setTimeout(() => {
         if (messagesEndRef.current) {
           messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
         }
       }, 100);
 
-      // Send to your backend function
       await fetch('/.netlify/functions/send-message', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -197,7 +171,6 @@ const ConversationDetail: React.FC = () => {
     }
   };
 
-  // Loading / error / not found states
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[100dvh]">
@@ -224,7 +197,6 @@ const ConversationDetail: React.FC = () => {
     );
   }
 
-  // Main component render
   return (
     <div className="fixed inset-0 flex flex-col bg-white">
       {/* Header */}
@@ -251,7 +223,6 @@ const ConversationDetail: React.FC = () => {
           </div>
         </div>
 
-        {/* Auto Pilot Toggle */}
         <button
           onClick={handleToggleAutoPilot}
           className={`flex items-center gap-2 px-3 py-1.5 rounded-full ${
