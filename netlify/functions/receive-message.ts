@@ -6,7 +6,7 @@ import { conversationService } from '../../src/services/airtable/conversationSer
 // Regex pour valider les numéros de téléphone français (avec ou sans +)
 const WHATSAPP_PHONE_REGEX = /^(\+33|33)[67]\d{8}$/;
 
-// Fonction pour formater le numéro de téléphone
+// Fonction pour formater le numéro de téléphone de manière cohérente
 const formatPhoneNumber = (phone: string): string => {
   // Supprimer tout ce qui n'est pas un chiffre
   const cleaned = phone.replace(/\D/g, '');
@@ -14,12 +14,11 @@ const formatPhoneNumber = (phone: string): string => {
   // Supprimer le 0 initial s'il existe
   const withoutLeadingZero = cleaned.replace(/^0/, '');
   
-  // Ajouter 33 au début si nécessaire
-  const withPrefix = withoutLeadingZero.startsWith('33') 
-    ? withoutLeadingZero 
-    : `33${withoutLeadingZero}`;
+  // Supprimer le 33 initial s'il existe, puis le rajouter
+  const normalized = withoutLeadingZero.replace(/^33/, '');
+  const withPrefix = `33${normalized}`;
   
-  return withPrefix;
+  return withPrefix; // Retourner sans le + pour être cohérent avec Airtable
 };
 
 // Schéma de validation pour les messages entrants
@@ -131,7 +130,7 @@ export const handler: Handler = async (event) => {
         Properties: [propertyId],
         'Guest Name': data.waNotifyName || data.guestName || 'Guest',
         'Guest Email': data.guestEmail || '',
-        'Guest phone number': data.guestPhone,
+        'Guest phone number': data.guestPhone, // Le numéro est déjà formaté par le schéma
         'Check-in Date': data.checkInDate,
         'Check-out Date': data.checkOutDate,
         Messages: JSON.stringify([{
@@ -179,7 +178,7 @@ export const handler: Handler = async (event) => {
         Messages: JSON.stringify(updatedMessages),
       });
 
-      // Incrémenter le compteur et envoyer la notification
+      // Incrémenter le compteur
       await conversationService.incrementUnreadCount(conversation.id);
 
       return {
@@ -214,20 +213,11 @@ export const handler: Handler = async (event) => {
       };
     }
 
-    if (error.error) {
-      console.error('🚨 Airtable error details:', {
-        type: error.error.type,
-        message: error.error.message,
-        statusCode: error.statusCode
-      });
-    }
-    
     return {
       statusCode: 500,
       body: JSON.stringify({ 
         error: 'Internal server error',
-        message: error instanceof Error ? error.message : 'Unknown error',
-        details: error.error || error
+        message: error instanceof Error ? error.message : 'Unknown error'
       }),
     };
   }
