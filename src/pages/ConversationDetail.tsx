@@ -5,12 +5,18 @@ import { conversationService } from '../services';
 import { propertyService } from '../services/airtable/propertyService';
 import type { Conversation, Message, Property } from '../types';
 
+const POLLING_INTERVAL = 3000;
+
 const ConversationDetail: React.FC = () => {
   const { conversationId, propertyId } = useParams();
   const navigate = useNavigate();
+
+  // Refs
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const pollingRef = useRef<NodeJS.Timeout | null>(null);
 
+  // States
   const [conversation, setConversation] = useState<Conversation | null>(null);
   const [property, setProperty] = useState<Property | null>(null);
   const [newMessage, setNewMessage] = useState('');
@@ -18,35 +24,60 @@ const ConversationDetail: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const [isAutoPilot, setIsAutoPilot] = useState(false);
-
-  // <-- NOUVEL ÉTAT POUR GESTION DE LA GÉNÉRATION IA -->
   const [generating, setGenerating] = useState(false);
 
-  // Récupérer la conversation
+  /**
+   * Fonction pour aller chercher la conversation
+   * et mettre à jour l'état local.
+   */
+  const fetchConversation = async () => {
+    if (!conversationId) return;
+    try {
+      const data = await conversationService.fetchConversationById(conversationId);
+      setConversation(data);
+      setIsAutoPilot(data.autoPilot || false);
+      setError(null);
+    } catch (err) {
+      console.error('Error fetching conversation:', err);
+      setError('Failed to load conversation');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /**
+   * Mise en place du polling.
+   * - On fait un premier fetch au montage
+   * - Puis on déclenche un setInterval pour refetch toutes les X secondes
+   * - On nettoie l’interval à l’unmount
+   */
   useEffect(() => {
-    const fetchConversation = async () => {
-      if (!conversationId) return;
-      try {
-        const data = await conversationService.fetchConversationById(conversationId);
-        setConversation(data);
-        setIsAutoPilot(data.autoPilot || false);
-      } catch (err) {
-        setError('Failed to load conversation');
-      } finally {
-        setLoading(false);
+    fetchConversation();
+
+    pollingRef.current = setInterval(() => {
+      fetchConversation();
+    }, POLLING_INTERVAL);
+
+    return () => {
+      if (pollingRef.current) {
+        clearInterval(pollingRef.current);
       }
     };
-    fetchConversation();
   }, [conversationId]);
 
-  // Scroll au chargement initial ou lorsqu'il y a de nouveaux messages
+  /**
+   * Scroll en bas au premier chargement ou lorsque de nouveaux messages sont ajoutés
+   */
   useEffect(() => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: 'auto' });
     }
   }, [conversation?.messages]);
 
-  // <-- NOUVELLE FONCTION POUR GÉNÉRER UNE RÉPONSE IA -->
+  /**
+   * Fonction pour générer une réponse IA
+   * (similaire à la version "plus complète")
+   */
   const handleGenerateResponse = async () => {
     if (!conversationId || !propertyId) return;
     setGenerating(true);
@@ -61,9 +92,11 @@ const ConversationDetail: React.FC = () => {
           propertyId,
         }),
       });
+
       if (!resp.ok) {
         throw new Error('Failed to generate response');
       }
+
       const data = await resp.json();
       // On met la réponse IA dans le champ de saisie pour que l’utilisateur puisse l’envoyer
       setNewMessage(data.response || '');
@@ -74,11 +107,16 @@ const ConversationDetail: React.FC = () => {
     }
   };
 
+  /**
+   * Fonction pour envoyer un nouveau message
+   */
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newMessage.trim() || sending) return;
 
     setSending(true);
+
+    // Création du nouveau message local
     const messageData: Message = {
       id: Date.now().toString(),
       text: newMessage.trim(),
@@ -93,8 +131,8 @@ const ConversationDetail: React.FC = () => {
         throw new Error('Missing conversation data');
       }
 
-      // Mettre à jour l'interface immédiatement
-      setConversation(prev => {
+      // Mettre à jour l'état local pour avoir un effet immédiat
+      setConversation((prev) => {
         if (!prev) return prev;
         return {
           ...prev,
@@ -110,7 +148,7 @@ const ConversationDetail: React.FC = () => {
         }
       }, 100);
 
-      // Envoyer au backend (fonction Netlify ou votre API)
+      // Envoyer au backend
       await fetch('/.netlify/functions/send-message', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -123,6 +161,7 @@ const ConversationDetail: React.FC = () => {
         }),
       });
 
+      // Pas besoin de re-fetch immédiatement, le polling se charge de mettre à jour
     } catch (error) {
       console.error('Error sending message:', error);
     } finally {
@@ -130,6 +169,7 @@ const ConversationDetail: React.FC = () => {
     }
   };
 
+  // Gestion du chargement
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[100dvh]">
@@ -138,10 +178,22 @@ const ConversationDetail: React.FC = () => {
     );
   }
 
+  // Gestion des erreurs
   if (error) {
     return (
       <div className="min-h-[100dvh] p-6">
         <div className="bg-red-50 text-red-600 p-4 rounded-lg">{error}</div>
+      </div>
+    );
+  }
+
+  // Si la conversation n’est pas trouvée
+  if (!conversation) {
+    return (
+      <div className="min-h-[100dvh] p-6">
+        <div className="bg-yellow-50 text-yellow-600 p-4 rounded-lg">
+          Conversation not found
+        </div>
       </div>
     );
   }
@@ -187,12 +239,9 @@ const ConversationDetail: React.FC = () => {
         </button>
       </div>
 
-      {/* Messages */}
-      <div 
-        ref={messagesContainerRef}
-        className="flex-1 overflow-y-auto px-4 pb-4"
-      >
-        {conversation?.messages.map((message, index) => (
+      {/* Liste des messages */}
+      <div ref={messagesContainerRef} className="flex-1 overflow-y-auto px-4 pb-4">
+        {conversation.messages.map((message, index) => (
           <div
             key={message.id || index}
             className={`flex ${message.sender === 'guest' ? 'justify-start' : 'justify-end'} mb-2`}
@@ -211,10 +260,10 @@ const ConversationDetail: React.FC = () => {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input + Bouton IA */}
+      {/* Barre d’envoi de message et bouton IA */}
       <div className="bg-white border-t px-4 py-3">
         <form onSubmit={handleSubmit} className="flex gap-2 items-center">
-          {/* BOUTON IA */}
+          {/* Bouton IA */}
           <button
             type="button"
             onClick={handleGenerateResponse}
