@@ -1,98 +1,52 @@
 import { Handler } from '@netlify/functions';
 import { z } from 'zod';
-import { propertyService } from '../../src/services/airtable/propertyService';
-import { conversationService } from '../../src/services/airtable/conversationService';
-import { aiService } from '../../src/services/ai/aiService';
 
-// Schéma de validation pour les messages entrants
-const messageSchema = z.object({
-  propertyId: z.string().optional(),
-  guestName: z.string().optional(),
-  guestEmail: z.string().optional(),
-  guestPhone: z.string().min(1, 'Phone number is required'),
-  message: z.string().min(1, 'Message cannot be empty'),
-  platform: z.enum(['whatsapp', 'sms', 'email']).default('whatsapp'),
-  timestamp: z.string().optional(),
-  checkInDate: z.string().optional(),
-  checkOutDate: z.string().optional(),
-  isHost: z.boolean().optional().default(false),
-  webhookId: z.string().optional()
+// Schéma de validation pour les messages WAAPI
+const wapiMessageSchema = z.object({
+  event: z.string(),
+  instanceId: z.string(),
+  data: z.object({
+    message: z.object({
+      _data: z.object({
+        id: z.object({
+          fromMe: z.boolean(),
+          remote: z.string(),
+          id: z.string(),
+          _serialized: z.string()
+        }),
+        body: z.string(),
+        type: z.string(),
+        t: z.number(),
+        notifyName: z.string().optional(),
+        from: z.string(),
+        to: z.string()
+      })
+    })
+  })
 });
 
-// Cache pour stocker les messages récents (5 minutes max)
-const recentMessages = new Map<string, number>();
-
-// Cache pour stocker les webhooks traités (5 minutes max)
-const processedWebhooks = new Map<string, number>();
-
-// Nettoyer les messages plus vieux que 5 minutes
-const cleanupOldMessages = () => {
-  const fiveMinutesAgo = Date.now() - 5 * 60 * 1000;
-  for (const [key, timestamp] of recentMessages.entries()) {
-    if (timestamp < fiveMinutesAgo) {
-      recentMessages.delete(key);
-    }
-  }
-};
-
-// Nettoyer les webhooks plus vieux que 5 minutes
-const cleanupOldWebhooks = () => {
-  const fiveMinutesAgo = Date.now() - 5 * 60 * 1000;
-  for (const [key, timestamp] of processedWebhooks.entries()) {
-    if (timestamp < fiveMinutesAgo) {
-      processedWebhooks.delete(key);
-    }
-  }
-};
-
-// Fonction pour envoyer une notification
-const sendNotification = async (title: string, body: string, messageId: string) => {
-  try {
-    console.log('📱 Sending notification:', { title, body, messageId });
-    
-    const response = await fetch('https://airhost1212-production.up.railway.app/notify', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ 
-        title, 
-        body,
-        messageId,
-        timestamp: new Date().toISOString()
-      })
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to send notification: ${response.status} ${response.statusText}`);
-    }
-
-    const data = await response.json();
-    console.log('✅ Notification sent:', data);
-  } catch (error) {
-    console.error('❌ Failed to send notification:', error);
-  }
+// Fonction pour formater le numéro de téléphone
+const formatPhoneNumber = (phone: string): string => {
+  // Supprimer tout ce qui n'est pas un chiffre
+  const cleaned = phone.replace(/\D/g, '');
+  
+  // Supprimer le @c.us à la fin si présent
+  const withoutSuffix = cleaned.replace(/@c\.us$/, '');
+  
+  // Ajouter le + si pas présent
+  return withoutSuffix.startsWith('+') ? withoutSuffix : `+${withoutSuffix}`;
 };
 
 export const handler: Handler = async (event) => {
-  console.log('🚀 Receive Message Function Called');
+  console.log('🚀 WAAPI Webhook Called');
   console.log('Method:', event.httpMethod);
-  console.log('Headers:', JSON.stringify(event.headers, null, 2));
-
-  // Vérifier la configuration Airtable
-  try {
-    const { env, isConfigValid } = await import('../../src/config/env');
-    console.log('🔑 Airtable Config:', {
-      isValid: isConfigValid,
-      hasApiKey: Boolean(env.airtable.apiKey),
-      hasBaseId: Boolean(env.airtable.baseId)
-    });
-  } catch (configError) {
-    console.error('❌ Error checking config:', configError);
-  }
-
+  console.log('Headers:', event.headers);
+  
   if (event.httpMethod !== 'POST') {
-    return { statusCode: 405, body: JSON.stringify({ error: 'Method not allowed' }) };
+    return { 
+      statusCode: 405, 
+      body: JSON.stringify({ error: 'Method not allowed' })
+    };
   }
 
   try {
@@ -100,145 +54,78 @@ export const handler: Handler = async (event) => {
     const body = JSON.parse(event.body || '{}');
     console.log('📦 Parsed body:', JSON.stringify(body, null, 2));
 
-    const data = messageSchema.parse(body);
-    console.log('✅ Validated data:', JSON.stringify(data, null, 2));
+    // Valider le message WAAPI
+    const data = wapiMessageSchema.parse(body);
+    console.log('✅ Validated WAAPI data:', JSON.stringify(data, null, 2));
 
-    // Nettoyage des caches
-    cleanupOldMessages();
-    cleanupOldWebhooks();
-
-    // Vérification du webhook ID pour éviter les doublons
-    if (data.webhookId && processedWebhooks.has(data.webhookId)) {
-      console.log('🔄 Duplicate webhook detected, skipping...');
+    // Ne traiter que les messages entrants (non envoyés par nous)
+    if (data.data.message._data.id.fromMe) {
+      console.log('⏭️ Skipping outgoing message');
       return {
         statusCode: 200,
         body: JSON.stringify({ 
           status: 'success',
           skipped: true,
-          reason: 'duplicate_webhook'
-        }),
+          reason: 'outgoing_message'
+        })
       };
     }
 
-    if (data.webhookId) {
-      processedWebhooks.set(data.webhookId, Date.now());
-    }
-    
-    const propertyId = data.propertyId || process.env.DEFAULT_PROPERTY_ID;
-    if (!propertyId) {
-      return { statusCode: 400, body: JSON.stringify({ error: 'Property ID is required' }) };
-    }
+    // Construire l'URL absolue pour receive-message
+    const host = event.headers.host;
+    const protocol = event.headers['x-forwarded-proto'] || 'https';
+    const baseUrl = `${protocol}://${host}`;
+    const receiveMessageUrl = `${baseUrl}/.netlify/functions/receive-message`;
 
-    // Recherche de la propriété
-    const properties = await propertyService.getProperties();
-    const property = properties.find((p) => p.id === propertyId);
-    if (!property) {
-      return { statusCode: 404, body: JSON.stringify({ error: 'Property not found' }) };
-    }
+    // Formater le numéro de téléphone
+    const guestPhone = formatPhoneNumber(data.data.message._data.from);
+    console.log('📱 Formatted phone number:', guestPhone);
 
-    // Récupération des conversations
-    const conversations = await conversationService.fetchPropertyConversations(propertyId);
-    let conversation = conversations.find((conv) => conv.guestPhone === data.guestPhone);
+    // Transférer le message au endpoint receive-message
+    const messagePayload = {
+      propertyId: 'rec7L9Jpo7DhgVoBR', // ID de la propriété par défaut
+      message: data.data.message._data.body,
+      guestPhone,
+      webhookId: `${Date.now()}--${data.data.message._data.id._serialized}`,
+      waNotifyName: data.data.message._data.notifyName // Ajouter le nom affiché
+    };
 
-    // Création d'une nouvelle conversation si nécessaire
-    if (!conversation) {
-      conversation = await conversationService.addConversation({
-        Properties: [propertyId],
-        'Guest Name': data.guestName || 'Guest',
-        'Guest Email': data.guestEmail || '',
-        'Guest phone number': data.guestPhone,
-        'Check-in Date': data.checkInDate,
-        'Check-out Date': data.checkOutDate,
-        Messages: JSON.stringify([{
-          id: Date.now().toString(),
-          text: data.message,
-          timestamp: new Date(),
-          sender: data.isHost ? 'host' : 'guest',
-          type: 'text'
-        }]),
-        'Auto Pilot': false
-      });
-      
-      return {
-        statusCode: 200,
-        body: JSON.stringify({ 
-          status: 'success',
-          conversationId: conversation.id,
-          messageId: conversation.messages[0].id
-        }),
-      };
+    console.log('📤 Forwarding to receive-message:', {
+      url: receiveMessageUrl,
+      payload: messagePayload
+    });
+
+    const response = await fetch(receiveMessageUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(messagePayload)
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to forward message: ${response.status} ${response.statusText}`);
     }
 
-    // Ajout du message à une conversation existante
-    if (!data.isHost) {
-      const newMessage = {
-        id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-        text: data.message,
-        timestamp: new Date(data.timestamp || Date.now()),
-        sender: 'guest',
-        type: 'text'
-      };
-
-      const updatedMessages = [...(conversation.messages || []), newMessage];
-      await conversationService.updateConversation(conversation.id, {
-        Messages: JSON.stringify(updatedMessages),
-      });
-
-      // Incrémenter le compteur et envoyer la notification
-      await conversationService.incrementUnreadCount(conversation.id);
-      await sendNotification(
-        'Nouveau message', 
-        data.message,
-        newMessage.id
-      );
-
-      return {
-        statusCode: 200,
-        body: JSON.stringify({ 
-          status: 'success',
-          conversationId: conversation.id,
-          messageId: newMessage.id
-        }),
-      };
-    }
+    const result = await response.json();
+    console.log('✅ Message forwarded successfully:', result);
 
     return {
       statusCode: 200,
       body: JSON.stringify({ 
         status: 'success',
-        conversationId: conversation.id,
-        skipped: true
-      }),
+        messageId: messagePayload.webhookId
+      })
     };
 
   } catch (error) {
-    console.error('🚨 Error processing message:', error);
-    
-    if (error instanceof z.ZodError) {
-      return {
-        statusCode: 400,
-        body: JSON.stringify({ 
-          error: 'Invalid request data',
-          details: error.errors
-        }),
-      };
-    }
-
-    if (error.error) {
-      console.error('🚨 Airtable error details:', {
-        type: error.error.type,
-        message: error.error.message,
-        statusCode: error.statusCode
-      });
-    }
-    
+    console.error('❌ Error processing WAAPI webhook:', error);
     return {
-      statusCode: 500,
+      statusCode: error instanceof z.ZodError ? 400 : 500,
       body: JSON.stringify({ 
-        error: 'Internal server error',
-        message: error instanceof Error ? error.message : 'Unknown error',
-        details: error.error || error
-      }),
+        error: 'Failed to process webhook',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      })
     };
   }
 };
