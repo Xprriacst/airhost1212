@@ -1,5 +1,7 @@
 import { Handler } from '@netlify/functions';
 import { z } from 'zod';
+import { propertyService } from '../../src/services/airtable/propertyService';
+import { conversationService } from '../../src/services/airtable/conversationService';
 
 // Regex pour valider les numéros de téléphone français (avec ou sans +)
 const WHATSAPP_PHONE_REGEX = /^(\+33|33)[67]\d{8}$/;
