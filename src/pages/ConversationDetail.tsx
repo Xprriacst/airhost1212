@@ -15,11 +15,9 @@ const ConversationDetail: React.FC = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
-
-  // Ref pour la textarea
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // States
+  // Local states
   const [conversation, setConversation] = useState<Conversation | null>(null);
   const [property, setProperty] = useState<Property | null>(null);
   const [newMessage, setNewMessage] = useState('');
@@ -29,15 +27,38 @@ const ConversationDetail: React.FC = () => {
   const [isAutoPilot, setIsAutoPilot] = useState(false);
   const [generating, setGenerating] = useState(false);
 
+  // Track if the user is currently near the bottom of the messages
+  const [isAtBottom, setIsAtBottom] = useState<boolean>(true);
+
   /**
    * Fonction pour aller chercher la conversation
+   * + Marquer la conversation comme lue s'il y a de nouveaux messages (unreadCount).
+   * On n'écrase pas l'état local isAutoPilot ici pour éviter les retours en arrière.
    */
   const fetchConversation = async () => {
     if (!conversationId) return;
     try {
       const data = await conversationService.fetchConversationById(conversationId);
-      setConversation(data);
-      setIsAutoPilot(data.autoPilot || false);
+
+      // Marquer la conversation comme lue si unreadCount > 0
+      if (data.unreadCount && data.unreadCount > 0) {
+        await conversationService.markConversationAsRead(conversationId);
+      }
+
+      // Mettre à jour la conversation avec les données reçues
+      setConversation((prev) => {
+        // Si l'utilisateur a déjà togglé auto-pilot localement, on conserve isAutoPilot
+        // et on n'écrase pas la valeur locale (pour éviter un "flashback").
+        // On fusionne l'existant si besoin, ici on reprend autoPilot dans la variable "data"
+        // uniquement si c'est différent de ce qu'on a localement.
+        const merged = {
+          ...data,
+          autoPilot: prev?.autoPilot ?? data.autoPilot,
+        };
+        return merged;
+      });
+
+      // On ne fait plus setIsAutoPilot(data.autoPilot)
       setError(null);
     } catch (err) {
       console.error('Error fetching conversation:', err);
@@ -48,27 +69,17 @@ const ConversationDetail: React.FC = () => {
   };
 
   /**
-   * Gère la bascule de l'auto-pilot et met à jour la conversation dans le backend
+   * Fonction pour synchroniser l'état local "isAutoPilot" avec la conversation
+   * si la donnée backend change et qu’on n’a pas récemment togglé localement.
    */
-  const handleToggleAutoPilot = async () => {
-    if (!conversationId) return;
-    const updatedState = !isAutoPilot;
-    setIsAutoPilot(updatedState);
-
-    try {
-      // Mettez à jour la conversation au backend
-      await conversationService.updateConversation(conversationId, {
-        autoPilot: updatedState,
-      });
-    } catch (err) {
-      console.error('Error toggling autoPilot:', err);
-      // Rétablit l'ancien état en cas d'erreur
-      setIsAutoPilot(!updatedState);
+  useEffect(() => {
+    if (conversation && conversation.autoPilot !== isAutoPilot) {
+      setIsAutoPilot(conversation.autoPilot || false);
     }
-  };
+  }, [conversation, isAutoPilot]);
 
   /**
-   * Mise en place du polling.
+   * Mise en place du polling avec gestion du nettoyage.
    */
   useEffect(() => {
     fetchConversation();
@@ -84,16 +95,49 @@ const ConversationDetail: React.FC = () => {
   }, [conversationId]);
 
   /**
-   * Scroll en bas au premier chargement ou lorsqu'il y a de nouveaux messages
+   * Gère le scroll automatique ou non.
+   * On fait défiler en bas seulement si l’utilisateur est déjà en bas.
    */
   useEffect(() => {
-    if (messagesEndRef.current) {
+    if (isAtBottom && messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: 'auto' });
     }
-  }, [conversation?.messages]);
+  }, [conversation?.messages, isAtBottom]);
 
   /**
-   * Gère l'auto-resize de la <textarea>
+   * Détecte si l’utilisateur est proche du bas pour (dés)activer le scroll automatique.
+   */
+  const handleScroll = () => {
+    if (!messagesContainerRef.current) return;
+
+    const { scrollTop, scrollHeight, clientHeight } = messagesContainerRef.current;
+    // On considère qu'on est "en bas" si l'écart est assez petit (par ex. 20px)
+    const gap = 20;
+    const isUserNearBottom = scrollHeight - scrollTop - clientHeight < gap;
+    setIsAtBottom(isUserNearBottom);
+  };
+
+  /**
+   * Gère la bascule de l’auto-pilot et met à jour le backend pour conserver la cohérence.
+   */
+  const handleToggleAutoPilot = async () => {
+    const updatedState = !isAutoPilot;
+    setIsAutoPilot(updatedState);
+
+    if (!conversationId) return;
+    try {
+      await conversationService.updateConversation(conversationId, {
+        autoPilot: updatedState,
+      });
+    } catch (err) {
+      console.error('Error toggling autoPilot:', err);
+      // En cas d’erreur on rétablit l’ancien état local
+      setIsAutoPilot(!updatedState);
+    }
+  };
+
+  /**
+   * Gère l'auto-resize de la <textarea>.
    */
   useEffect(() => {
     const textarea = textareaRef.current;
@@ -101,7 +145,7 @@ const ConversationDetail: React.FC = () => {
 
     const adjustHeight = () => {
       textarea.style.height = 'auto';
-      const newHeight = Math.min(textarea.scrollHeight, 120); // max 120px
+      const newHeight = Math.min(textarea.scrollHeight, 120); // Limite à 120px
       textarea.style.height = `${newHeight}px`;
     };
 
@@ -109,7 +153,7 @@ const ConversationDetail: React.FC = () => {
   }, [newMessage]);
 
   /**
-   * Fonction pour générer une réponse IA
+   * Fonction pour générer une réponse IA (bouton IA / "Générer une réponse").
    */
   const handleGenerateResponse = async () => {
     if (!conversationId || !propertyId) return;
@@ -130,6 +174,7 @@ const ConversationDetail: React.FC = () => {
       }
 
       const data = await resp.json();
+      // On place la réponse IA dans le champ, prête à être envoyée
       setNewMessage(data.response || '');
     } catch (error) {
       console.error('Error generating AI response:', error);
@@ -139,7 +184,7 @@ const ConversationDetail: React.FC = () => {
   };
 
   /**
-   * Fonction pour envoyer un message
+   * Fonction pour envoyer un message.
    */
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -162,7 +207,7 @@ const ConversationDetail: React.FC = () => {
         throw new Error('Missing conversation data');
       }
 
-      // Mettre à jour l'état local
+      // Mettre à jour l'état local avec ce nouveau message
       setConversation((prev) => {
         if (!prev) return prev;
         return {
@@ -172,7 +217,7 @@ const ConversationDetail: React.FC = () => {
       });
       setNewMessage('');
 
-      // Scroll vers le nouveau message
+      // Attendre un instant avant de scroller (pour laisser le DOM se mettre à jour)
       setTimeout(() => {
         if (messagesEndRef.current) {
           messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
@@ -191,7 +236,6 @@ const ConversationDetail: React.FC = () => {
           conversationId,
         }),
       });
-
     } catch (error) {
       console.error('Error sending message:', error);
     } finally {
@@ -270,11 +314,17 @@ const ConversationDetail: React.FC = () => {
       </div>
 
       {/* Liste des messages */}
-      <div ref={messagesContainerRef} className="flex-1 overflow-y-auto px-4 pb-4">
+      <div
+        ref={messagesContainerRef}
+        onScroll={handleScroll}
+        className="flex-1 overflow-y-auto px-4 pb-4"
+      >
         {conversation.messages.map((message, index) => (
           <div
             key={message.id || index}
-            className={`flex ${message.sender === 'guest' ? 'justify-start' : 'justify-end'} mb-2`}
+            className={`flex ${
+              message.sender === 'guest' ? 'justify-start' : 'justify-end'
+            } mb-2`}
           >
             <div
               className={`max-w-[75%] rounded-2xl px-4 py-2 ${
