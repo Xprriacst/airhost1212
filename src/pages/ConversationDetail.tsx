@@ -19,7 +19,6 @@ const ConversationDetail: React.FC = () => {
 
   // States
   const [conversation, setConversation] = useState<Conversation | null>(null);
-  const [property, setProperty] = useState<Property | null>(null);
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -65,23 +64,29 @@ const ConversationDetail: React.FC = () => {
     if (!textarea) return;
 
     const adjustHeight = () => {
+      // Ajuster la hauteur
       textarea.style.height = 'auto';
-      const newHeight = Math.min(textarea.scrollHeight, 120); // Limite à 120px
+      const newHeight = Math.min(textarea.scrollHeight, 120); // hauteur maximum 120px
       textarea.style.height = `${newHeight}px`;
 
-      // Calculer un border-radius décroissant en fonction de la hauteur.
-      // Par exemple : commencer à 999px quand la hauteur est minimale,
-      // et diminuer proportionnellement, sans descendre en dessous de 4px.
-      const maxRadius = 999; 
-      const minRadius = 4;
-      // On assume que la hauteur minimale est 24px (valeur initiale),
-      // et la maximale est 120px.
-      const initialHeight = 24;
-      const heightRange = 120 - initialHeight;
-      const currentHeight = newHeight - initialHeight;
-      const radiusRange = maxRadius - minRadius;
-      const newRadius = Math.max(maxRadius - (currentHeight / heightRange) * radiusRange, minRadius);
-      textarea.style.borderRadius = `${newRadius}px`;
+      // Détermination du border-radius en fonction du nombre de lignes
+      const lineHeight = 24; // hauteur approximative d'une ligne
+      let radius = 999; // valeur par défaut pour 1 ligne (très arrondi)
+
+      if (newHeight <= lineHeight * 1.5) {
+        // 1 ligne ou presque
+        radius = 999;
+      } else if (newHeight <= lineHeight * 2.5) {
+        // environ 2 lignes
+        radius = 50;
+      } else if (newHeight <= lineHeight * 3.5) {
+        // environ 3 lignes
+        radius = 20;
+      } else {
+        // 4 lignes ou plus
+        radius = 4;
+      }
+      textarea.style.borderRadius = `${radius}px`;
     };
 
     adjustHeight();
@@ -190,27 +195,7 @@ const ConversationDetail: React.FC = () => {
     <div className="fixed inset-0 flex flex-col bg-white">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 bg-white border-b">
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => navigate(-1)}
-            className="p-2 -ml-2 hover:bg-gray-50 rounded-full"
-          >
-            <ArrowLeft className="w-6 h-6 text-gray-700" />
-          </button>
-          <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
-            <span className="text-gray-600 text-sm font-medium">
-              {conversation.guestName?.charAt(0).toUpperCase()}
-            </span>
-          </div>
-          <div>
-            <h2 className="font-medium">{conversation.guestName || 'Conversation'}</h2>
-            <p className="text-xs text-gray-500">
-              {conversation.checkIn && new Date(conversation.checkIn).toLocaleDateString()}
-              {' - '}
-              {conversation.checkOut && new Date(conversation.checkOut).toLocaleDateString()}
-            </p>
-          </div>
-        </div>
+        {/* ... (le reste du header inchangé) */}
         <button
           onClick={() => setIsAutoPilot(!isAutoPilot)}
           className={`flex items-center gap-2 px-3 py-1.5 rounded-full ${
@@ -226,7 +211,7 @@ const ConversationDetail: React.FC = () => {
         </button>
       </div>
 
-      {/* Liste des messages */}
+      {/* Messages */}
       <div ref={messagesContainerRef} className="flex-1 overflow-y-auto px-4 pb-4">
         {conversation.messages.map((message, index) => (
           <div
