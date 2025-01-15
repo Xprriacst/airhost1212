@@ -24,12 +24,30 @@ app.use(bodyParser.json());
 const recentNotifications = new Map();
 const NOTIFICATION_TTL = 5000; // 5 secondes
 
-// Nettoyage périodique du cache
+// Cache des messages reçus pour éviter les doublons
+const recentMessages = new Map();
+const MESSAGE_TTL = 5000; // 5 secondes
+
+// File d'attente pour les notifications en échec
+const notificationQueue = new Map();
+const MAX_RETRIES = 3;
+const RETRY_DELAYS = [1000, 5000, 15000]; // Délais croissants entre les tentatives
+
+// Nettoyage périodique des caches
 setInterval(() => {
   const now = Date.now();
+  
+  // Nettoyage des notifications
   for (const [key, timestamp] of recentNotifications.entries()) {
     if (now - timestamp > NOTIFICATION_TTL) {
       recentNotifications.delete(key);
+    }
+  }
+  
+  // Nettoyage des messages
+  for (const [key, timestamp] of recentMessages.entries()) {
+    if (now - timestamp > MESSAGE_TTL) {
+      recentMessages.delete(key);
     }
   }
 }, 10000);
@@ -46,7 +64,7 @@ webpush.setVapidDetails(
   process.env.VAPID_PRIVATE_KEY
 );
 
-// Stockage des souscriptions
+// Stockage des souscriptions avec TTL
 const subscriptions = new Map();
 const SUBSCRIPTION_TTL = 24 * 60 * 60 * 1000; // 24h
 
@@ -60,22 +78,156 @@ setInterval(() => {
   }
 }, 60 * 60 * 1000);
 
+// Fonction pour retenter l'envoi d'une notification
+async function retryNotification(subscription, payload, retryCount = 0) {
+  try {
+    await webpush.sendNotification(subscription, payload);
+    return true;
+  } catch (error) {
+    if (error.statusCode === 410) {
+      // Souscription expirée, on la supprime
+      subscriptions.delete(subscription.endpoint);
+      return false;
+    }
+
+    if (retryCount < MAX_RETRIES) {
+      // Planifier une nouvelle tentative avec un délai croissant
+      const delay = RETRY_DELAYS[retryCount];
+      await new Promise(resolve => setTimeout(resolve, delay));
+      return retryNotification(subscription, payload, retryCount + 1);
+    }
+
+    return false;
+  }
+}
+
 // Route de santé
 app.get('/health', (req, res) => {
   res.status(200).json({ 
     status: 'ok',
     subscriptions: subscriptions.size,
+    queueSize: notificationQueue.size,
     uptime: process.uptime()
   });
 });
 
-// Route d'abonnement
+// Route de réception des messages
+app.post('/receive-message', async (req, res) => {
+  console.log('📨 Message received:', req.body);
+  
+  try {
+    const { propertyId, message, guestPhone, webhookId } = req.body;
+
+    // Validation des données requises
+    if (!propertyId || !message || !guestPhone) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    // Vérifier les doublons si un webhookId est fourni
+    if (webhookId) {
+      if (recentMessages.has(webhookId)) {
+        console.log('⚠️ Duplicate message detected, skipping');
+        return res.status(200).json({ 
+          status: 'success',
+          skipped: true,
+          reason: 'duplicate_message'
+        });
+      }
+      recentMessages.set(webhookId, Date.now());
+    }
+
+    // Formater le numéro de téléphone
+    const formattedPhone = guestPhone
+      .replace(/^\+/, '')     // Supprimer le + initial
+      .replace(/\D/g, '')     // Supprimer tous les caractères non numériques
+      .replace(/^0/, '')      // Supprimer le 0 initial
+      .replace(/^33/, '')     // Supprimer le 33 initial
+      .replace(/^/, '33');    // Ajouter 33 au début
+
+    // Préparer la notification
+    const payload = JSON.stringify({
+      title: 'Nouveau message',
+      body: message,
+      icon: '/logo192.png',
+      badge: '/logo192.png',
+      timestamp: Date.now(),
+      data: { 
+        url: '/',
+        propertyId,
+        guestPhone: formattedPhone,
+        messageId: webhookId
+      }
+    });
+
+    // Envoyer la notification à tous les abonnés
+    const results = await Promise.allSettled(
+      Array.from(subscriptions.entries()).map(async ([endpoint, { subscription }]) => {
+        try {
+          const success = await retryNotification(subscription, payload);
+          return { success, endpoint };
+        } catch (error) {
+          return { success: false, endpoint, error: error.message };
+        }
+      })
+    );
+
+    // Analyser les résultats
+    const succeeded = results.filter(r => r.status === 'fulfilled' && r.value.success).length;
+    const failed = results.filter(r => r.status === 'fulfilled' && !r.value.success).length;
+
+    // Si certains envois ont échoué, les ajouter à la file d'attente
+    if (failed > 0) {
+      const retryKey = `${Date.now()}-${webhookId || Math.random()}`;
+      notificationQueue.set(retryKey, {
+        payload,
+        retryCount: 0,
+        timestamp: Date.now()
+      });
+    }
+
+    console.log('✅ Message processed:', {
+      total: subscriptions.size,
+      succeeded,
+      failed,
+      queued: notificationQueue.size
+    });
+
+    res.status(200).json({
+      success: true,
+      sent: succeeded,
+      failed,
+      queued: notificationQueue.size
+    });
+
+  } catch (error) {
+    console.error('❌ Error processing message:', error);
+    res.status(500).json({ error: 'Message processing failed' });
+  }
+});
+
+// Route d'abonnement améliorée
 app.post('/subscribe', async (req, res) => {
   try {
     const { subscription } = req.body;
     
     if (!subscription?.endpoint) {
       return res.status(400).json({ error: 'Invalid subscription data' });
+    }
+
+    // Vérifier si la souscription est valide
+    try {
+      await webpush.sendNotification(
+        subscription,
+        JSON.stringify({
+          title: 'Test de connexion',
+          body: 'Vérification de la souscription',
+          silent: true
+        })
+      );
+    } catch (error) {
+      if (error.statusCode === 410) {
+        return res.status(400).json({ error: 'Invalid subscription' });
+      }
     }
 
     subscriptions.set(subscription.endpoint, {
@@ -101,72 +253,41 @@ app.post('/subscribe', async (req, res) => {
   }
 });
 
-// Route de notification améliorée
-app.post('/notify', async (req, res) => {
-  console.log('📨 Notification request received:', req.body);
-  
-  try {
-    const { title, body, messageId } = req.body;
-
-    if (!title || !body) {
-      console.log('❌ Missing title or body');
-      return res.status(400).json({ error: 'Missing required fields' });
+// Traitement périodique de la file d'attente
+setInterval(async () => {
+  for (const [key, notification] of notificationQueue.entries()) {
+    const { payload, retryCount, timestamp } = notification;
+    
+    // Vérifier si la notification n'est pas trop vieille (max 1h)
+    if (Date.now() - timestamp > 3600000) {
+      notificationQueue.delete(key);
+      continue;
     }
 
-    // Vérifier si on a déjà traité cette notification récemment
-    if (messageId) {
-      const key = `${messageId}`;
-      if (recentNotifications.has(key)) {
-        console.log('⚠️ Duplicate notification detected, still sending');
-      }
-      recentNotifications.set(key, Date.now());
-    }
-
-    if (subscriptions.size === 0) {
-      return res.status(200).json({
-        message: 'No active subscriptions',
-        sent: 0
-      });
-    }
-
-    const payload = JSON.stringify({
-      title,
-      body,
-      icon: '/logo192.png',
-      badge: '/logo192.png',
-      timestamp: Date.now(),
-      data: { url: '/' },
-      actions: [{ action: 'open', title: 'Ouvrir' }]
-    });
-
+    // Retenter l'envoi pour toutes les souscriptions
     const results = await Promise.allSettled(
       Array.from(subscriptions.entries()).map(async ([endpoint, { subscription }]) => {
         try {
-          await webpush.sendNotification(subscription, payload);
-          return { success: true, endpoint };
+          const success = await retryNotification(subscription, payload);
+          return { success, endpoint };
         } catch (error) {
-          if (error.statusCode === 404 || error.statusCode === 410) {
-            subscriptions.delete(endpoint);
-          }
           return { success: false, endpoint, error: error.message };
         }
       })
     );
 
-    const succeeded = results.filter(r => r.status === 'fulfilled' && r.value.success).length;
-
-    console.log('✅ Notification processed successfully');
-    res.status(200).json({
-      success: true,
-      sent: succeeded,
-      total: subscriptions.size
-    });
-
-  } catch (error) {
-    console.error('❌ Error processing notification:', error);
-    res.status(500).json({ error: 'Notification failed' });
+    // Si tous les envois ont réussi ou nombre max de tentatives atteint
+    if (results.every(r => r.status === 'fulfilled' && r.value.success) || retryCount >= MAX_RETRIES) {
+      notificationQueue.delete(key);
+    } else {
+      // Incrémenter le compteur de tentatives
+      notificationQueue.set(key, {
+        ...notification,
+        retryCount: retryCount + 1
+      });
+    }
   }
-});
+}, 30000); // Vérifier toutes les 30 secondes
 
 app.listen(port, () => {
   console.log(`
