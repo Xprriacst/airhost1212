@@ -14,11 +14,11 @@ const formatPhoneNumber = (phone: string): string => {
   // Supprimer le 0 initial s'il existe
   const withoutLeadingZero = cleaned.replace(/^0/, '');
   
-  // Supprimer le 33 initial s'il existe, puis le rajouter
+  // Supprimer le 33 initial s'il existe, puis le rajouter avec +
   const normalized = withoutLeadingZero.replace(/^33/, '');
-  const withPrefix = `33${normalized}`;
+  const withPrefix = `+33${normalized}`;
   
-  return withPrefix; // Retourner sans le + pour être cohérent avec Airtable
+  return withPrefix; // Retourner avec le + pour Airtable
 };
 
 // Schéma de validation pour les messages entrants
@@ -30,7 +30,7 @@ const messageSchema = z.object({
     .min(1, 'Phone number is required')
     .transform(formatPhoneNumber)
     .refine(
-      phone => WHATSAPP_PHONE_REGEX.test(`+${phone}`),
+      phone => WHATSAPP_PHONE_REGEX.test(phone),
       'Invalid French mobile number format'
     ),
   message: z.string().min(1, 'Message cannot be empty'),
@@ -130,7 +130,7 @@ export const handler: Handler = async (event) => {
         Properties: [propertyId],
         'Guest Name': data.waNotifyName || data.guestName || 'Guest',
         'Guest Email': data.guestEmail || '',
-        'Guest phone number': data.guestPhone, // Le numéro est déjà formaté par le schéma
+        'Guest phone number': data.guestPhone, // Le numéro est déjà formaté avec le +
         'Check-in Date': data.checkInDate,
         'Check-out Date': data.checkOutDate,
         Messages: JSON.stringify([{
