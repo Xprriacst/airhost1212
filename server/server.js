@@ -6,7 +6,7 @@ const bodyParser = require('body-parser');
 const app = express();
 const port = process.env.PORT || 8080;
 
-// Configuration CORS
+// CORS Configuration
 const corsOptions = {
   origin: process.env.NODE_ENV === 'production' 
     ? ['https://whimsical-beignet-91329f.netlify.app', 'https://airhost1212.netlify.app']
@@ -20,39 +20,44 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(bodyParser.json());
 
-// Cache des notifications récentes pour éviter les doublons
+// Caches for deduplication
 const recentNotifications = new Map();
-const NOTIFICATION_TTL = 5000; // 5 secondes
-
-// Cache des messages reçus pour éviter les doublons
 const recentMessages = new Map();
-const MESSAGE_TTL = 5000; // 5 secondes
+const CACHE_TTL = 5000; // 5 seconds
 
-// File d'attente pour les notifications en échec
+// Notification retry queue
 const notificationQueue = new Map();
 const MAX_RETRIES = 3;
-const RETRY_DELAYS = [1000, 5000, 15000]; // Délais croissants entre les tentatives
+const RETRY_DELAYS = [1000, 5000, 15000];
 
-// Nettoyage périodique des caches
+// Subscription storage
+const subscriptions = new Map();
+const SUBSCRIPTION_TTL = 24 * 60 * 60 * 1000; // 24h
+
+// Periodic cache cleanup
 setInterval(() => {
   const now = Date.now();
   
-  // Nettoyage des notifications
   for (const [key, timestamp] of recentNotifications.entries()) {
-    if (now - timestamp > NOTIFICATION_TTL) {
-      recentNotifications.delete(key);
-    }
+    if (now - timestamp > CACHE_TTL) recentNotifications.delete(key);
   }
   
-  // Nettoyage des messages
   for (const [key, timestamp] of recentMessages.entries()) {
-    if (now - timestamp > MESSAGE_TTL) {
-      recentMessages.delete(key);
-    }
+    if (now - timestamp > CACHE_TTL) recentMessages.delete(key);
   }
 }, 10000);
 
-// Configuration VAPID
+// Periodic subscription cleanup
+setInterval(() => {
+  const now = Date.now();
+  for (const [endpoint, data] of subscriptions.entries()) {
+    if (now - data.timestamp > SUBSCRIPTION_TTL) {
+      subscriptions.delete(endpoint);
+    }
+  }
+}, 60 * 60 * 1000);
+
+// VAPID Configuration
 if (!process.env.VAPID_PUBLIC_KEY || !process.env.VAPID_PRIVATE_KEY) {
   console.error('❌ Missing VAPID keys');
   process.exit(1);
@@ -64,34 +69,20 @@ webpush.setVapidDetails(
   process.env.VAPID_PRIVATE_KEY
 );
 
-// Stockage des souscriptions avec TTL
-const subscriptions = new Map();
-const SUBSCRIPTION_TTL = 24 * 60 * 60 * 1000; // 24h
-
-// Nettoyage périodique des souscriptions
-setInterval(() => {
-  const now = Date.now();
-  for (const [endpoint, data] of subscriptions.entries()) {
-    if (now - data.timestamp > SUBSCRIPTION_TTL) {
-      subscriptions.delete(endpoint);
-    }
-  }
-}, 60 * 60 * 1000);
-
-// Fonction pour retenter l'envoi d'une notification
+// Notification retry helper
 async function retryNotification(subscription, payload, retryCount = 0) {
   try {
     await webpush.sendNotification(subscription, payload);
     return true;
   } catch (error) {
+    console.error(`Notification attempt ${retryCount + 1} failed:`, error.message);
+
     if (error.statusCode === 410) {
-      // Souscription expirée, on la supprime
       subscriptions.delete(subscription.endpoint);
       return false;
     }
 
     if (retryCount < MAX_RETRIES) {
-      // Planifier une nouvelle tentative avec un délai croissant
       const delay = RETRY_DELAYS[retryCount];
       await new Promise(resolve => setTimeout(resolve, delay));
       return retryNotification(subscription, payload, retryCount + 1);
@@ -101,7 +92,7 @@ async function retryNotification(subscription, payload, retryCount = 0) {
   }
 }
 
-// Route de santé
+// Health check endpoint
 app.get('/health', (req, res) => {
   res.status(200).json({ 
     status: 'ok',
@@ -111,40 +102,131 @@ app.get('/health', (req, res) => {
   });
 });
 
-// Route de réception des messages
+// New notification endpoint
+app.post('/send-notification', async (req, res) => {
+  try {
+    const { title, body } = req.body;
+    
+    if (!title || !body) {
+      return res.status(400).json({ error: 'Missing title or body' });
+    }
+
+    console.log('📨 Sending notification:', { title, body });
+
+    const payload = JSON.stringify({
+      title,
+      body,
+      icon: '/logo192.png',
+      badge: '/logo192.png',
+      timestamp: Date.now()
+    });
+
+    const results = await Promise.allSettled(
+      Array.from(subscriptions.entries()).map(async ([endpoint, { subscription }]) => {
+        try {
+          const success = await retryNotification(subscription, payload);
+          return { success, endpoint };
+        } catch (error) {
+          return { success: false, endpoint, error: error.message };
+        }
+      })
+    );
+
+    const succeeded = results.filter(r => r.status === 'fulfilled' && r.value.success).length;
+    const failed = results.filter(r => r.status === 'fulfilled' && !r.value.success).length;
+
+    console.log('✅ Notification sent:', { succeeded, failed });
+
+    res.status(200).json({
+      success: true,
+      sent: succeeded,
+      failed
+    });
+  } catch (error) {
+    console.error('❌ Error sending notification:', error);
+    res.status(500).json({ 
+      error: 'Failed to send notification',
+      details: error.message 
+    });
+  }
+});
+
+// Subscription endpoint
+app.post('/subscribe', async (req, res) => {
+  try {
+    const { subscription } = req.body;
+    
+    if (!subscription?.endpoint) {
+      return res.status(400).json({ error: 'Invalid subscription data' });
+    }
+
+    // Validate subscription
+    try {
+      await webpush.sendNotification(
+        subscription,
+        JSON.stringify({
+          title: 'Test de connexion',
+          body: 'Vérification de la souscription',
+          silent: true
+        })
+      );
+    } catch (error) {
+      if (error.statusCode === 410) {
+        return res.status(400).json({ error: 'Invalid subscription' });
+      }
+      console.warn('⚠️ Test notification failed:', error.message);
+    }
+
+    // Store subscription
+    subscriptions.set(subscription.endpoint, {
+      subscription,
+      timestamp: Date.now()
+    });
+
+    console.log('✅ New subscription added:', subscription.endpoint);
+    res.status(201).json({ message: 'Subscription successful' });
+  } catch (error) {
+    console.error('❌ Subscription error:', error);
+    res.status(500).json({ 
+      error: 'Subscription failed',
+      details: error.message 
+    });
+  }
+});
+
+// Message receiving endpoint
 app.post('/receive-message', async (req, res) => {
   console.log('📨 Message received:', req.body);
   
   try {
     const { propertyId, message, guestPhone, webhookId } = req.body;
 
-    // Validation des données requises
     if (!propertyId || !message || !guestPhone) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
-    // Vérifier les doublons si un webhookId est fourni
+    // Deduplication check
+    if (webhookId && recentMessages.has(webhookId)) {
+      return res.status(200).json({ 
+        status: 'success',
+        skipped: true,
+        reason: 'duplicate_message'
+      });
+    }
+
     if (webhookId) {
-      if (recentMessages.has(webhookId)) {
-        console.log('⚠️ Duplicate message detected, skipping');
-        return res.status(200).json({ 
-          status: 'success',
-          skipped: true,
-          reason: 'duplicate_message'
-        });
-      }
       recentMessages.set(webhookId, Date.now());
     }
 
-    // Formater le numéro de téléphone
+    // Format phone number
     const formattedPhone = guestPhone
-      .replace(/^\+/, '')     // Supprimer le + initial
-      .replace(/\D/g, '')     // Supprimer tous les caractères non numériques
-      .replace(/^0/, '')      // Supprimer le 0 initial
-      .replace(/^33/, '')     // Supprimer le 33 initial
-      .replace(/^/, '33');    // Ajouter 33 au début
+      .replace(/^\+/, '')
+      .replace(/\D/g, '')
+      .replace(/^0/, '')
+      .replace(/^33/, '')
+      .replace(/^/, '33');
 
-    // Préparer la notification
+    // Prepare notification payload
     const payload = JSON.stringify({
       title: 'Nouveau message',
       body: message,
@@ -159,7 +241,7 @@ app.post('/receive-message', async (req, res) => {
       }
     });
 
-    // Envoyer la notification à tous les abonnés
+    // Send to all subscribers
     const results = await Promise.allSettled(
       Array.from(subscriptions.entries()).map(async ([endpoint, { subscription }]) => {
         try {
@@ -171,124 +253,31 @@ app.post('/receive-message', async (req, res) => {
       })
     );
 
-    // Analyser les résultats
     const succeeded = results.filter(r => r.status === 'fulfilled' && r.value.success).length;
     const failed = results.filter(r => r.status === 'fulfilled' && !r.value.success).length;
-
-    // Si certains envois ont échoué, les ajouter à la file d'attente
-    if (failed > 0) {
-      const retryKey = `${Date.now()}-${webhookId || Math.random()}`;
-      notificationQueue.set(retryKey, {
-        payload,
-        retryCount: 0,
-        timestamp: Date.now()
-      });
-    }
 
     console.log('✅ Message processed:', {
       total: subscriptions.size,
       succeeded,
-      failed,
-      queued: notificationQueue.size
+      failed
     });
 
     res.status(200).json({
       success: true,
       sent: succeeded,
-      failed,
-      queued: notificationQueue.size
+      failed
     });
 
   } catch (error) {
     console.error('❌ Error processing message:', error);
-    res.status(500).json({ error: 'Message processing failed' });
-  }
-});
-
-// Route d'abonnement améliorée
-app.post('/subscribe', async (req, res) => {
-  try {
-    const { subscription } = req.body;
-    
-    if (!subscription?.endpoint) {
-      return res.status(400).json({ error: 'Invalid subscription data' });
-    }
-
-    // Vérifier si la souscription est valide
-    try {
-      await webpush.sendNotification(
-        subscription,
-        JSON.stringify({
-          title: 'Test de connexion',
-          body: 'Vérification de la souscription',
-          silent: true
-        })
-      );
-    } catch (error) {
-      if (error.statusCode === 410) {
-        return res.status(400).json({ error: 'Invalid subscription' });
-      }
-    }
-
-    subscriptions.set(subscription.endpoint, {
-      subscription,
-      timestamp: Date.now()
+    res.status(500).json({ 
+      error: 'Message processing failed',
+      details: error.message
     });
-
-    // Notification de test
-    try {
-      await webpush.sendNotification(subscription, JSON.stringify({
-        title: 'Notifications activées !',
-        body: 'Vous recevrez désormais les messages de vos voyageurs.',
-        icon: '/logo192.png'
-      }));
-    } catch (error) {
-      console.warn('⚠️ Test notification failed:', error.message);
-    }
-
-    res.status(201).json({ message: 'Subscription successful' });
-  } catch (error) {
-    console.error('❌ Subscription error:', error);
-    res.status(500).json({ error: 'Subscription failed' });
   }
 });
 
-// Traitement périodique de la file d'attente
-setInterval(async () => {
-  for (const [key, notification] of notificationQueue.entries()) {
-    const { payload, retryCount, timestamp } = notification;
-    
-    // Vérifier si la notification n'est pas trop vieille (max 1h)
-    if (Date.now() - timestamp > 3600000) {
-      notificationQueue.delete(key);
-      continue;
-    }
-
-    // Retenter l'envoi pour toutes les souscriptions
-    const results = await Promise.allSettled(
-      Array.from(subscriptions.entries()).map(async ([endpoint, { subscription }]) => {
-        try {
-          const success = await retryNotification(subscription, payload);
-          return { success, endpoint };
-        } catch (error) {
-          return { success: false, endpoint, error: error.message };
-        }
-      })
-    );
-
-    // Si tous les envois ont réussi ou nombre max de tentatives atteint
-    if (results.every(r => r.status === 'fulfilled' && r.value.success) || retryCount >= MAX_RETRIES) {
-      notificationQueue.delete(key);
-    } else {
-      // Incrémenter le compteur de tentatives
-      notificationQueue.set(key, {
-        ...notification,
-        retryCount: retryCount + 1
-      });
-    }
-  }
-}, 30000); // Vérifier toutes les 30 secondes
-
+// Start server
 app.listen(port, () => {
   console.log(`
 🚀 Server running on port ${port}
