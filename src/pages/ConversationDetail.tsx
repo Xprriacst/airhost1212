@@ -1,3 +1,5 @@
+// src/pages/ConversationDetail.tsx
+
 import React, { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Send, Sparkles, Zap } from 'lucide-react';
@@ -11,13 +13,15 @@ const ConversationDetail: React.FC = () => {
   const { conversationId, propertyId } = useParams();
   const navigate = useNavigate();
 
-  // DOM references
+  // Refs DOM
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
-  const pollingRef = useRef<NodeJS.Timeout | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // States
+  // Référence pour le polling
+  const pollingRef = useRef<NodeJS.Timeout | null>(null);
+
+  // États locaux
   const [conversation, setConversation] = useState<Conversation | null>(null);
   const [property, setProperty] = useState<Property | null>(null);
   const [newMessage, setNewMessage] = useState('');
@@ -25,32 +29,83 @@ const ConversationDetail: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const [generating, setGenerating] = useState(false);
+
+  // Suivi de la position du scroll
+  const [isAtBottom, setIsAtBottom] = useState<boolean>(true);
+
+  // État pour l'Auto-pilot
   const [isAutoPilot, setIsAutoPilot] = useState(false);
 
+  // **État additionnel pour les messages non lus**
+  const [unreadCount, setUnreadCount] = useState<number>(0);
+
   /**
-   * Fetch the conversation from your backend or Airtable service
+   * Fonction pour récupérer la conversation depuis le backend
    */
   const fetchConversation = async () => {
     if (!conversationId) return;
     try {
       const data = await conversationService.fetchConversationById(conversationId);
-      setConversation(data);
-      setIsAutoPilot(data.autoPilot || false);
+      
+      setConversation((prev) => {
+        if (prev) {
+          return {
+            ...prev,
+            messages: data.messages,
+            guestPhone: data.guestPhone,
+            guestName: data.guestName,
+            checkIn: data.checkIn,
+            checkOut: data.checkOut,
+            // Maintient l'état local de l'Auto-pilot
+          };
+        }
+        // Pour le premier chargement, initialise l'état de l'Auto-pilot
+        setIsAutoPilot(data.autoPilot || false);
+        return data;
+      });
+
+      // **Mise à jour du compteur de messages non lus**
+      setUnreadCount(data.unreadCount || 0);
+
+      // **Marquer comme lu si il y a des messages non lus**
+      if (data.unreadCount && data.unreadCount > 0) {
+        await conversationService.markConversationAsRead(conversationId);
+        setUnreadCount(0); // Réinitialise le compteur après marquage
+      }
+
       setError(null);
     } catch (err) {
-      console.error('Error fetching conversation:', err);
-      setError('Failed to load conversation');
+      console.error('Erreur lors de la récupération de la conversation :', err);
+      setError('Échec du chargement de la conversation');
     } finally {
       setLoading(false);
     }
   };
 
   /**
-   * Set up polling to refresh the conversation
+   * Fonction pour basculer l'Auto-pilot et mettre à jour Airtable
+   */
+  const handleToggleAutoPilot = async () => {
+    const updatedState = !isAutoPilot;
+    setIsAutoPilot(updatedState);
+
+    if (!conversationId) return;
+    try {
+      await conversationService.updateConversation(conversationId, {
+        'Auto Pilot': updatedState,
+      });
+    } catch (err) {
+      console.error('Erreur lors de la mise à jour de l\'Auto-pilot :', err);
+      // Revenir à l'état précédent si l'appel échoue
+      setIsAutoPilot(!updatedState);
+    }
+  };
+
+  /**
+   * Configuration du polling pour rafraîchir la conversation périodiquement
    */
   useEffect(() => {
     fetchConversation();
-
     pollingRef.current = setInterval(() => {
       fetchConversation();
     }, POLLING_INTERVAL);
@@ -63,16 +118,26 @@ const ConversationDetail: React.FC = () => {
   }, [conversationId]);
 
   /**
-   * Scroll to the bottom when messages change
+   * Gestion du scroll : auto-scroll seulement si l'utilisateur est proche du bas
    */
-  useEffect(() => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: 'auto' });
-    }
-  }, [conversation?.messages]);
+  const handleScroll = () => {
+    if (!messagesContainerRef.current) return;
+    const { scrollTop, scrollHeight, clientHeight } = messagesContainerRef.current;
+    const gap = 20; // Seuil pour considérer que l'utilisateur est en bas
+    setIsAtBottom((scrollHeight - scrollTop - clientHeight) < gap);
+  };
 
   /**
-   * Auto-resize the textarea as newMessage grows
+   * Scroll automatique vers le bas si l'utilisateur est déjà en bas
+   */
+  useEffect(() => {
+    if (isAtBottom && messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'auto' });
+    }
+  }, [conversation?.messages, isAtBottom]);
+
+  /**
+   * Ajustement automatique de la hauteur de la textarea
    */
   useEffect(() => {
     const textarea = textareaRef.current;
@@ -80,39 +145,14 @@ const ConversationDetail: React.FC = () => {
 
     const adjustHeight = () => {
       textarea.style.height = 'auto';
-      const newHeight = Math.min(textarea.scrollHeight, 120);
+      const newHeight = Math.min(textarea.scrollHeight, 120); // Limite à 120px
       textarea.style.height = `${newHeight}px`;
     };
-
     adjustHeight();
   }, [newMessage]);
 
   /**
-   * Toggle the Auto Pilot setting and update Airtable
-   */
-  const handleToggleAutoPilot = async () => {
-    if (!conversationId || !conversation) return;
-
-    const newValue = !isAutoPilot;
-    setIsAutoPilot(newValue);
-
-    try {
-      // Call your conversationService to update Airtable
-      // Make sure the field name matches what you have in Airtable
-      const updated = await conversationService.updateConversation(conversationId, {
-        'Auto Pilot': newValue,
-      });
-      // Merge updated conversation data (if returned by your API)
-      setConversation(updated);
-    } catch (err) {
-      console.error('Error updating Auto Pilot:', err);
-      // Revert local state if update fails
-      setIsAutoPilot(!newValue);
-    }
-  };
-
-  /**
-   * Generate an AI response (example placeholder function)
+   * Génération d'une réponse IA
    */
   const handleGenerateResponse = async () => {
     if (!conversationId || !propertyId) return;
@@ -124,22 +164,20 @@ const ConversationDetail: React.FC = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ conversationId, propertyId }),
       });
-
       if (!resp.ok) {
-        throw new Error('Failed to generate response');
+        throw new Error('Échec de la génération de la réponse');
       }
-
       const data = await resp.json();
       setNewMessage(data.response || '');
-    } catch (error) {
-      console.error('Error generating AI response:', error);
+    } catch (err) {
+      console.error('Erreur lors de la génération de la réponse IA :', err);
     } finally {
       setGenerating(false);
     }
   };
 
   /**
-   * Send a new message
+   * Gestion de l'envoi d'un nouveau message
    */
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -158,10 +196,9 @@ const ConversationDetail: React.FC = () => {
 
     try {
       if (!conversation || !conversation.guestPhone) {
-        throw new Error('Missing conversation data');
+        throw new Error('Données de conversation manquantes');
       }
-
-      // Update local state right away
+      // Mise à jour locale de la conversation
       setConversation((prev) => {
         if (!prev) return prev;
         return {
@@ -171,14 +208,14 @@ const ConversationDetail: React.FC = () => {
       });
       setNewMessage('');
 
-      // Scroll to the newly added message
+      // Scroll vers le nouveau message
       setTimeout(() => {
         if (messagesEndRef.current) {
           messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
         }
       }, 100);
 
-      // Send to your backend function
+      // Envoi au backend
       await fetch('/.netlify/functions/send-message', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -190,22 +227,21 @@ const ConversationDetail: React.FC = () => {
           conversationId,
         }),
       });
-    } catch (error) {
-      console.error('Error sending message:', error);
+    } catch (err) {
+      console.error('Erreur lors de l\'envoi du message :', err);
     } finally {
       setSending(false);
     }
   };
 
-  // Loading / error / not found states
+  // Gestion des états de chargement, d'erreur ou de non-trouvés
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[100dvh]">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
       </div>
     );
   }
-
   if (error) {
     return (
       <div className="min-h-[100dvh] p-6">
@@ -213,21 +249,20 @@ const ConversationDetail: React.FC = () => {
       </div>
     );
   }
-
   if (!conversation) {
     return (
       <div className="min-h-[100dvh] p-6">
         <div className="bg-yellow-50 text-yellow-600 p-4 rounded-lg">
-          Conversation not found
+          Conversation introuvable
         </div>
       </div>
     );
   }
 
-  // Main component render
+  // Rendu principal du composant
   return (
     <div className="fixed inset-0 flex flex-col bg-white">
-      {/* Header */}
+      {/* En-tête */}
       <div className="flex items-center justify-between px-4 py-3 bg-white border-b">
         <div className="flex items-center gap-2">
           <button
@@ -248,10 +283,16 @@ const ConversationDetail: React.FC = () => {
               {' - '}
               {conversation.checkOut && new Date(conversation.checkOut).toLocaleDateString()}
             </p>
+            {/* **Affichage du compteur de messages non lus** */}
+            {unreadCount > 0 && (
+              <p className="text-xs text-red-500">
+                {unreadCount} message{unreadCount > 1 ? 's' : ''} non lu{unreadCount > 1 ? 's' : ''}
+              </p>
+            )}
           </div>
         </div>
 
-        {/* Auto Pilot Toggle */}
+        {/* Bouton de basculement de l'Auto-pilot */}
         <button
           onClick={handleToggleAutoPilot}
           className={`flex items-center gap-2 px-3 py-1.5 rounded-full ${
@@ -267,8 +308,12 @@ const ConversationDetail: React.FC = () => {
         </button>
       </div>
 
-      {/* Messages list */}
-      <div ref={messagesContainerRef} className="flex-1 overflow-y-auto px-4 pb-4">
+      {/* Liste des messages */}
+      <div
+        ref={messagesContainerRef}
+        onScroll={handleScroll}
+        className="flex-1 overflow-y-auto px-4 pb-4"
+      >
         {conversation.messages.map((message, index) => (
           <div
             key={message.id || index}
@@ -290,20 +335,24 @@ const ConversationDetail: React.FC = () => {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Send message bar + AI generation */}
+      {/* Barre d'entrée de message + Bouton IA */}
       <div className="bg-white border-t px-4 py-3">
         <form onSubmit={handleSubmit} className="flex gap-2 items-end">
+          {/* Bouton pour générer une réponse IA */}
           <button
             type="button"
             onClick={handleGenerateResponse}
             disabled={generating}
             className={`p-2 rounded-full ${
-              generating ? 'bg-gray-100 text-gray-400' : 'bg-purple-500 text-white hover:bg-purple-600'
+              generating
+                ? 'bg-gray-100 text-gray-400'
+                : 'bg-purple-500 text-white hover:bg-purple-600'
             }`}
           >
             <Sparkles className="w-5 h-5" />
           </button>
 
+          {/* Textarea avec redimensionnement automatique */}
           <textarea
             ref={textareaRef}
             value={newMessage}
@@ -314,6 +363,7 @@ const ConversationDetail: React.FC = () => {
             style={{ height: 'auto', maxHeight: '120px' }}
           />
 
+          {/* Bouton d'envoi */}
           <button
             type="submit"
             disabled={!newMessage.trim() || sending}
