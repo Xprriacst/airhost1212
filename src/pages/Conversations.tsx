@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import ConversationList from '../components/ConversationList';
@@ -10,58 +10,94 @@ export default function Conversations() {
   const { propertyId } = useParams();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [autoPilotStates, setAutoPilotStates] = useState<Record<string, boolean>>({});
-  const [isLoading, setIsLoading] = useState(true);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // Référence pour stocker la dernière version des conversations
+  const conversationsRef = useRef<Conversation[]>([]);
 
   useEffect(() => {
+    // Fonction pour mettre à jour les conversations de manière optimisée
+    const updateConversations = (newConversations: Conversation[]) => {
+      // Vérifier si les données ont réellement changé
+      const hasChanges = JSON.stringify(conversationsRef.current) !== JSON.stringify(newConversations);
+      
+      if (hasChanges) {
+        // Mettre à jour la référence
+        conversationsRef.current = newConversations;
+        
+        // Mettre à jour l'état React de manière optimisée
+        setConversations(prev => {
+          const updatedConversations = newConversations.map(newConv => {
+            // Trouver la conversation existante
+            const existingConv = prev.find(c => c.id === newConv.id);
+            if (!existingConv) return newConv;
+
+            // Ne mettre à jour que si nécessaire
+            if (
+              existingConv.messages.length !== newConv.messages.length ||
+              existingConv.unreadCount !== newConv.unreadCount ||
+              existingConv.autoPilot !== newConv.autoPilot
+            ) {
+              return newConv;
+            }
+            
+            // Sinon, garder l'instance existante pour éviter un re-render inutile
+            return existingConv;
+          });
+
+          return updatedConversations;
+        });
+      }
+    };
+
+    // Fonction pour récupérer les conversations
     const fetchConversations = async () => {
       try {
-        setIsLoading(true);
         let fetchedConversations;
         
         if (propertyId) {
-          // Fetch conversations for specific property
           fetchedConversations = await conversationService.fetchPropertyConversations(propertyId);
         } else {
-          // Fetch all conversations
           fetchedConversations = await conversationService.fetchAllConversations();
         }
         
-        // Trier les conversations par date du dernier message et unreadCount
+        // Trier les conversations
         fetchedConversations.sort((a, b) => {
-          // D'abord par unreadCount
           if (b.unreadCount !== a.unreadCount) {
             return b.unreadCount - a.unreadCount;
           }
-          // Ensuite par date du dernier message
           const aLastMessage = a.messages[a.messages.length - 1];
           const bLastMessage = b.messages[b.messages.length - 1];
           if (!aLastMessage || !bLastMessage) return 0;
           return new Date(bLastMessage.timestamp).getTime() - new Date(aLastMessage.timestamp).getTime();
         });
 
-        setConversations(fetchedConversations);
+        // Mise à jour optimisée
+        updateConversations(fetchedConversations);
 
-        // Initialize auto-pilot states
-        const initialStates = fetchedConversations.reduce((acc, conv) => ({
-          ...acc,
-          [conv.id]: conv.autoPilot || false
-        }), {});
-        setAutoPilotStates(initialStates);
+        // Initialiser les états auto-pilot au premier chargement
+        if (isInitialLoading) {
+          const initialStates = fetchedConversations.reduce((acc, conv) => ({
+            ...acc,
+            [conv.id]: conv.autoPilot || false
+          }), {});
+          setAutoPilotStates(initialStates);
+          setIsInitialLoading(false);
+        }
       } catch (err) {
         console.error('Error fetching conversations:', err);
         setError(err instanceof Error ? err.message : 'Failed to load conversations');
-      } finally {
-        setIsLoading(false);
       }
     };
 
+    // Premier chargement
     fetchConversations();
 
-    // Rafraîchir les conversations toutes les 3 secondes
-    const interval = setInterval(fetchConversations, 3000);
+    // Mettre en place le polling
+    const intervalId = setInterval(fetchConversations, 3000);
 
-    return () => clearInterval(interval);
+    return () => clearInterval(intervalId);
   }, [propertyId]);
 
   const handleSelectConversation = (conversation: Conversation) => {
@@ -84,7 +120,7 @@ export default function Conversations() {
 
       {/* Liste des conversations */}
       <div className="flex-1 overflow-y-auto bg-white">
-        {isLoading ? (
+        {isInitialLoading ? (
           <div className="flex items-center justify-center h-full">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900" />
           </div>
@@ -110,39 +146,3 @@ export default function Conversations() {
     </div>
   );
 }
-
-const ConversationItem = ({ conversation, onClick }: { conversation: Conversation; onClick: () => void }) => {
-  const lastMessage = conversation.messages[conversation.messages.length - 1];
-  const truncatedMessage = lastMessage?.text.length > 25 
-    ? lastMessage.text.substring(0, 22) + "..."
-    : lastMessage?.text;
-
-  return (
-    <div 
-      onClick={onClick}
-      className="flex items-center px-4 py-3 hover:bg-gray-50 cursor-pointer w-full"
-    >
-      {/* Avatar */}
-      <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center flex-shrink-0">
-        <span className="text-gray-600 text-lg font-medium">
-          {conversation.guestName?.charAt(0).toUpperCase()}
-        </span>
-      </div>
-
-      {/* Info */}
-      <div className="flex-1 min-w-0 ml-3 mr-2">
-        <div className="flex justify-between items-baseline">
-          <h3 className="text-base font-medium text-gray-900 truncate max-w-[60%]">
-            {conversation.guestName}
-          </h3>
-          <span className="text-sm text-gray-500 flex-shrink-0">
-            {lastMessage?.timestamp ? new Date(lastMessage.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
-          </span>
-        </div>
-        <p className="text-sm text-gray-500 truncate">
-          {truncatedMessage}
-        </p>
-      </div>
-    </div>
-  );
-};
