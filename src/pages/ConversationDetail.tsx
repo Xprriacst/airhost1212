@@ -50,30 +50,29 @@ const ConversationDetail: React.FC = () => {
   const [isAutoPilot, setIsAutoPilot] = useState(false);
   const [isAtBottom, setIsAtBottom] = useState(true);
 
-  // Improved scroll handling
+  // Scroll to bottom helper
   const scrollToBottom = useCallback((smooth = true) => {
     if (messagesEndRef.current) {
-      // Add small delay to ensure DOM is updated
+      // Petit délai pour s'assurer que le DOM est bien mis à jour
       setTimeout(() => {
         messagesEndRef.current?.scrollIntoView({
           behavior: smooth ? 'smooth' : 'auto',
-          block: 'end'
+          block: 'end',
         });
       }, 100);
     }
   }, []);
 
-  // Handle scroll detection with threshold
+  // Détection du scroll (pour savoir si on est en bas)
   const handleScroll = useCallback(() => {
     if (!messagesContainerRef.current) return;
-    
     const { scrollTop, scrollHeight, clientHeight } = messagesContainerRef.current;
-    // Consider "at bottom" if within 20px of bottom
+    // On considère qu'on est en bas si on est à moins de 20px du fond
     const nearBottom = scrollHeight - scrollTop - clientHeight < 20;
     setIsAtBottom(nearBottom);
   }, []);
 
-  // Fetch conversation
+  // Récupère la conversation depuis le backend
   const fetchConversation = async () => {
     if (!conversationId || skipPollingRef.current) return;
 
@@ -86,6 +85,7 @@ const ConversationDetail: React.FC = () => {
 
       setConversation(data);
 
+      // Mettre à jour l'état autoPilot si pas de skip
       if (!skipPollingRef.current) {
         setIsAutoPilot(data.autoPilot || false);
       }
@@ -99,7 +99,7 @@ const ConversationDetail: React.FC = () => {
     }
   };
 
-  // Start polling
+  // Mise en place du polling
   useEffect(() => {
     fetchConversation();
     pollingRef.current = setInterval(fetchConversation, POLLING_INTERVAL);
@@ -111,7 +111,7 @@ const ConversationDetail: React.FC = () => {
     };
   }, [conversationId]);
 
-  // Load property
+  // Charge la propriété associée
   useEffect(() => {
     const loadProperty = async () => {
       if (!propertyId) return;
@@ -128,18 +128,18 @@ const ConversationDetail: React.FC = () => {
     loadProperty();
   }, [propertyId]);
 
-  // Improved scroll handling for new messages
+  // Scrolle en bas si on est déjà en bas et qu'il y a de nouveaux messages
   useEffect(() => {
     if (!conversation?.messages) return;
-    
-    // First load - instant scroll
+
+    // Premier chargement
     if (!initialScrollDoneRef.current) {
-      scrollToBottom(false); // No smooth scroll on initial load
+      scrollToBottom(false); // Pas de smooth scroll au premier chargement
       initialScrollDoneRef.current = true;
       return;
     }
 
-    // New messages - only scroll if we were at bottom
+    // Si de nouveaux messages arrivent et qu'on était en bas, on scrolle
     if (conversation.messages.length > prevMessagesLengthRef.current && isAtBottom) {
       scrollToBottom(true);
     }
@@ -147,7 +147,7 @@ const ConversationDetail: React.FC = () => {
     prevMessagesLengthRef.current = conversation.messages.length;
   }, [conversation?.messages, isAtBottom, scrollToBottom]);
 
-  // Attach scroll listener
+  // Écoute le scroll du conteneur
   useEffect(() => {
     const container = messagesContainerRef.current;
     if (container) {
@@ -156,7 +156,7 @@ const ConversationDetail: React.FC = () => {
     }
   }, [handleScroll]);
 
-  // Textarea auto-resize
+  // Ajuste la hauteur du textarea automatiquement
   useEffect(() => {
     const textarea = textareaRef.current;
     if (!textarea) return;
@@ -172,7 +172,7 @@ const ConversationDetail: React.FC = () => {
     return () => textarea.removeEventListener('input', adjustHeight);
   }, [newMessage]);
 
-  // Toggle auto-pilot
+  // Active/désactive l'auto-pilot
   const handleToggleAutoPilot = async () => {
     if (!conversation) return;
     const newState = !isAutoPilot;
@@ -189,13 +189,14 @@ const ConversationDetail: React.FC = () => {
       console.error('Error toggling auto pilot:', err);
       setIsAutoPilot(!newState);
     } finally {
+      // On évite de re-poller immédiatement pour ne pas écraser l'état
       setTimeout(() => {
         skipPollingRef.current = false;
       }, 1000);
     }
   };
 
-  // Send message
+  // Envoi d'un message
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newMessage.trim() || sending) return;
@@ -208,6 +209,7 @@ const ConversationDetail: React.FC = () => {
         throw new Error('Missing conversation data');
       }
 
+      // Message temporaire
       const messageData: Message = {
         id: tempId,
         text: newMessage.trim(),
@@ -217,16 +219,20 @@ const ConversationDetail: React.FC = () => {
         status: 'pending',
       };
 
+      // On met à jour localement les messages
+      const updatedMessages = [...conversation.messages, messageData];
       setConversation((prev) => {
-        if (!prev) return prev;
-        return {
-          ...prev,
-          messages: [...prev.messages, messageData],
-        };
+        if (!prev) return null;
+        return { ...prev, messages: updatedMessages };
       });
 
+      // Force le scroll en bas
+      setTimeout(() => scrollToBottom(true), 100);
+
+      // Reset du champ
       setNewMessage('');
 
+      // Envoi au backend (fonction Netlify)
       const response = await fetch('/.netlify/functions/send-message', {
         method: 'POST',
         headers: {
@@ -245,11 +251,13 @@ const ConversationDetail: React.FC = () => {
         throw new Error('Failed to send message');
       }
 
-      await fetchConversation();
+      // Ne pas re-fetch immédiatement pour éviter le flash
+      // Le polling gère déjà la mise à jour
     } catch (error) {
       console.error('Error sending message:', error);
+      // Si l'envoi échoue, on passe le message en "failed"
       setConversation((prev) => {
-        if (!prev) return prev;
+        if (!prev) return null;
         return {
           ...prev,
           messages: prev.messages.map((msg) =>
@@ -262,7 +270,7 @@ const ConversationDetail: React.FC = () => {
     }
   };
 
-  // Handle Enter key
+  // Envoi via la touche Entrée (sans Shift)
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -270,7 +278,7 @@ const ConversationDetail: React.FC = () => {
     }
   };
 
-  // Generate AI response
+  // Génération automatique d'une réponse via l'IA
   const handleGenerateResponse = async () => {
     if (!conversation || sending) return;
 
@@ -300,6 +308,7 @@ const ConversationDetail: React.FC = () => {
     }
   };
 
+  // Affichage en cours de chargement
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[100dvh]">
@@ -308,6 +317,7 @@ const ConversationDetail: React.FC = () => {
     );
   }
 
+  // Affichage d'erreur
   if (error) {
     return (
       <div className="min-h-[100dvh] p-6">
@@ -316,6 +326,7 @@ const ConversationDetail: React.FC = () => {
     );
   }
 
+  // Conversation introuvable
   if (!conversation) {
     return (
       <div className="min-h-[100dvh] p-6">
@@ -326,6 +337,7 @@ const ConversationDetail: React.FC = () => {
     );
   }
 
+  // Rendu principal
   return (
     <div className="fixed inset-0 flex flex-col bg-white">
       {/* Header */}
@@ -376,28 +388,29 @@ const ConversationDetail: React.FC = () => {
       </div>
 
       {/* Messages container */}
-      <div 
+      <div
         ref={messagesContainerRef}
         onScroll={handleScroll}
-        className="flex-1 overflow-y-auto px-4 pb-4"
+        className="flex-1 overflow-y-auto bg-white"
+        style={{ paddingBottom: '120px' }} // Espace pour la zone de saisie
       >
-        <div className="space-y-1">
+        <div className="px-4 space-y-1">
           {conversation.messages.map((message) => (
             <Message key={message.id} message={message} />
           ))}
+          {/* Ancre pour scroller en bas */}
+          <div ref={messagesEndRef} className="h-1" />
         </div>
-        {/* Scroll anchor */}
-        <div ref={messagesEndRef} style={{ height: 1, width: '100%' }} />
-        
+
         {generating && (
-          <div className="flex items-center gap-2 text-gray-500 text-sm">
+          <div className="flex items-center gap-2 text-gray-500 text-sm px-4 mt-2">
             <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
             L'IA est en train d'écrire...
           </div>
         )}
       </div>
 
-      {/* Input area */}
+      {/* Zone de saisie */}
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t px-4 py-2">
         <div className="flex items-end gap-2">
           <div className="flex-1 min-h-[40px] max-h-[120px] flex items-end bg-white rounded-full border px-4 py-2">
