@@ -2,26 +2,20 @@ import { Handler } from '@netlify/functions';
 import { z } from 'zod';
 import { propertyService } from '../../src/services/airtable/propertyService';
 import { conversationService } from '../../src/services/airtable/conversationService';
+import axios from 'axios';
 
-// Regex pour valider les numéros de téléphone français (avec ou sans +)
+// French mobile phone number validation regex
 const WHATSAPP_PHONE_REGEX = /^(\+33|33)[67]\d{8}$/;
 
-// Fonction pour formater le numéro de téléphone de manière cohérente
+// Phone number formatting helper
 const formatPhoneNumber = (phone: string): string => {
-  // Supprimer tout ce qui n'est pas un chiffre
   const cleaned = phone.replace(/\D/g, '');
-  
-  // Supprimer le 0 initial s'il existe
   const withoutLeadingZero = cleaned.replace(/^0/, '');
-  
-  // Supprimer le 33 initial s'il existe, puis le rajouter avec +
   const normalized = withoutLeadingZero.replace(/^33/, '');
-  const withPrefix = `+33${normalized}`;
-  
-  return withPrefix; // Retourner avec le + pour Airtable
+  return `+33${normalized}`;
 };
 
-// Schéma de validation pour les messages entrants
+// Message validation schema
 const messageSchema = z.object({
   propertyId: z.string().optional(),
   guestName: z.string().optional(),
@@ -44,39 +38,69 @@ const messageSchema = z.object({
   waNotifyName: z.string().optional()
 });
 
-// Cache pour stocker les messages récents (5 minutes max)
+// Deduplication caches
 const recentMessages = new Map<string, number>();
-
-// Cache pour stocker les webhooks traités (5 minutes max)
 const processedWebhooks = new Map<string, number>();
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
-// Nettoyer les messages plus vieux que 5 minutes
+// Cache cleanup functions
 const cleanupOldMessages = () => {
-  const fiveMinutesAgo = Date.now() - 5 * 60 * 1000;
+  const cutoff = Date.now() - CACHE_TTL;
   for (const [key, timestamp] of recentMessages.entries()) {
-    if (timestamp < fiveMinutesAgo) {
-      recentMessages.delete(key);
-    }
+    if (timestamp < cutoff) recentMessages.delete(key);
   }
 };
 
-// Nettoyer les webhooks plus vieux que 5 minutes
 const cleanupOldWebhooks = () => {
-  const fiveMinutesAgo = Date.now() - 5 * 60 * 1000;
+  const cutoff = Date.now() - CACHE_TTL;
   for (const [key, timestamp] of processedWebhooks.entries()) {
-    if (timestamp < fiveMinutesAgo) {
-      processedWebhooks.delete(key);
-    }
+    if (timestamp < cutoff) processedWebhooks.delete(key);
+  }
+};
+
+// Send notification helper
+const sendNotification = async (title: string, body: string) => {
+  try {
+    console.log('Sending notification:', { title, body });
+    const response = await axios.post(`${process.env.REACT_APP_API_URL}/send-notification`, {
+      title,
+      body,
+    }, {
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+    console.log('Notification sent:', response.data);
+  } catch (error) {
+    console.error('Error sending notification:', error);
+    throw error;
   }
 };
 
 export const handler: Handler = async (event) => {
   console.log('🚀 Receive Message Function Called');
   console.log('Method:', event.httpMethod);
-  console.log('Headers:', JSON.stringify(event.headers, null, 2));
+  console.log('Headers:', event.headers);
 
+  // CORS preflight
+  if (event.httpMethod === 'OPTIONS') {
+    return {
+      statusCode: 204,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type'
+      },
+      body: ''
+    };
+  }
+
+  // Only allow POST
   if (event.httpMethod !== 'POST') {
-    return { statusCode: 405, body: JSON.stringify({ error: 'Method not allowed' }) };
+    return { 
+      statusCode: 405, 
+      body: JSON.stringify({ error: 'Method not allowed' }) 
+    };
   }
 
   try {
@@ -87,11 +111,11 @@ export const handler: Handler = async (event) => {
     const data = messageSchema.parse(body);
     console.log('✅ Validated data:', JSON.stringify(data, null, 2));
 
-    // Nettoyage des caches
+    // Clean caches
     cleanupOldMessages();
     cleanupOldWebhooks();
 
-    // Vérification du webhook ID pour éviter les doublons
+    // Deduplication check
     if (data.webhookId && processedWebhooks.has(data.webhookId)) {
       console.log('🔄 Duplicate webhook detected, skipping...');
       return {
@@ -110,27 +134,33 @@ export const handler: Handler = async (event) => {
     
     const propertyId = data.propertyId || process.env.DEFAULT_PROPERTY_ID;
     if (!propertyId) {
-      return { statusCode: 400, body: JSON.stringify({ error: 'Property ID is required' }) };
+      return { 
+        statusCode: 400, 
+        body: JSON.stringify({ error: 'Property ID is required' }) 
+      };
     }
 
-    // Recherche de la propriété
+    // Get property
     const properties = await propertyService.getProperties();
     const property = properties.find((p) => p.id === propertyId);
     if (!property) {
-      return { statusCode: 404, body: JSON.stringify({ error: 'Property not found' }) };
+      return { 
+        statusCode: 404, 
+        body: JSON.stringify({ error: 'Property not found' }) 
+      };
     }
 
-    // Récupération des conversations
+    // Get conversations
     const conversations = await conversationService.fetchPropertyConversations(propertyId);
     let conversation = conversations.find((conv) => conv.guestPhone === data.guestPhone);
 
-    // Création d'une nouvelle conversation si nécessaire
+    // Create new conversation if needed
     if (!conversation) {
       conversation = await conversationService.addConversation({
         Properties: [propertyId],
         'Guest Name': data.waNotifyName || data.guestName || 'Guest',
         'Guest Email': data.guestEmail || '',
-        'Guest phone number': data.guestPhone, // Le numéro est déjà formaté avec le +
+        'Guest phone number': data.guestPhone,
         'Check-in Date': data.checkInDate,
         'Check-out Date': data.checkOutDate,
         Messages: JSON.stringify([{
@@ -148,6 +178,16 @@ export const handler: Handler = async (event) => {
         'Auto Pilot': false
       });
       
+      // Send notification for new conversation
+      try {
+        await sendNotification(
+          'Nouvelle conversation',
+          `${conversation.guestName}: ${data.message}`
+        );
+      } catch (error) {
+        console.error('Failed to send new conversation notification:', error);
+      }
+      
       return {
         statusCode: 200,
         body: JSON.stringify({ 
@@ -158,7 +198,7 @@ export const handler: Handler = async (event) => {
       };
     }
 
-    // Ajout du message à une conversation existante
+    // Add message to existing conversation
     if (!data.isHost) {
       const newMessage = {
         id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
@@ -178,8 +218,18 @@ export const handler: Handler = async (event) => {
         Messages: JSON.stringify(updatedMessages),
       });
 
-      // Incrémenter le compteur
+      // Increment unread count
       await conversationService.incrementUnreadCount(conversation.id);
+
+      // Send notification for new message
+      try {
+        await sendNotification(
+          'Nouveau message',
+          `${conversation.guestName}: ${data.message}`
+        );
+      } catch (error) {
+        console.error('Failed to send new message notification:', error);
+      }
 
       return {
         statusCode: 200,
@@ -222,3 +272,4 @@ export const handler: Handler = async (event) => {
     };
   }
 };
+
