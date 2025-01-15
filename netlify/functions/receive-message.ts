@@ -4,6 +4,9 @@ import { propertyService } from '../../src/services/airtable/propertyService';
 import { conversationService } from '../../src/services/airtable/conversationService';
 import axios from 'axios';
 
+// Shorter deduplication window for better handling
+const MESSAGE_DEDUP_TTL = 30000; // 30 seconds
+
 // French mobile phone number validation regex
 const WHATSAPP_PHONE_REGEX = /^(\+33|33)[67]\d{8}$/;
 
@@ -38,41 +41,47 @@ const messageSchema = z.object({
   waNotifyName: z.string().optional()
 });
 
-// Deduplication caches
+// Deduplication caches with shorter TTL
 const recentMessages = new Map<string, number>();
 const processedWebhooks = new Map<string, number>();
-const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
 // Cache cleanup functions
 const cleanupOldMessages = () => {
-  const cutoff = Date.now() - CACHE_TTL;
+  const cutoff = Date.now() - MESSAGE_DEDUP_TTL;
   for (const [key, timestamp] of recentMessages.entries()) {
     if (timestamp < cutoff) recentMessages.delete(key);
   }
 };
 
 const cleanupOldWebhooks = () => {
-  const cutoff = Date.now() - CACHE_TTL;
+  const cutoff = Date.now() - MESSAGE_DEDUP_TTL;
   for (const [key, timestamp] of processedWebhooks.entries()) {
     if (timestamp < cutoff) processedWebhooks.delete(key);
   }
 };
 
-// Send notification helper
+// Send notification helper with improved error handling
 const sendNotification = async (title: string, body: string) => {
   try {
-    console.log('Sending notification:', { title, body });
-    const response = await axios.post(`${process.env.REACT_APP_API_URL}/send-notification`, {
-      title,
-      body,
-    }, {
-      headers: {
-        'Content-Type': 'application/json'
+    console.log('📨 Sending notification:', { title, body });
+    
+    const response = await axios.post(
+      `${process.env.REACT_APP_API_URL}/send-notification`,
+      { title, body },
+      {
+        headers: { 'Content-Type': 'application/json' },
+        timeout: 5000 // 5 second timeout
       }
-    });
-    console.log('Notification sent:', response.data);
+    );
+
+    console.log('✅ Notification sent:', response.data);
+    return response.data;
   } catch (error) {
-    console.error('Error sending notification:', error);
+    console.error('❌ Error sending notification:', error);
+    if (axios.isAxiosError(error)) {
+      console.error('Response:', error.response?.data);
+      console.error('Status:', error.response?.status);
+    }
     throw error;
   }
 };
@@ -80,7 +89,7 @@ const sendNotification = async (title: string, body: string) => {
 export const handler: Handler = async (event) => {
   console.log('🚀 Receive Message Function Called');
   console.log('Method:', event.httpMethod);
-  console.log('Headers:', event.headers);
+  console.log('Headers:', JSON.stringify(event.headers, null, 2));
 
   // CORS preflight
   if (event.httpMethod === 'OPTIONS') {
@@ -95,12 +104,8 @@ export const handler: Handler = async (event) => {
     };
   }
 
-  // Only allow POST
   if (event.httpMethod !== 'POST') {
-    return { 
-      statusCode: 405, 
-      body: JSON.stringify({ error: 'Method not allowed' }) 
-    };
+    return { statusCode: 405, body: JSON.stringify({ error: 'Method not allowed' }) };
   }
 
   try {
@@ -115,39 +120,48 @@ export const handler: Handler = async (event) => {
     cleanupOldMessages();
     cleanupOldWebhooks();
 
-    // Deduplication check
-    if (data.webhookId && processedWebhooks.has(data.webhookId)) {
-      console.log('🔄 Duplicate webhook detected, skipping...');
-      return {
-        statusCode: 200,
-        body: JSON.stringify({ 
-          status: 'success',
-          skipped: true,
-          reason: 'duplicate_webhook'
-        }),
-      };
-    }
-
-    if (data.webhookId) {
-      processedWebhooks.set(data.webhookId, Date.now());
+    // Enhanced deduplication check using both webhookId and waMessageId
+    const dedupKey = data.webhookId || data.waMessageId;
+    if (dedupKey) {
+      const existingTimestamp = processedWebhooks.get(dedupKey);
+      
+      if (existingTimestamp) {
+        const timeSinceLastProcess = Date.now() - existingTimestamp;
+        
+        if (timeSinceLastProcess < MESSAGE_DEDUP_TTL) {
+          console.log('🔄 Duplicate message detected:', {
+            key: dedupKey,
+            timeSinceLastProcess: `${timeSinceLastProcess}ms`
+          });
+          
+          return {
+            statusCode: 200,
+            body: JSON.stringify({ 
+              status: 'success',
+              skipped: true,
+              reason: 'duplicate_message',
+              details: {
+                key: dedupKey,
+                age: timeSinceLastProcess
+              }
+            }),
+          };
+        }
+      }
+      
+      processedWebhooks.set(dedupKey, Date.now());
     }
     
     const propertyId = data.propertyId || process.env.DEFAULT_PROPERTY_ID;
     if (!propertyId) {
-      return { 
-        statusCode: 400, 
-        body: JSON.stringify({ error: 'Property ID is required' }) 
-      };
+      return { statusCode: 400, body: JSON.stringify({ error: 'Property ID is required' }) };
     }
 
     // Get property
     const properties = await propertyService.getProperties();
     const property = properties.find((p) => p.id === propertyId);
     if (!property) {
-      return { 
-        statusCode: 404, 
-        body: JSON.stringify({ error: 'Property not found' }) 
-      };
+      return { statusCode: 404, body: JSON.stringify({ error: 'Property not found' }) };
     }
 
     // Get conversations
@@ -272,4 +286,3 @@ export const handler: Handler = async (event) => {
     };
   }
 };
-
