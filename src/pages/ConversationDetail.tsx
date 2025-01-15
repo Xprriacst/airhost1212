@@ -31,18 +31,11 @@ const ConversationDetail: React.FC = () => {
 
   /**
    * Fonction pour aller chercher la conversation
-   * et marquer la conversation comme lue s'il y a de nouveaux messages.
    */
   const fetchConversation = async () => {
     if (!conversationId) return;
     try {
       const data = await conversationService.fetchConversationById(conversationId);
-
-      // Marquer la conversation comme lue si des nouveaux messages sont présents
-      if (data.unreadCount && data.unreadCount > 0) {
-        await conversationService.markConversationAsRead(conversationId);
-      }
-
       setConversation(data);
       setIsAutoPilot(data.autoPilot || false);
       setError(null);
@@ -55,11 +48,30 @@ const ConversationDetail: React.FC = () => {
   };
 
   /**
+   * Gère la bascule de l'auto-pilot et met à jour la conversation dans le backend
+   */
+  const handleToggleAutoPilot = async () => {
+    if (!conversationId) return;
+    const updatedState = !isAutoPilot;
+    setIsAutoPilot(updatedState);
+
+    try {
+      // Mettez à jour la conversation au backend
+      await conversationService.updateConversation(conversationId, {
+        autoPilot: updatedState,
+      });
+    } catch (err) {
+      console.error('Error toggling autoPilot:', err);
+      // Rétablit l'ancien état en cas d'erreur
+      setIsAutoPilot(!updatedState);
+    }
+  };
+
+  /**
    * Mise en place du polling.
    */
   useEffect(() => {
     fetchConversation();
-
     pollingRef.current = setInterval(() => {
       fetchConversation();
     }, POLLING_INTERVAL);
@@ -82,7 +94,6 @@ const ConversationDetail: React.FC = () => {
 
   /**
    * Gère l'auto-resize de la <textarea>
-   * - À chaque changement de newMessage, on ajuste la hauteur.
    */
   useEffect(() => {
     const textarea = textareaRef.current;
@@ -244,7 +255,7 @@ const ConversationDetail: React.FC = () => {
         </div>
 
         <button
-          onClick={() => setIsAutoPilot(!isAutoPilot)}
+          onClick={handleToggleAutoPilot}
           className={`flex items-center gap-2 px-3 py-1.5 rounded-full ${
             isAutoPilot
               ? 'bg-blue-100 text-blue-700'
