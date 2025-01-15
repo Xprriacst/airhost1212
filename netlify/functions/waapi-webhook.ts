@@ -25,6 +25,25 @@ const wapiMessageSchema = z.object({
   })
 });
 
+// Fonction pour formater le numéro de téléphone
+const formatPhoneNumber = (phone: string): string => {
+  // Supprimer tout ce qui n'est pas un chiffre
+  const cleaned = phone.replace(/\D/g, '');
+  
+  // Supprimer le @c.us à la fin si présent
+  const withoutSuffix = cleaned.replace(/@c\.us$/, '');
+  
+  // Supprimer le 0 initial s'il existe
+  const withoutLeadingZero = withoutSuffix.replace(/^0/, '');
+  
+  // Ajouter +33 au début si nécessaire
+  const withPrefix = withoutLeadingZero.startsWith('33') 
+    ? withoutLeadingZero 
+    : `33${withoutLeadingZero}`;
+  
+  return `+${withPrefix}`;
+};
+
 export const handler: Handler = async (event) => {
   console.log('🚀 WAAPI Webhook Called');
   console.log('Method:', event.httpMethod);
@@ -65,18 +84,23 @@ export const handler: Handler = async (event) => {
     const baseUrl = `${protocol}://${host}`;
     const receiveMessageUrl = `${baseUrl}/.netlify/functions/receive-message`;
 
+    // Formater le numéro de téléphone
+    const guestPhone = formatPhoneNumber(data.data.message._data.from);
+    console.log('📱 Formatted phone number:', guestPhone);
+
     // Transférer le message au endpoint receive-message
     const messagePayload = {
       propertyId: 'rec7L9Jpo7DhgVoBR', // ID de la propriété par défaut
       message: data.data.message._data.body,
-      guestPhone: data.data.message._data.from.replace(/@c\.us$/, ''),
-      webhookId: `${Date.now()}--${data.data.message._data.id._serialized}`
+      guestPhone,
+      platform: 'whatsapp',
+      webhookId: `${Date.now()}--${data.data.message._data.id._serialized}`,
+      waMessageId: data.data.message._data.id._serialized,
+      waNotifyName: data.data.message._data.notifyName,
+      timestamp: new Date(data.data.message._data.t * 1000).toISOString()
     };
 
-    console.log('📤 Forwarding to receive-message:', {
-      url: receiveMessageUrl,
-      payload: messagePayload
-    });
+    console.log('📤 Forwarding to receive-message:', messagePayload);
 
     const response = await fetch(receiveMessageUrl, {
       method: 'POST',
@@ -87,7 +111,8 @@ export const handler: Handler = async (event) => {
     });
 
     if (!response.ok) {
-      throw new Error(`Failed to forward message: ${response.status} ${response.statusText}`);
+      const errorText = await response.text();
+      throw new Error(`Failed to forward message: ${response.status} ${response.statusText}\n${errorText}`);
     }
 
     const result = await response.json();
