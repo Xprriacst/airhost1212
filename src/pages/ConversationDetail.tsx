@@ -16,7 +16,7 @@ const ConversationDetail: React.FC = () => {
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
 
-  // <-- NOUVEAU REF POUR LA TEXTAREA -->
+  // Ref pour la textarea
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // States
@@ -31,11 +31,18 @@ const ConversationDetail: React.FC = () => {
 
   /**
    * Fonction pour aller chercher la conversation
+   * et marquer la conversation comme lue s'il y a de nouveaux messages.
    */
   const fetchConversation = async () => {
     if (!conversationId) return;
     try {
       const data = await conversationService.fetchConversationById(conversationId);
+
+      // Marquer la conversation comme lue si des nouveaux messages sont présents
+      if (data.unreadCount && data.unreadCount > 0) {
+        await conversationService.markConversationAsRead(conversationId);
+      }
+
       setConversation(data);
       setIsAutoPilot(data.autoPilot || false);
       setError(null);
@@ -82,7 +89,6 @@ const ConversationDetail: React.FC = () => {
     if (!textarea) return;
 
     const adjustHeight = () => {
-      // Réinitialise la hauteur avant de mesurer le scrollHeight
       textarea.style.height = 'auto';
       const newHeight = Math.min(textarea.scrollHeight, 120); // max 120px
       textarea.style.height = `${newHeight}px`;
@@ -113,7 +119,6 @@ const ConversationDetail: React.FC = () => {
       }
 
       const data = await resp.json();
-      // On place la réponse IA dans le champ, prête à être envoyée
       setNewMessage(data.response || '');
     } catch (error) {
       console.error('Error generating AI response:', error);
@@ -297,7 +302,7 @@ const ConversationDetail: React.FC = () => {
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
             placeholder="Tapez un message..."
-            rows={1} // "rows=1" pour démarrer tout petit
+            rows={1}
             className="flex-1 rounded-full border-gray-300 focus:border-blue-500 focus:ring-blue-500 px-3 py-2 resize-none"
             style={{ height: 'auto', maxHeight: '120px' }}
           />
