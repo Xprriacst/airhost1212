@@ -16,6 +16,9 @@ const ConversationDetail: React.FC = () => {
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
 
+  // <-- NOUVEAU REF POUR LA TEXTAREA -->
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
   // States
   const [conversation, setConversation] = useState<Conversation | null>(null);
   const [property, setProperty] = useState<Property | null>(null);
@@ -28,7 +31,6 @@ const ConversationDetail: React.FC = () => {
 
   /**
    * Fonction pour aller chercher la conversation
-   * et mettre à jour l'état local.
    */
   const fetchConversation = async () => {
     if (!conversationId) return;
@@ -47,9 +49,6 @@ const ConversationDetail: React.FC = () => {
 
   /**
    * Mise en place du polling.
-   * - On fait un premier fetch au montage
-   * - Puis on déclenche un setInterval pour refetch toutes les X secondes
-   * - On nettoie l’interval à l’unmount
    */
   useEffect(() => {
     fetchConversation();
@@ -66,7 +65,7 @@ const ConversationDetail: React.FC = () => {
   }, [conversationId]);
 
   /**
-   * Scroll en bas au premier chargement ou lorsque de nouveaux messages sont ajoutés
+   * Scroll en bas au premier chargement ou lorsqu'il y a de nouveaux messages
    */
   useEffect(() => {
     if (messagesEndRef.current) {
@@ -75,15 +74,31 @@ const ConversationDetail: React.FC = () => {
   }, [conversation?.messages]);
 
   /**
+   * Gère l'auto-resize de la <textarea>
+   * - À chaque changement de newMessage, on ajuste la hauteur.
+   */
+  useEffect(() => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const adjustHeight = () => {
+      // Réinitialise la hauteur avant de mesurer le scrollHeight
+      textarea.style.height = 'auto';
+      const newHeight = Math.min(textarea.scrollHeight, 120); // max 120px
+      textarea.style.height = `${newHeight}px`;
+    };
+
+    adjustHeight();
+  }, [newMessage]);
+
+  /**
    * Fonction pour générer une réponse IA
-   * (similaire à la version "plus complète")
    */
   const handleGenerateResponse = async () => {
     if (!conversationId || !propertyId) return;
     setGenerating(true);
 
     try {
-      // Appelez ici votre fonction serverless ou API pour générer une réponse
       const resp = await fetch('/.netlify/functions/generate-ai-response', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -98,7 +113,7 @@ const ConversationDetail: React.FC = () => {
       }
 
       const data = await resp.json();
-      // On met la réponse IA dans le champ de saisie pour que l’utilisateur puisse l’envoyer
+      // On place la réponse IA dans le champ, prête à être envoyée
       setNewMessage(data.response || '');
     } catch (error) {
       console.error('Error generating AI response:', error);
@@ -108,7 +123,7 @@ const ConversationDetail: React.FC = () => {
   };
 
   /**
-   * Fonction pour envoyer un nouveau message
+   * Fonction pour envoyer un message
    */
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -131,7 +146,7 @@ const ConversationDetail: React.FC = () => {
         throw new Error('Missing conversation data');
       }
 
-      // Mettre à jour l'état local pour avoir un effet immédiat
+      // Mettre à jour l'état local
       setConversation((prev) => {
         if (!prev) return prev;
         return {
@@ -161,7 +176,6 @@ const ConversationDetail: React.FC = () => {
         }),
       });
 
-      // Pas besoin de re-fetch immédiatement, le polling se charge de mettre à jour
     } catch (error) {
       console.error('Error sending message:', error);
     } finally {
@@ -211,15 +225,15 @@ const ConversationDetail: React.FC = () => {
           </button>
           <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
             <span className="text-gray-600 text-sm font-medium">
-              {conversation?.guestName?.charAt(0).toUpperCase()}
+              {conversation.guestName?.charAt(0).toUpperCase()}
             </span>
           </div>
           <div>
-            <h2 className="font-medium">{conversation?.guestName || 'Conversation'}</h2>
+            <h2 className="font-medium">{conversation.guestName || 'Conversation'}</h2>
             <p className="text-xs text-gray-500">
-              {conversation?.checkIn && new Date(conversation.checkIn).toLocaleDateString()}
+              {conversation.checkIn && new Date(conversation.checkIn).toLocaleDateString()}
               {' - '}
-              {conversation?.checkOut && new Date(conversation.checkOut).toLocaleDateString()}
+              {conversation.checkOut && new Date(conversation.checkOut).toLocaleDateString()}
             </p>
           </div>
         </div>
@@ -262,7 +276,7 @@ const ConversationDetail: React.FC = () => {
 
       {/* Barre d’envoi de message et bouton IA */}
       <div className="bg-white border-t px-4 py-3">
-        <form onSubmit={handleSubmit} className="flex gap-2 items-center">
+        <form onSubmit={handleSubmit} className="flex gap-2 items-end">
           {/* Bouton IA */}
           <button
             type="button"
@@ -277,13 +291,15 @@ const ConversationDetail: React.FC = () => {
             <Sparkles className="w-5 h-5" />
           </button>
 
-          {/* Champ de saisie */}
-          <input
-            type="text"
+          {/* TEXTAREA auto-resize */}
+          <textarea
+            ref={textareaRef}
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
             placeholder="Tapez un message..."
-            className="flex-1 rounded-full border-gray-300 focus:border-blue-500 focus:ring-blue-500 px-3 py-2"
+            rows={1} // "rows=1" pour démarrer tout petit
+            className="flex-1 rounded-full border-gray-300 focus:border-blue-500 focus:ring-blue-500 px-3 py-2 resize-none"
+            style={{ height: 'auto', maxHeight: '120px' }}
           />
 
           {/* Bouton d'envoi */}
