@@ -59,6 +59,12 @@ export const handler: Handler = async (event) => {
       };
     }
 
+    // Construire l'URL absolue pour receive-message
+    const host = event.headers.host;
+    const protocol = event.headers['x-forwarded-proto'] || 'https';
+    const baseUrl = `${protocol}://${host}`;
+    const receiveMessageUrl = `${baseUrl}/.netlify/functions/receive-message`;
+
     // Transférer le message au endpoint receive-message
     const messagePayload = {
       propertyId: 'rec7L9Jpo7DhgVoBR', // ID de la propriété par défaut
@@ -67,9 +73,12 @@ export const handler: Handler = async (event) => {
       webhookId: `${Date.now()}--${data.data.message._data.id._serialized}`
     };
 
-    console.log('📤 Forwarding to receive-message:', messagePayload);
+    console.log('📤 Forwarding to receive-message:', {
+      url: receiveMessageUrl,
+      payload: messagePayload
+    });
 
-    const response = await fetch('/.netlify/functions/receive-message', {
+    const response = await fetch(receiveMessageUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
