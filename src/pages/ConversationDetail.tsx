@@ -300,27 +300,48 @@ const ConversationDetail: React.FC = () => {
   }
 
   return (
-    <div className="flex flex-col h-[100dvh]">
-      {/* En-tête fixe */}
-      <div className="flex-none bg-white border-b px-4 py-3 sticky top-0 z-10">
-        <div className="flex items-center gap-3">
+    <div className="fixed inset-0 flex flex-col bg-white">
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-3 bg-white border-b sticky top-0 z-10">
+        <div className="flex items-center gap-2">
           <button
-            onClick={() => navigate('/conversations')}
-            className="p-1 text-gray-500 hover:text-gray-700"
+            onClick={() => navigate(-1)}
+            className="p-2 -ml-2 hover:bg-gray-50 rounded-full"
           >
-            <ArrowLeft className="w-5 h-5" />
+            <ArrowLeft className="w-6 h-6 text-gray-700" />
           </button>
+          <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
+            <span className="text-gray-600 text-sm font-medium">
+              {conversation?.guestName?.charAt(0).toUpperCase()}
+            </span>
+          </div>
           <div>
-            <h2 className="font-medium">{conversation?.guestName}</h2>
-            <p className="text-sm text-gray-500">
-              {conversation?.checkIn && `Check-in: ${new Date(conversation.checkIn).toLocaleDateString()}`}
+            <h2 className="font-medium">{conversation?.guestName || 'Conversation'}</h2>
+            <p className="text-xs text-gray-500">
+              {conversation?.checkIn && new Date(conversation.checkIn).toLocaleDateString()}
+              {' - '}
+              {conversation?.checkOut && new Date(conversation.checkOut).toLocaleDateString()}
             </p>
           </div>
         </div>
+
+        <button
+          onClick={handleAutoPilotToggle}
+          className={`flex items-center gap-2 px-3 py-1.5 rounded-full ${
+            isAutoPilot
+              ? 'bg-blue-100 text-blue-700'
+              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+          }`}
+        >
+          <Zap className={`w-4 h-4 ${isAutoPilot ? 'text-blue-500' : 'text-gray-400'}`} />
+          <span className="text-sm font-medium">
+            {isAutoPilot ? 'Auto-pilot ON' : 'Auto-pilot OFF'}
+          </span>
+        </button>
       </div>
 
-      {/* Zone de messages scrollable */}
-      <div
+      {/* Messages */}
+      <div 
         ref={messagesContainerRef}
         className="flex-1 overflow-y-auto px-4 pb-4"
       >
@@ -343,8 +364,8 @@ const ConversationDetail: React.FC = () => {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Zone de saisie */}
-      <div className="flex-none bg-white border-t p-2">
+      {/* Input */}
+      <div className="bg-white border-t px-4 py-2">
         <form onSubmit={handleSubmit} className="flex items-end gap-2">
           <textarea
             ref={textareaRef}
@@ -371,6 +392,14 @@ const ConversationDetail: React.FC = () => {
                 : 'rounded-lg min-h-[100px] max-h-[100px] overflow-y-auto'
             }`}
           />
+          <button
+            type="button"
+            onClick={handleGenerateResponse}
+            disabled={generatingResponse}
+            className="p-2 text-blue-500 hover:text-blue-600 disabled:opacity-50 h-[40px] w-[40px] flex items-center justify-center flex-shrink-0"
+          >
+            <Sparkles className="w-5 h-5" />
+          </button>
           <button
             type="submit"
             disabled={!newMessage.trim() || sending}
