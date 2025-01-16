@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Send, Sparkles, Zap } from 'lucide-react';
 import { conversationService } from '../services';
 import { propertyService } from '../services/airtable/propertyService';
+import { aiService } from '../services/ai/aiService';
 import type { Conversation, Message, Property } from '../types';
 
 const ConversationDetail: React.FC = () => {
@@ -17,6 +18,7 @@ const ConversationDetail: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const [isAutoPilot, setIsAutoPilot] = useState(false);
+  const [generatingResponse, setGeneratingResponse] = useState(false);
 
   // Récupérer la conversation
   useEffect(() => {
@@ -140,6 +142,22 @@ const ConversationDetail: React.FC = () => {
     }
   };
 
+  const handleGenerateResponse = async () => {
+    if (!conversation || !propertyId || generatingResponse) return;
+    
+    try {
+      setGeneratingResponse(true);
+      const response = await aiService.generateResponse(conversation, propertyId);
+      if (response) {
+        setNewMessage(response);
+      }
+    } catch (error) {
+      console.error('Error generating response:', error);
+    } finally {
+      setGeneratingResponse(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[100dvh]">
@@ -231,6 +249,14 @@ const ConversationDetail: React.FC = () => {
             placeholder="Tapez un message..."
             className="flex-1 rounded-full border-gray-300 focus:border-blue-500 focus:ring-blue-500"
           />
+          <button
+            type="button"
+            onClick={handleGenerateResponse}
+            disabled={generatingResponse}
+            className="p-2 text-blue-500 hover:text-blue-600 disabled:opacity-50"
+          >
+            <Sparkles className="w-5 h-5" />
+          </button>
           <button
             type="submit"
             disabled={!newMessage.trim() || sending}
