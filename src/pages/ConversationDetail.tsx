@@ -74,6 +74,29 @@ const ConversationDetail: React.FC = () => {
     }
   }, [conversation?.messages]);
 
+  // Rafraîchir la conversation toutes les 5 secondes
+  useEffect(() => {
+    if (!conversationId) return;
+
+    const refreshConversation = async () => {
+      try {
+        const data = await conversationService.fetchConversationById(conversationId);
+        setConversation(prev => {
+          // Ne mettre à jour que si les messages ont changé
+          if (prev && JSON.stringify(prev.messages) === JSON.stringify(data.messages)) {
+            return prev;
+          }
+          return data;
+        });
+      } catch (err) {
+        console.error('Error refreshing conversation:', err);
+      }
+    };
+
+    const intervalId = setInterval(refreshConversation, 5000);
+    return () => clearInterval(intervalId);
+  }, [conversationId]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newMessage.trim() || sending) return;
@@ -157,7 +180,14 @@ const ConversationDetail: React.FC = () => {
   };
 
   const handleGenerateResponse = async () => {
-    if (!conversation || !property || generatingResponse) return;
+    if (!conversation || !property || generatingResponse) {
+      console.warn('Cannot generate response:', {
+        hasConversation: !!conversation,
+        hasProperty: !!property,
+        isGenerating: generatingResponse
+      });
+      return;
+    }
     
     try {
       setGeneratingResponse(true);
@@ -172,26 +202,38 @@ const ConversationDetail: React.FC = () => {
         return;
       }
 
+      console.log('Generating response with context:', {
+        property: property.name,
+        lastMessage: lastGuestMessage.text,
+        checkIn: conversation.checkIn,
+        checkOut: conversation.checkOut
+      });
+
       // Créer le contexte de réservation
       const bookingContext = {
         hasBooking: true,
         checkIn: conversation.checkIn,
         checkOut: conversation.checkOut,
-        guestCount: 1, // À remplacer par le vrai nombre d'invités si disponible
+        guestCount: conversation.guestCount || 1,
       };
 
-      // Récupérer les messages précédents (limité aux 10 derniers pour le contexte)
-      const previousMessages = conversation.messages
-        .slice(-10)
-        .filter(msg => msg.id !== lastGuestMessage.id);
+      // Configuration de l'IA
+      const aiConfig = {
+        language: 'fr',
+        tone: 'friendly' as const,
+        shouldIncludeEmoji: true
+      };
 
       // Générer la réponse
       const response = await aiService.generateResponse(
         lastGuestMessage,
         property,
         bookingContext,
-        previousMessages
+        conversation.messages.slice(-10),
+        aiConfig
       );
+
+      console.log('AI response generated:', response);
 
       if (response) {
         setNewMessage(response);

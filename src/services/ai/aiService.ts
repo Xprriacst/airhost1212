@@ -19,6 +19,12 @@ export const aiService = {
     config: AIConfig = {}
   ): Promise<string> {
     try {
+      console.log('AI Service - Starting response generation:', {
+        property: property.name,
+        messageCount: previousMessages.length + 1,
+        hasBooking: bookingContext.hasBooking
+      });
+
       // Construction du contexte complet
       const context = ContextBuilder.buildContext(
         property,
@@ -30,14 +36,13 @@ export const aiService = {
       const systemPrompt = PromptBuilder.buildSystemPrompt(context, config);
       const userPrompt = PromptBuilder.buildUserPrompt(message);
 
-      console.log('Generating response with context:', {
-        property: property.name,
-        messageCount: previousMessages.length + 1,
-        hasBooking: bookingContext.hasBooking
+      console.log('AI Service - Prompts generated:', {
+        systemPromptLength: systemPrompt.length,
+        userPromptLength: userPrompt.length
       });
 
       const completion = await openai.chat.completions.create({
-        model: "gpt-4o-mini-2024-07-18",  // Version mini optimisée pour les tâches spécifiques
+        model: "gpt-4",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt }
@@ -51,9 +56,10 @@ export const aiService = {
         throw new Error('No response generated');
       }
 
+      console.log('AI Service - Response generated successfully');
       return response;
     } catch (error) {
-      console.error('Error generating AI response:', error);
+      console.error('AI Service - Error generating response:', error);
       throw new Error('Failed to generate AI response');
     }
   }
