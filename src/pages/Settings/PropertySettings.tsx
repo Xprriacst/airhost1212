@@ -11,22 +11,24 @@ const PropertySettings: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'general' | 'ai'>('general');
 
   return (
-    <div className="max-w-4xl mx-auto p-6">
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">Property Settings</h1>
+    <div className="flex flex-col h-[100dvh]">
+      <div className="flex-none p-6">
+        <h1 className="text-2xl font-bold text-gray-900 mb-6">Property Settings</h1>
 
-      <div className="mb-6">
-        <PropertySelect
-          properties={properties}
-          selectedProperty={selectedProperty}
-          onSelect={setSelectedProperty}
-          isLoading={isLoading}
-          error={error}
-        />
+        <div className="mb-6">
+          <PropertySelect
+            properties={properties}
+            selectedProperty={selectedProperty}
+            onSelect={setSelectedProperty}
+            isLoading={isLoading}
+            error={error}
+          />
+        </div>
       </div>
 
       {selectedProperty && (
-        <>
-          <div className="mb-6 border-b border-gray-200">
+        <div className="flex-1 flex flex-col min-h-0">
+          <div className="flex-none px-6 border-b border-gray-200">
             <nav className="flex gap-4">
               <button
                 onClick={() => setActiveTab('general')}
@@ -57,14 +59,16 @@ const PropertySettings: React.FC = () => {
             </nav>
           </div>
 
-          <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
-            {activeTab === 'general' ? (
-              <GeneralSettings property={selectedProperty} />
-            ) : (
-              <AIInstructions property={selectedProperty} />
-            )}
+          <div className="flex-1 overflow-y-auto p-6">
+            <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
+              {activeTab === 'general' ? (
+                <GeneralSettings property={selectedProperty} />
+              ) : (
+                <AIInstructions property={selectedProperty} />
+              )}
+            </div>
           </div>
-        </>
+        </div>
       )}
     </div>
   );
