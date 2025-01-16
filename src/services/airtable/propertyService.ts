@@ -5,6 +5,20 @@ import { handleServiceError } from '../../utils/error';
 import type { Property } from '../../types';
 
 export const propertyService = {
+  async fetchPropertyById(id: string): Promise<Property> {
+    try {
+      if (!base) {
+        throw new Error('Airtable is not configured');
+      }
+
+      const record = await base('Properties').find(id);
+      return mapRecordToProperty(record);
+    } catch (error) {
+      console.error('Error fetching property:', error);
+      throw error;
+    }
+  },
+
   async getProperties(): Promise<Property[]> {
     try {
       if (!base) {

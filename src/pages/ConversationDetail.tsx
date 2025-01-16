@@ -40,16 +40,16 @@ const ConversationDetail: React.FC = () => {
   // Récupérer la propriété
   useEffect(() => {
     const fetchProperty = async () => {
-      if (!propertyId) return;
+      if (!conversation?.propertyId) return;
       try {
-        const data = await propertyService.fetchPropertyById(propertyId);
+        const data = await propertyService.fetchPropertyById(conversation.propertyId);
         setProperty(data);
       } catch (err) {
         console.error('Error fetching property:', err);
       }
     };
     fetchProperty();
-  }, [propertyId]);
+  }, [conversation?.propertyId]);
 
   // Réinitialiser le compteur de messages non lus quand la conversation est chargée
   useEffect(() => {
