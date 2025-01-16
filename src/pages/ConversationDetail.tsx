@@ -10,17 +10,16 @@ const ConversationDetail: React.FC = () => {
   const { conversationId, propertyId } = useParams();
   const navigate = useNavigate();
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [conversation, setConversation] = useState<Conversation | null>(null);
   const [property, setProperty] = useState<Property | null>(null);
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
-  const [isAutoPilot, setIsAutoPilot] = useState(false);
   const [generatingResponse, setGeneratingResponse] = useState(false);
-  const [textareaLines, setTextareaLines] = useState(1);
+  const [isAutoPilot, setIsAutoPilot] = useState(false);
 
   // Récupérer la conversation
   useEffect(() => {
@@ -99,24 +98,22 @@ const ConversationDetail: React.FC = () => {
     return () => clearInterval(intervalId);
   }, [conversationId]);
 
-  // Ajuster la hauteur du textarea
-  const adjustTextareaHeight = () => {
+  // Ajuste la hauteur du textarea au fur et à mesure
+  useEffect(() => {
     const textarea = textareaRef.current;
     if (!textarea) return;
 
-    // Réinitialiser la hauteur
-    textarea.style.height = '40px';
-    
-    // Calculer le nombre de lignes en fonction de la hauteur de contenu vs hauteur d'une ligne
-    const lineHeight = parseInt(getComputedStyle(textarea).lineHeight);
-    const lines = Math.min(Math.ceil((textarea.scrollHeight - 24) / lineHeight), 4);
-    
-    // Mettre à jour le nombre de lignes
-    setTextareaLines(lines);
-    textarea.rows = lines;
-  };
+    const adjustHeight = () => {
+      textarea.style.height = 'auto';
+      const newHeight = Math.min(textarea.scrollHeight, 120);
+      textarea.style.height = `${newHeight}px`;
+    };
 
-  // Réinitialiser après l'envoi
+    adjustHeight();
+    textarea.addEventListener('input', adjustHeight);
+    return () => textarea.removeEventListener('input', adjustHeight);
+  }, [newMessage]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newMessage.trim() || sending) return;
@@ -145,11 +142,9 @@ const ConversationDetail: React.FC = () => {
         };
       });
       setNewMessage('');
-      setTextareaLines(1);
       const textarea = textareaRef.current;
       if (textarea) {
         textarea.style.height = '40px';
-        textarea.rows = 1;
       }
     } catch (error) {
       console.error('Error sending message:', error);
@@ -250,10 +245,6 @@ const ConversationDetail: React.FC = () => {
     }
   };
 
-  useEffect(() => {
-    adjustTextareaHeight();
-  }, [newMessage]);
-
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[100dvh]">
@@ -341,9 +332,7 @@ const ConversationDetail: React.FC = () => {
           <textarea
             ref={textareaRef}
             value={newMessage}
-            onChange={(e) => {
-              setNewMessage(e.target.value);
-            }}
+            onChange={(e) => setNewMessage(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
@@ -352,15 +341,8 @@ const ConversationDetail: React.FC = () => {
             }}
             placeholder="Tapez votre message..."
             rows={1}
-            className={`flex-1 resize-none py-3 px-4 border-gray-300 focus:border-blue-500 focus:ring-blue-500 transition-all duration-200 leading-5 ${
-              textareaLines === 1
-                ? 'rounded-full min-h-[40px]'
-                : textareaLines === 2
-                ? 'rounded-2xl min-h-[60px]'
-                : textareaLines === 3
-                ? 'rounded-xl min-h-[80px]'
-                : 'rounded-lg min-h-[100px] max-h-[100px] overflow-y-auto'
-            }`}
+            className="flex-1 resize-none py-2 px-4 border border-gray-300 rounded-full focus:border-blue-500 focus:ring-blue-500 min-h-[40px] bg-transparent"
+            style={{ height: 40, maxHeight: 120 }}
           />
           <button
             type="button"
