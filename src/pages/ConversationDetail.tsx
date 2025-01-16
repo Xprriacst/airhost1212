@@ -114,6 +114,32 @@ const ConversationDetail: React.FC = () => {
     }
   };
 
+  const handleAutoPilotToggle = async () => {
+    if (!conversationId || !conversation) return;
+    
+    try {
+      // Mettre à jour l'interface immédiatement pour une meilleure réactivité
+      const newAutoPilotState = !isAutoPilot;
+      setIsAutoPilot(newAutoPilotState);
+      
+      // Mettre à jour dans la base de données
+      await conversationService.updateConversation(conversationId, {
+        'Auto Pilot': newAutoPilotState
+      });
+      
+      // Mettre à jour l'état local de la conversation
+      setConversation(prev => prev ? {
+        ...prev,
+        autoPilot: newAutoPilotState
+      } : prev);
+      
+    } catch (error) {
+      // En cas d'erreur, revenir à l'état précédent
+      setIsAutoPilot(!isAutoPilot);
+      console.error('Error updating Auto Pilot state:', error);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[100dvh]">
@@ -157,7 +183,7 @@ const ConversationDetail: React.FC = () => {
         </div>
 
         <button
-          onClick={() => setIsAutoPilot(!isAutoPilot)}
+          onClick={handleAutoPilotToggle}
           className={`flex items-center gap-2 px-3 py-1.5 rounded-full ${
             isAutoPilot
               ? 'bg-blue-100 text-blue-700'
