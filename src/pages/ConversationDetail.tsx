@@ -128,10 +128,17 @@ const ConversationDetail: React.FC = () => {
     e.preventDefault();
     if (!newMessage.trim() || sending) return;
 
+    setSending(true);
+    const tempId = `temp-${Date.now()}`;
+
     try {
-      setSending(true);
+      if (!conversation || !conversation.guestPhone) {
+        throw new Error('Missing conversation data');
+      }
+
+      // Message "temporaire"
       const messageData: Message = {
-        id: Date.now().toString(),
+        id: tempId,
         text: newMessage.trim(),
         timestamp: new Date(),
         sender: 'host',
@@ -139,25 +146,56 @@ const ConversationDetail: React.FC = () => {
         status: 'pending',
       };
 
-      if (!conversation || !conversation.guestPhone) {
-        throw new Error('Missing conversation data');
-      }
-
-      // Mettre à jour l'interface immédiatement
-      setConversation(prev => {
+      // On l'ajoute tout de suite localement
+      setConversation((prev) => {
         if (!prev) return prev;
         return {
           ...prev,
           messages: [...prev.messages, messageData],
         };
       });
+
+      // Réinitialiser le textarea
       setNewMessage('');
+      setTextareaLines(1);
       const textarea = textareaRef.current;
       if (textarea) {
         textarea.style.height = '40px';
+        textarea.style.overflowY = 'hidden';
       }
+
+      // Envoi au backend
+      const response = await fetch('/.netlify/functions/send-message', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          propertyId,
+          message: messageData.text,
+          guestPhone: conversation.guestPhone,
+          isHost: true,
+          conversationId,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to send message');
+      }
+
+      // On re-fetch la conversation pour voir le message "officiel"
+      await fetchConversation();
     } catch (error) {
       console.error('Error sending message:', error);
+      setConversation((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          messages: prev.messages.map((msg) =>
+            msg.id === tempId ? { ...msg, status: 'failed' } : msg
+          ),
+        };
+      });
     } finally {
       setSending(false);
     }
