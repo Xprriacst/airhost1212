@@ -12,8 +12,6 @@ const ConversationDetail: React.FC = () => {
   const navigate = useNavigate();
 
   // DOM references
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const messagesContainerRef = useRef<HTMLDivElement>(null);
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -65,15 +63,6 @@ const ConversationDetail: React.FC = () => {
       }
     };
   }, [conversationId]);
-
-  /**
-   * Scroll to the bottom when messages change
-   */
-  useEffect(() => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: 'auto' });
-    }
-  }, [conversation?.messages]);
 
   /**
    * Auto-resize the textarea as newMessage grows
@@ -175,13 +164,6 @@ const ConversationDetail: React.FC = () => {
       });
       setNewMessage('');
 
-      // Scroll to the newly added message
-      setTimeout(() => {
-        if (messagesEndRef.current) {
-          messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
-        }
-      }, 100);
-
       // Send to your backend function
       await fetch('/.netlify/functions/send-message', {
         method: 'POST',
@@ -272,7 +254,7 @@ const ConversationDetail: React.FC = () => {
       </div>
 
       {/* Messages list */}
-      <div ref={messagesContainerRef} className="flex-1 overflow-y-auto px-4 pb-4">
+      <div className="flex-1 overflow-y-auto px-4 pb-4">
         {conversation.messages.map((message, index) => (
           <div
             key={message.id || index}
@@ -291,7 +273,6 @@ const ConversationDetail: React.FC = () => {
             </div>
           </div>
         ))}
-        <div ref={messagesEndRef} />
       </div>
 
       {/* Send message bar + AI generation */}
