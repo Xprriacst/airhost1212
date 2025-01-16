@@ -102,19 +102,24 @@ const ConversationDetail: React.FC = () => {
   // Calculer le nombre de lignes dans le textarea
   const calculateLines = () => {
     const textarea = textareaRef.current;
-    if (!textarea) return;
+    if (!textarea) return 1;
 
-    const previousHeight = textarea.style.height;
+    // Sauvegarder les valeurs actuelles
+    const { paddingTop, paddingBottom } = getComputedStyle(textarea);
+    const currentHeight = textarea.style.height;
+    
+    // Réinitialiser la hauteur pour un calcul précis
     textarea.style.height = 'auto';
     
+    // Calculer la hauteur d'une ligne (en excluant les paddings)
     const lineHeight = parseInt(getComputedStyle(textarea).lineHeight);
-    const scrollHeight = textarea.scrollHeight;
-    const numberOfLines = Math.floor(scrollHeight / lineHeight);
+    const contentHeight = textarea.scrollHeight - (parseFloat(paddingTop) + parseFloat(paddingBottom));
+    const lines = Math.ceil(contentHeight / lineHeight);
     
-    textarea.style.height = previousHeight;
-    setTextareaLines(numberOfLines);
+    // Restaurer la hauteur
+    textarea.style.height = currentHeight;
     
-    return numberOfLines;
+    return lines;
   };
 
   // Ajuster la hauteur du textarea
@@ -122,18 +127,24 @@ const ConversationDetail: React.FC = () => {
     const textarea = textareaRef.current;
     if (!textarea) return;
 
+    // Réinitialiser la hauteur pour un calcul précis
     textarea.style.height = 'auto';
-    const lines = calculateLines();
     
+    const lines = calculateLines();
+    setTextareaLines(lines);
+
+    // Appliquer la nouvelle hauteur
     if (lines <= 4) {
       textarea.style.height = `${textarea.scrollHeight}px`;
     } else {
-      // Fixer la hauteur à 4 lignes et activer le scroll
       const lineHeight = parseInt(getComputedStyle(textarea).lineHeight);
-      textarea.style.height = `${lineHeight * 4}px`;
+      const { paddingTop, paddingBottom } = getComputedStyle(textarea);
+      const totalPadding = parseFloat(paddingTop) + parseFloat(paddingBottom);
+      textarea.style.height = `${(lineHeight * 4) + totalPadding}px`;
     }
   };
 
+  // Réinitialiser la hauteur après l'envoi
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newMessage.trim() || sending) return;
@@ -162,27 +173,12 @@ const ConversationDetail: React.FC = () => {
         };
       });
       setNewMessage('');
-      adjustTextareaHeight();
-
-      // Scroll vers le nouveau message
-      setTimeout(() => {
-        if (messagesEndRef.current) {
-          messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
-        }
-      }, 100);
-
-      // Envoyer au backend
-      await fetch('/.netlify/functions/send-message', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          propertyId,
-          message: messageData.text,
-          guestPhone: conversation.guestPhone,
-          isHost: true,
-          conversationId,
-        }),
-      });
+      // Réinitialiser la hauteur au minimum
+      const textarea = textareaRef.current;
+      if (textarea) {
+        textarea.style.height = 'auto';
+        setTextareaLines(1);
+      }
 
     } catch (error) {
       console.error('Error sending message:', error);
@@ -283,6 +279,10 @@ const ConversationDetail: React.FC = () => {
     }
   };
 
+  useEffect(() => {
+    adjustTextareaHeight();
+  }, [newMessage]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[100dvh]">
@@ -372,7 +372,6 @@ const ConversationDetail: React.FC = () => {
             value={newMessage}
             onChange={(e) => {
               setNewMessage(e.target.value);
-              adjustTextareaHeight();
             }}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && !e.shiftKey) {
@@ -382,7 +381,7 @@ const ConversationDetail: React.FC = () => {
             }}
             placeholder="Tapez votre message..."
             rows={1}
-            className={`flex-1 resize-none py-2 px-4 border-gray-300 focus:border-blue-500 focus:ring-blue-500 transition-all ${
+            className={`flex-1 resize-none py-2 px-4 border-gray-300 focus:border-blue-500 focus:ring-blue-500 transition-all duration-200 ${
               textareaLines === 1
                 ? 'rounded-full min-h-[40px]'
                 : textareaLines === 2
