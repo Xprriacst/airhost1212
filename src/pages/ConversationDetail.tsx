@@ -37,9 +37,6 @@ const ConversationDetail: React.FC = () => {
       setConversation(data);
       setIsAutoPilot(data.autoPilot || false);
       setError(null);
-      
-      // Réinitialiser le compteur de messages non lus
-      await conversationService.markConversationAsRead(conversationId);
     } catch (err) {
       console.error('Error fetching conversation:', err);
       setError('Failed to load conversation');
