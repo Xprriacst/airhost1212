@@ -37,6 +37,20 @@ const ConversationDetail: React.FC = () => {
     fetchConversation();
   }, [conversationId]);
 
+  // Récupérer la propriété
+  useEffect(() => {
+    const fetchProperty = async () => {
+      if (!propertyId) return;
+      try {
+        const data = await propertyService.fetchPropertyById(propertyId);
+        setProperty(data);
+      } catch (err) {
+        console.error('Error fetching property:', err);
+      }
+    };
+    fetchProperty();
+  }, [propertyId]);
+
   // Réinitialiser le compteur de messages non lus quand la conversation est chargée
   useEffect(() => {
     const resetUnreadCount = async () => {
@@ -143,11 +157,42 @@ const ConversationDetail: React.FC = () => {
   };
 
   const handleGenerateResponse = async () => {
-    if (!conversation || !propertyId || generatingResponse) return;
+    if (!conversation || !property || generatingResponse) return;
     
     try {
       setGeneratingResponse(true);
-      const response = await aiService.generateResponse(conversation, propertyId);
+      
+      // Récupérer le dernier message du client s'il existe
+      const lastGuestMessage = [...conversation.messages]
+        .reverse()
+        .find(msg => msg.sender === 'guest');
+        
+      if (!lastGuestMessage) {
+        console.warn('No guest message found to generate response for');
+        return;
+      }
+
+      // Créer le contexte de réservation
+      const bookingContext = {
+        hasBooking: true,
+        checkIn: conversation.checkIn,
+        checkOut: conversation.checkOut,
+        guestCount: 1, // À remplacer par le vrai nombre d'invités si disponible
+      };
+
+      // Récupérer les messages précédents (limité aux 10 derniers pour le contexte)
+      const previousMessages = conversation.messages
+        .slice(-10)
+        .filter(msg => msg.id !== lastGuestMessage.id);
+
+      // Générer la réponse
+      const response = await aiService.generateResponse(
+        lastGuestMessage,
+        property,
+        bookingContext,
+        previousMessages
+      );
+
       if (response) {
         setNewMessage(response);
       }
