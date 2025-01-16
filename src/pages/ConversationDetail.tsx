@@ -20,6 +20,7 @@ const ConversationDetail: React.FC = () => {
   const [sending, setSending] = useState(false);
   const [isAutoPilot, setIsAutoPilot] = useState(false);
   const [generatingResponse, setGeneratingResponse] = useState(false);
+  const [textareaLines, setTextareaLines] = useState(1);
 
   // Récupérer la conversation
   useEffect(() => {
@@ -98,20 +99,38 @@ const ConversationDetail: React.FC = () => {
     return () => clearInterval(intervalId);
   }, [conversationId]);
 
+  // Calculer le nombre de lignes dans le textarea
+  const calculateLines = () => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const previousHeight = textarea.style.height;
+    textarea.style.height = 'auto';
+    
+    const lineHeight = parseInt(getComputedStyle(textarea).lineHeight);
+    const scrollHeight = textarea.scrollHeight;
+    const numberOfLines = Math.floor(scrollHeight / lineHeight);
+    
+    textarea.style.height = previousHeight;
+    setTextareaLines(numberOfLines);
+    
+    return numberOfLines;
+  };
+
   // Ajuster la hauteur du textarea
   const adjustTextareaHeight = () => {
     const textarea = textareaRef.current;
-    if (textarea) {
-      textarea.style.height = 'auto';
-      textarea.style.height = `${Math.min(textarea.scrollHeight, 200)}px`; // Max 200px
-    }
-  };
+    if (!textarea) return;
 
-  // Réinitialiser la hauteur du textarea quand le message est envoyé
-  const resetTextareaHeight = () => {
-    const textarea = textareaRef.current;
-    if (textarea) {
-      textarea.style.height = 'auto';
+    textarea.style.height = 'auto';
+    const lines = calculateLines();
+    
+    if (lines <= 4) {
+      textarea.style.height = `${textarea.scrollHeight}px`;
+    } else {
+      // Fixer la hauteur à 4 lignes et activer le scroll
+      const lineHeight = parseInt(getComputedStyle(textarea).lineHeight);
+      textarea.style.height = `${lineHeight * 4}px`;
     }
   };
 
@@ -143,7 +162,7 @@ const ConversationDetail: React.FC = () => {
         };
       });
       setNewMessage('');
-      resetTextareaHeight();
+      adjustTextareaHeight();
 
       // Scroll vers le nouveau message
       setTimeout(() => {
@@ -281,48 +300,27 @@ const ConversationDetail: React.FC = () => {
   }
 
   return (
-    <div className="fixed inset-0 flex flex-col bg-white">
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 bg-white border-b">
-        <div className="flex items-center gap-2">
+    <div className="flex flex-col h-[100dvh]">
+      {/* En-tête fixe */}
+      <div className="flex-none bg-white border-b px-4 py-3 sticky top-0 z-10">
+        <div className="flex items-center gap-3">
           <button
-            onClick={() => navigate(-1)}
-            className="p-2 -ml-2 hover:bg-gray-50 rounded-full"
+            onClick={() => navigate('/conversations')}
+            className="p-1 text-gray-500 hover:text-gray-700"
           >
-            <ArrowLeft className="w-6 h-6 text-gray-700" />
+            <ArrowLeft className="w-5 h-5" />
           </button>
-          <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
-            <span className="text-gray-600 text-sm font-medium">
-              {conversation?.guestName?.charAt(0).toUpperCase()}
-            </span>
-          </div>
           <div>
-            <h2 className="font-medium">{conversation?.guestName || 'Conversation'}</h2>
-            <p className="text-xs text-gray-500">
-              {conversation?.checkIn && new Date(conversation.checkIn).toLocaleDateString()}
-              {' - '}
-              {conversation?.checkOut && new Date(conversation.checkOut).toLocaleDateString()}
+            <h2 className="font-medium">{conversation?.guestName}</h2>
+            <p className="text-sm text-gray-500">
+              {conversation?.checkIn && `Check-in: ${new Date(conversation.checkIn).toLocaleDateString()}`}
             </p>
           </div>
         </div>
-
-        <button
-          onClick={handleAutoPilotToggle}
-          className={`flex items-center gap-2 px-3 py-1.5 rounded-full ${
-            isAutoPilot
-              ? 'bg-blue-100 text-blue-700'
-              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-          }`}
-        >
-          <Zap className={`w-4 h-4 ${isAutoPilot ? 'text-blue-500' : 'text-gray-400'}`} />
-          <span className="text-sm font-medium">
-            {isAutoPilot ? 'Auto-pilot ON' : 'Auto-pilot OFF'}
-          </span>
-        </button>
       </div>
 
-      {/* Messages */}
-      <div 
+      {/* Zone de messages scrollable */}
+      <div
         ref={messagesContainerRef}
         className="flex-1 overflow-y-auto px-4 pb-4"
       >
@@ -345,8 +343,8 @@ const ConversationDetail: React.FC = () => {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input */}
-      <div className="bg-white border-t p-4">
+      {/* Zone de saisie */}
+      <div className="flex-none bg-white border-t p-2">
         <form onSubmit={handleSubmit} className="flex items-end gap-2">
           <textarea
             ref={textareaRef}
@@ -363,16 +361,16 @@ const ConversationDetail: React.FC = () => {
             }}
             placeholder="Tapez votre message..."
             rows={1}
-            className="flex-1 resize-none overflow-hidden rounded-full border-gray-300 focus:border-blue-500 focus:ring-blue-500 min-h-[40px] py-2 px-4"
+            className={`flex-1 resize-none py-2 px-4 border-gray-300 focus:border-blue-500 focus:ring-blue-500 transition-all ${
+              textareaLines === 1
+                ? 'rounded-full min-h-[40px]'
+                : textareaLines === 2
+                ? 'rounded-2xl min-h-[60px]'
+                : textareaLines === 3
+                ? 'rounded-xl min-h-[80px]'
+                : 'rounded-lg min-h-[100px] max-h-[100px] overflow-y-auto'
+            }`}
           />
-          <button
-            type="button"
-            onClick={handleGenerateResponse}
-            disabled={generatingResponse}
-            className="p-2 text-blue-500 hover:text-blue-600 disabled:opacity-50"
-          >
-            <Sparkles className="w-5 h-5" />
-          </button>
           <button
             type="submit"
             disabled={!newMessage.trim() || sending}
