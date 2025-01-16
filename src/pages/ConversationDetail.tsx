@@ -30,24 +30,28 @@ const ConversationDetail: React.FC = () => {
   /**
    * Fetch the conversation from your backend or Airtable service
    */
+  const fetchConversation = async () => {
+    if (!conversationId) return;
+    try {
+      const data = await conversationService.fetchConversationById(conversationId);
+      setConversation(data);
+      setIsAutoPilot(data.autoPilot || false);
+      setError(null);
+      
+      // Réinitialiser le compteur de messages non lus
+      await conversationService.markConversationAsRead(conversationId);
+    } catch (err) {
+      console.error('Error fetching conversation:', err);
+      setError('Failed to load conversation');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /**
+   * Set up polling to refresh the conversation
+   */
   useEffect(() => {
-    const fetchConversation = async () => {
-      if (!conversationId) return;
-      try {
-        const data = await conversationService.fetchConversationById(conversationId);
-        setConversation(data);
-        setIsAutoPilot(data.autoPilot || false);
-        setError(null);
-        
-        // Réinitialiser le compteur de messages non lus
-        await conversationService.markConversationAsRead(conversationId);
-      } catch (err) {
-        console.error('Error fetching conversation:', err);
-        setError('Failed to load conversation');
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchConversation();
 
     pollingRef.current = setInterval(() => {
