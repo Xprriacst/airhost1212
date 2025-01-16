@@ -105,18 +105,15 @@ const ConversationDetail: React.FC = () => {
     if (!textarea) return;
 
     // Réinitialiser la hauteur
-    textarea.style.height = 'auto';
+    textarea.style.height = '40px';
     
-    // Calculer la nouvelle hauteur
-    const scrollHeight = textarea.scrollHeight;
-    const maxHeight = parseInt(getComputedStyle(textarea).lineHeight) * 4;
+    // Calculer le nombre de lignes en fonction de la hauteur de contenu vs hauteur d'une ligne
+    const lineHeight = parseInt(getComputedStyle(textarea).lineHeight);
+    const lines = Math.min(Math.ceil((textarea.scrollHeight - 24) / lineHeight), 4);
     
-    // Appliquer la hauteur (limitée à 4 lignes)
-    textarea.style.height = `${Math.min(scrollHeight, maxHeight)}px`;
-    
-    // Mettre à jour le nombre de lignes pour les styles
-    const lines = Math.ceil(scrollHeight / parseInt(getComputedStyle(textarea).lineHeight));
-    setTextareaLines(Math.min(lines, 4));
+    // Mettre à jour le nombre de lignes
+    setTextareaLines(lines);
+    textarea.rows = lines;
   };
 
   // Réinitialiser après l'envoi
@@ -152,6 +149,7 @@ const ConversationDetail: React.FC = () => {
       const textarea = textareaRef.current;
       if (textarea) {
         textarea.style.height = '40px';
+        textarea.rows = 1;
       }
     } catch (error) {
       console.error('Error sending message:', error);
@@ -354,7 +352,7 @@ const ConversationDetail: React.FC = () => {
             }}
             placeholder="Tapez votre message..."
             rows={1}
-            className={`flex-1 resize-none py-2 px-4 border-gray-300 focus:border-blue-500 focus:ring-blue-500 transition-all duration-200 ${
+            className={`flex-1 resize-none py-3 px-4 border-gray-300 focus:border-blue-500 focus:ring-blue-500 transition-all duration-200 leading-5 ${
               textareaLines === 1
                 ? 'rounded-full min-h-[40px]'
                 : textareaLines === 2
