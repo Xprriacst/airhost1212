@@ -1,7 +1,7 @@
 import { base } from './config';
 import { handleServiceError } from '../../utils/error';
 import axios from 'axios';
-import type { Conversation, Message } from '../../types';
+import type { Conversation, Message, EmergencyTag } from '../../types';
 
 const parseMessages = (rawMessages: any): Message[] => {
   try {
@@ -54,6 +54,26 @@ const sendNotification = async (title: string, body: string) => {
   } catch (error) {
     console.error('Error sending notification:', error);
   }
+};
+
+// Mots-clés pour détecter les cas d'urgence
+const EMERGENCY_KEYWORDS = {
+  client_mecontent: ['insatisfait', 'mécontent', 'déçu', 'remboursement', 'plainte', 'inacceptable'],
+  probleme_technique: ['panne', 'cassé', 'ne fonctionne pas', 'problème', 'fuite', 'électricité'],
+  probleme_stock: ['manque', 'vide', 'épuisé', 'plus de', 'besoin de'],
+  reponse_inconnue: ['pas de réponse', 'sans réponse', 'urgent', 'besoin maintenant'],
+  urgence: ['urgent', 'immédiat', 'emergency', 'secours', 'danger', 'grave']
+};
+
+// Fonction pour détecter les tags d'urgence dans un message
+const detectEmergencyTags = (message: string): EmergencyTag[] => {
+  const lowercaseMessage = message.toLowerCase();
+  return Object.entries(EMERGENCY_KEYWORDS).reduce((tags: EmergencyTag[], [tag, keywords]) => {
+    if (keywords.some(keyword => lowercaseMessage.includes(keyword))) {
+      tags.push(tag as EmergencyTag);
+    }
+    return tags;
+  }, []);
 };
 
 export const conversationService = {
@@ -147,13 +167,29 @@ export const conversationService = {
         const messages = JSON.parse(data.Messages);
         if (Array.isArray(messages) && messages.length > 0) {
           const lastMessage = messages[messages.length - 1];
-          if (lastMessage.sender === 'guest' && 
-              lastMessage.platform !== 'whatsapp' && 
-              lastMessage.text?.trim()) {
-            await sendNotification(
-              'Nouveau message', 
-              lastMessage.text
-            );
+          if (lastMessage.sender === 'guest' && lastMessage.text?.trim()) {
+            // Détecter les tags d'urgence dans le dernier message
+            const emergencyTags = detectEmergencyTags(lastMessage.text);
+            
+            // Si des tags d'urgence sont détectés, désactiver l'Auto Pilot
+            if (emergencyTags.length > 0) {
+              console.log('Emergency tags detected:', emergencyTags);
+              formattedData['Auto Pilot'] = false;
+              
+              // Envoyer une notification d'urgence
+              await sendNotification(
+                'Message urgent détecté !',
+                `Tags: ${emergencyTags.join(', ')}\\nMessage: ${lastMessage.text}`
+              );
+            }
+
+            // Envoyer une notification normale si ce n'est pas un message WhatsApp
+            if (lastMessage.platform !== 'whatsapp') {
+              await sendNotification(
+                'Nouveau message', 
+                lastMessage.text
+              );
+            }
           }
         }
       }
