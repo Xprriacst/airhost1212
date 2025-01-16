@@ -10,6 +10,7 @@ const ConversationDetail: React.FC = () => {
   const { conversationId, propertyId } = useParams();
   const navigate = useNavigate();
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const [conversation, setConversation] = useState<Conversation | null>(null);
   const [property, setProperty] = useState<Property | null>(null);
@@ -97,21 +98,38 @@ const ConversationDetail: React.FC = () => {
     return () => clearInterval(intervalId);
   }, [conversationId]);
 
+  // Ajuster la hauteur du textarea
+  const adjustTextareaHeight = () => {
+    const textarea = textareaRef.current;
+    if (textarea) {
+      textarea.style.height = 'auto';
+      textarea.style.height = `${Math.min(textarea.scrollHeight, 200)}px`; // Max 200px
+    }
+  };
+
+  // Réinitialiser la hauteur du textarea quand le message est envoyé
+  const resetTextareaHeight = () => {
+    const textarea = textareaRef.current;
+    if (textarea) {
+      textarea.style.height = 'auto';
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newMessage.trim() || sending) return;
 
-    setSending(true);
-    const messageData: Message = {
-      id: Date.now().toString(),
-      text: newMessage.trim(),
-      timestamp: new Date(),
-      sender: 'host',
-      type: 'text',
-      status: 'pending',
-    };
-
     try {
+      setSending(true);
+      const messageData: Message = {
+        id: Date.now().toString(),
+        text: newMessage.trim(),
+        timestamp: new Date(),
+        sender: 'host',
+        type: 'text',
+        status: 'pending',
+      };
+
       if (!conversation || !conversation.guestPhone) {
         throw new Error('Missing conversation data');
       }
@@ -125,6 +143,7 @@ const ConversationDetail: React.FC = () => {
         };
       });
       setNewMessage('');
+      resetTextareaHeight();
 
       // Scroll vers le nouveau message
       setTimeout(() => {
@@ -327,14 +346,24 @@ const ConversationDetail: React.FC = () => {
       </div>
 
       {/* Input */}
-      <div className="bg-white border-t px-4 py-3">
-        <form onSubmit={handleSubmit} className="flex gap-2">
-          <input
-            type="text"
+      <div className="bg-white border-t p-4">
+        <form onSubmit={handleSubmit} className="flex items-end gap-2">
+          <textarea
+            ref={textareaRef}
             value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
-            placeholder="Tapez un message..."
-            className="flex-1 rounded-full border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+            onChange={(e) => {
+              setNewMessage(e.target.value);
+              adjustTextareaHeight();
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                handleSubmit(e);
+              }
+            }}
+            placeholder="Tapez votre message..."
+            rows={1}
+            className="flex-1 resize-none overflow-hidden rounded-full border-gray-300 focus:border-blue-500 focus:ring-blue-500 min-h-[40px] py-2 px-4"
           />
           <button
             type="button"
@@ -347,7 +376,7 @@ const ConversationDetail: React.FC = () => {
           <button
             type="submit"
             disabled={!newMessage.trim() || sending}
-            className="p-2 bg-blue-500 text-white rounded-full hover:bg-blue-600 disabled:opacity-50"
+            className="p-2 bg-blue-500 text-white rounded-full hover:bg-blue-600 disabled:opacity-50 h-[40px] w-[40px] flex items-center justify-center flex-shrink-0"
           >
             <Send className="w-5 h-5" />
           </button>
