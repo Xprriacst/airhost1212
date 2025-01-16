@@ -35,6 +35,22 @@ const ConversationDetail: React.FC = () => {
     fetchConversation();
   }, [conversationId]);
 
+  // Réinitialiser le compteur de messages non lus quand la conversation est chargée
+  useEffect(() => {
+    const resetUnreadCount = async () => {
+      if (!conversationId || !conversation) return;
+      try {
+        await conversationService.markConversationAsRead(conversationId);
+        // Mise à jour locale du compteur
+        setConversation(prev => prev ? { ...prev, unreadCount: 0 } : prev);
+      } catch (err) {
+        console.error('Error resetting unread count:', err);
+      }
+    };
+
+    resetUnreadCount();
+  }, [conversationId, conversation?.id]); // Se déclenche uniquement quand la conversation change
+
   // Scroll au chargement initial
   useEffect(() => {
     if (messagesEndRef.current) {
