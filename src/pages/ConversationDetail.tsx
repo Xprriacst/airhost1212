@@ -99,63 +99,27 @@ const ConversationDetail: React.FC = () => {
     return () => clearInterval(intervalId);
   }, [conversationId]);
 
-  // Calculer le nombre de lignes dans le textarea
-  const calculateLines = () => {
-    const textarea = textareaRef.current;
-    if (!textarea) return 1;
-
-    // Créer un div temporaire pour mesurer le texte
-    const mirror = document.createElement('textarea');
-    mirror.style.position = 'absolute';
-    mirror.style.visibility = 'hidden';
-    mirror.style.width = `${textarea.clientWidth}px`;
-    mirror.style.padding = getComputedStyle(textarea).padding;
-    mirror.style.border = getComputedStyle(textarea).border;
-    mirror.style.lineHeight = getComputedStyle(textarea).lineHeight;
-    mirror.style.font = getComputedStyle(textarea).font;
-    mirror.value = textarea.value;
-    
-    document.body.appendChild(mirror);
-    const lineHeight = parseInt(getComputedStyle(textarea).lineHeight);
-    const lines = Math.ceil(mirror.scrollHeight / lineHeight);
-    document.body.removeChild(mirror);
-    
-    return lines;
-  };
-
   // Ajuster la hauteur du textarea
   const adjustTextareaHeight = () => {
     const textarea = textareaRef.current;
     if (!textarea) return;
 
-    const lines = calculateLines();
-    setTextareaLines(lines);
-
-    if (lines <= 4) {
-      // Pour 1-4 lignes, ajuster à la hauteur exacte
-      const mirror = document.createElement('textarea');
-      mirror.style.position = 'absolute';
-      mirror.style.visibility = 'hidden';
-      mirror.style.width = `${textarea.clientWidth}px`;
-      mirror.style.padding = getComputedStyle(textarea).padding;
-      mirror.style.border = getComputedStyle(textarea).border;
-      mirror.style.lineHeight = getComputedStyle(textarea).lineHeight;
-      mirror.style.font = getComputedStyle(textarea).font;
-      mirror.value = textarea.value;
-      
-      document.body.appendChild(mirror);
-      textarea.style.height = `${mirror.scrollHeight}px`;
-      document.body.removeChild(mirror);
-    } else {
-      // Pour 5+ lignes, fixer à 4 lignes avec scroll
-      const lineHeight = parseInt(getComputedStyle(textarea).lineHeight);
-      const { paddingTop, paddingBottom } = getComputedStyle(textarea);
-      const totalPadding = parseFloat(paddingTop) + parseFloat(paddingBottom);
-      textarea.style.height = `${(lineHeight * 4) + totalPadding}px`;
-    }
+    // Réinitialiser la hauteur
+    textarea.style.height = 'auto';
+    
+    // Calculer la nouvelle hauteur
+    const scrollHeight = textarea.scrollHeight;
+    const maxHeight = parseInt(getComputedStyle(textarea).lineHeight) * 4;
+    
+    // Appliquer la hauteur (limitée à 4 lignes)
+    textarea.style.height = `${Math.min(scrollHeight, maxHeight)}px`;
+    
+    // Mettre à jour le nombre de lignes pour les styles
+    const lines = Math.ceil(scrollHeight / parseInt(getComputedStyle(textarea).lineHeight));
+    setTextareaLines(Math.min(lines, 4));
   };
 
-  // Réinitialiser la hauteur après l'envoi
+  // Réinitialiser après l'envoi
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newMessage.trim() || sending) return;
@@ -187,7 +151,7 @@ const ConversationDetail: React.FC = () => {
       setTextareaLines(1);
       const textarea = textareaRef.current;
       if (textarea) {
-        textarea.style.height = '40px'; // hauteur minimale
+        textarea.style.height = '40px';
       }
     } catch (error) {
       console.error('Error sending message:', error);
