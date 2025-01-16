@@ -20,6 +20,7 @@ const ConversationDetail: React.FC = () => {
   const [sending, setSending] = useState(false);
   const [generatingResponse, setGeneratingResponse] = useState(false);
   const [isAutoPilot, setIsAutoPilot] = useState(false);
+  const [textareaLines, setTextareaLines] = useState(1);
 
   // Récupérer la conversation
   useEffect(() => {
@@ -105,8 +106,17 @@ const ConversationDetail: React.FC = () => {
 
     const adjustHeight = () => {
       textarea.style.height = 'auto';
-      const newHeight = Math.min(textarea.scrollHeight, 120);
-      textarea.style.height = `${newHeight}px`;
+      
+      // Calculer le nombre de lignes
+      const lineHeight = parseInt(getComputedStyle(textarea).lineHeight || '20');
+      const paddingY = 16; // 2 * 8px (py-2)
+      const lines = Math.ceil((textarea.scrollHeight - paddingY) / lineHeight);
+      setTextareaLines(lines);
+
+      // Limiter à 4 lignes avec scroll
+      const maxHeight = (lineHeight * 4) + paddingY;
+      textarea.style.height = `${Math.min(textarea.scrollHeight, maxHeight)}px`;
+      textarea.style.overflowY = lines > 4 ? 'auto' : 'hidden';
     };
 
     adjustHeight();
@@ -341,8 +351,20 @@ const ConversationDetail: React.FC = () => {
             }}
             placeholder="Tapez votre message..."
             rows={1}
-            className="flex-1 resize-none py-2 px-4 border border-gray-300 rounded-full focus:border-blue-500 focus:ring-blue-500 min-h-[40px] bg-transparent"
-            style={{ height: 40, maxHeight: 120 }}
+            className={`flex-1 resize-none py-2 px-4 border border-gray-300 focus:border-blue-500 focus:ring-blue-500 min-h-[40px] bg-transparent transition-all duration-200 ${
+              textareaLines === 1
+                ? 'rounded-full'
+                : textareaLines === 2
+                ? 'rounded-2xl'
+                : textareaLines === 3
+                ? 'rounded-xl'
+                : 'rounded-lg'
+            }`}
+            style={{ 
+              height: 40,
+              maxHeight: textareaLines > 4 ? '100px' : 'none',
+              lineHeight: '20px'
+            }}
           />
           <button
             type="button"
