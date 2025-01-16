@@ -104,20 +104,21 @@ const ConversationDetail: React.FC = () => {
     const textarea = textareaRef.current;
     if (!textarea) return 1;
 
-    // Sauvegarder les valeurs actuelles
-    const { paddingTop, paddingBottom } = getComputedStyle(textarea);
-    const currentHeight = textarea.style.height;
+    // Créer un div temporaire pour mesurer le texte
+    const mirror = document.createElement('textarea');
+    mirror.style.position = 'absolute';
+    mirror.style.visibility = 'hidden';
+    mirror.style.width = `${textarea.clientWidth}px`;
+    mirror.style.padding = getComputedStyle(textarea).padding;
+    mirror.style.border = getComputedStyle(textarea).border;
+    mirror.style.lineHeight = getComputedStyle(textarea).lineHeight;
+    mirror.style.font = getComputedStyle(textarea).font;
+    mirror.value = textarea.value;
     
-    // Réinitialiser la hauteur pour un calcul précis
-    textarea.style.height = 'auto';
-    
-    // Calculer la hauteur d'une ligne (en excluant les paddings)
+    document.body.appendChild(mirror);
     const lineHeight = parseInt(getComputedStyle(textarea).lineHeight);
-    const contentHeight = textarea.scrollHeight - (parseFloat(paddingTop) + parseFloat(paddingBottom));
-    const lines = Math.ceil(contentHeight / lineHeight);
-    
-    // Restaurer la hauteur
-    textarea.style.height = currentHeight;
+    const lines = Math.ceil(mirror.scrollHeight / lineHeight);
+    document.body.removeChild(mirror);
     
     return lines;
   };
@@ -127,16 +128,26 @@ const ConversationDetail: React.FC = () => {
     const textarea = textareaRef.current;
     if (!textarea) return;
 
-    // Réinitialiser la hauteur pour un calcul précis
-    textarea.style.height = 'auto';
-    
     const lines = calculateLines();
     setTextareaLines(lines);
 
-    // Appliquer la nouvelle hauteur
     if (lines <= 4) {
-      textarea.style.height = `${textarea.scrollHeight}px`;
+      // Pour 1-4 lignes, ajuster à la hauteur exacte
+      const mirror = document.createElement('textarea');
+      mirror.style.position = 'absolute';
+      mirror.style.visibility = 'hidden';
+      mirror.style.width = `${textarea.clientWidth}px`;
+      mirror.style.padding = getComputedStyle(textarea).padding;
+      mirror.style.border = getComputedStyle(textarea).border;
+      mirror.style.lineHeight = getComputedStyle(textarea).lineHeight;
+      mirror.style.font = getComputedStyle(textarea).font;
+      mirror.value = textarea.value;
+      
+      document.body.appendChild(mirror);
+      textarea.style.height = `${mirror.scrollHeight}px`;
+      document.body.removeChild(mirror);
     } else {
+      // Pour 5+ lignes, fixer à 4 lignes avec scroll
       const lineHeight = parseInt(getComputedStyle(textarea).lineHeight);
       const { paddingTop, paddingBottom } = getComputedStyle(textarea);
       const totalPadding = parseFloat(paddingTop) + parseFloat(paddingBottom);
@@ -173,13 +184,11 @@ const ConversationDetail: React.FC = () => {
         };
       });
       setNewMessage('');
-      // Réinitialiser la hauteur au minimum
+      setTextareaLines(1);
       const textarea = textareaRef.current;
       if (textarea) {
-        textarea.style.height = 'auto';
-        setTextareaLines(1);
+        textarea.style.height = '40px'; // hauteur minimale
       }
-
     } catch (error) {
       console.error('Error sending message:', error);
     } finally {
