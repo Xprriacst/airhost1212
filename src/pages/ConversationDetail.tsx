@@ -26,6 +26,8 @@ const ConversationDetail: React.FC = () => {
         const data = await conversationService.fetchConversationById(conversationId);
         setConversation(data);
         setIsAutoPilot(data.autoPilot || false);
+        // Marquer la conversation comme lue
+        await conversationService.markConversationAsRead(conversationId);
       } catch (err) {
         setError('Failed to load conversation');
       } finally {
