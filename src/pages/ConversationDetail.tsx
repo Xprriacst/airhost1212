@@ -11,6 +11,7 @@ const ConversationDetail: React.FC = () => {
   const navigate = useNavigate();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [conversation, setConversation] = useState<Conversation | null>(null);
   const [property, setProperty] = useState<Property | null>(null);
   const [newMessage, setNewMessage] = useState('');
@@ -96,6 +97,22 @@ const ConversationDetail: React.FC = () => {
     const intervalId = setInterval(refreshConversation, 5000);
     return () => clearInterval(intervalId);
   }, [conversationId]);
+
+  // Ajuste la hauteur du textarea au fur et à mesure
+  useEffect(() => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const adjustHeight = () => {
+      textarea.style.height = 'auto';
+      const newHeight = Math.min(textarea.scrollHeight, 120);
+      textarea.style.height = `${newHeight}px`;
+    };
+
+    adjustHeight();
+    textarea.addEventListener('input', adjustHeight);
+    return () => textarea.removeEventListener('input', adjustHeight);
+  }, [newMessage]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -327,27 +344,35 @@ const ConversationDetail: React.FC = () => {
       </div>
 
       {/* Input */}
-      <div className="bg-white border-t px-4 py-3">
-        <form onSubmit={handleSubmit} className="flex gap-2">
-          <input
-            type="text"
+      <div className="bg-white border-t px-4 py-2">
+        <form onSubmit={handleSubmit} className="flex items-end gap-2">
+          <textarea
+            ref={textareaRef}
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
-            placeholder="Tapez un message..."
-            className="flex-1 rounded-full border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                handleSubmit(e);
+              }
+            }}
+            placeholder="Tapez votre message..."
+            rows={1}
+            className="flex-1 resize-none py-2 px-4 border border-gray-300 rounded-full focus:border-blue-500 focus:ring-blue-500 min-h-[40px] bg-transparent"
+            style={{ height: 40, maxHeight: 120 }}
           />
           <button
             type="button"
             onClick={handleGenerateResponse}
             disabled={generatingResponse}
-            className="p-2 text-blue-500 hover:text-blue-600 disabled:opacity-50"
+            className="p-2 text-blue-500 hover:text-blue-600 disabled:opacity-50 h-[40px] w-[40px] flex items-center justify-center flex-shrink-0"
           >
             <Sparkles className="w-5 h-5" />
           </button>
           <button
             type="submit"
             disabled={!newMessage.trim() || sending}
-            className="p-2 bg-blue-500 text-white rounded-full hover:bg-blue-600 disabled:opacity-50"
+            className="p-2 bg-blue-500 text-white rounded-full hover:bg-blue-600 disabled:opacity-50 h-[40px] w-[40px] flex items-center justify-center flex-shrink-0"
           >
             <Send className="w-5 h-5" />
           </button>
