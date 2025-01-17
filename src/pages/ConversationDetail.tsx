@@ -1,536 +1,181 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Send, Sparkles, Zap, X } from 'lucide-react';
-import { conversationService } from '../services';
-import { propertyService } from '../services/airtable/propertyService';
+import { useParams } from 'react-router-dom';
+import { Box, Button, Container, TextField, Typography } from '@mui/material';
+import { useConversationStore } from '../stores/conversationStore';
 import { aiService } from '../services/ai/aiService';
-import type { Conversation, Message, Property } from '../types';
-import { AlertTriangle, Clock, Package, Wrench } from 'lucide-react';
+import { Message } from '../types';
+import { MessageList } from '../components/MessageList';
+import { ConversationHeader } from '../components/ConversationHeader';
 
-const EmergencyAlert = ({ tag, onClose }: { tag: string; onClose: () => void }) => {
-  const getEmergencyInfo = () => {
-    switch (tag) {
-      case 'urgence':
-        return {
-          title: 'Urgence détectée',
-          description: 'Le voyageur signale une urgence',
-          color: 'red',
-          icon: AlertTriangle
-        };
-      case 'client_mecontent':
-        return {
-          title: 'Voyageur mécontent',
-          description: 'Le voyageur exprime son mécontentement',
-          color: 'orange',
-          icon: AlertTriangle
-        };
-      case 'probleme_technique':
-        return {
-          title: 'Problème technique',
-          description: 'Un appareil ne fonctionne pas correctement',
-          color: 'purple',
-          icon: Wrench
-        };
-      case 'probleme_stock':
-        return {
-          title: 'Problème de stock',
-          description: 'Il manque des consommables',
-          color: 'gray',
-          icon: Package
-        };
-      case 'reponse_inconnue':
-        return {
-          title: 'Réponse requise',
-          description: 'Une réponse rapide est nécessaire',
-          color: 'blue',
-          icon: Clock
-        };
-      default:
-        return null;
+export const ConversationDetail: React.FC = () => {
+  const { id } = useParams<{ id: string }>();
+  const { conversation, fetchConversation, sendMessage } = useConversationStore();
+  const [newMessage, setNewMessage] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [isAutoPilot, setIsAutoPilot] = useState(false);
+  const messageListRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (id) {
+      fetchConversation(id);
+    }
+  }, [id, fetchConversation]);
+
+  useEffect(() => {
+    if (conversation) {
+      setIsAutoPilot(false);
+    }
+  }, [conversation]);
+
+  const scrollToBottom = () => {
+    if (messageListRef.current) {
+      const element = messageListRef.current;
+      if (typeof element.scrollIntoView === 'function') {
+        element.scrollIntoView({ behavior: 'smooth', block: 'end' });
+      }
     }
   };
 
-  const info = getEmergencyInfo();
-  if (!info) return null;
+  const handleSendMessage = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!newMessage.trim() || !conversation) return;
 
-  const IconComponent = info.icon;
-
-  return (
-    <div className={`bg-white border-l-4 border-${info.color}-500 p-4 mb-4 relative`}>
-      <button 
-        onClick={onClose}
-        className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
-      >
-        <X className="w-5 h-5" />
-      </button>
-      <div className="flex items-start pr-8">
-        <div className={`p-2 text-${info.color}-600`}>
-          <IconComponent className="w-5 h-5" />
-        </div>
-        <div className="ml-3">
-          <h3 className="text-gray-800 font-medium">{info.title}</h3>
-          <p className="text-gray-600 mt-1">{info.description}</p>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-const ConversationDetail: React.FC = () => {
-  const { conversationId, propertyId } = useParams();
-  const navigate = useNavigate();
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const messagesContainerRef = useRef<HTMLDivElement>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const [conversation, setConversation] = useState<Conversation | null>(null);
-  const [property, setProperty] = useState<Property | null>(null);
-  const [newMessage, setNewMessage] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [sending, setSending] = useState(false);
-  const [generatingResponse, setGeneratingResponse] = useState(false);
-  const [isAutoPilot, setIsAutoPilot] = useState(false);
-  const [textareaLines, setTextareaLines] = useState(1);
-  const [dismissedAlerts, setDismissedAlerts] = useState<Set<string>>(new Set());
-
-  // Récupérer la conversation
-  useEffect(() => {
-    const fetchConversation = async () => {
-      if (!conversationId) return;
-      try {
-        const data = await conversationService.fetchConversationById(conversationId);
-        setConversation(data);
-        setIsAutoPilot(data.autoPilot || false);
-      } catch (err) {
-        setError('Failed to load conversation');
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchConversation();
-  }, [conversationId]);
-
-  // Récupérer la propriété
-  useEffect(() => {
-    const fetchProperty = async () => {
-      if (!conversation?.propertyId) return;
-      try {
-        const data = await propertyService.fetchPropertyById(conversation.propertyId);
-        setProperty(data);
-      } catch (err) {
-        console.error('Error fetching property:', err);
-      }
-    };
-    fetchProperty();
-  }, [conversation?.propertyId]);
-
-  // Réinitialiser le compteur de messages non lus quand la conversation est chargée
-  useEffect(() => {
-    const resetUnreadCount = async () => {
-      if (!conversationId || !conversation) return;
-      try {
-        await conversationService.markConversationAsRead(conversationId);
-        // Mise à jour locale du compteur
-        setConversation(prev => prev ? { ...prev, unreadCount: 0 } : prev);
-      } catch (err) {
-        console.error('Error resetting unread count:', err);
-      }
-    };
-
-    resetUnreadCount();
-  }, [conversationId, conversation?.id]); // Se déclenche uniquement quand la conversation change
-
-  // Scroll au chargement initial
-  useEffect(() => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: 'auto' });
-    }
-  }, [conversation?.messages]);
-
-  // Rafraîchir la conversation toutes les 5 secondes
-  useEffect(() => {
-    if (!conversationId) return;
-
-    const refreshConversation = async () => {
-      try {
-        const data = await conversationService.fetchConversationById(conversationId);
-        setConversation(prev => {
-          // Ne mettre à jour que si les messages ont changé
-          if (prev && JSON.stringify(prev.messages) === JSON.stringify(data.messages)) {
-            return prev;
-          }
-          return data;
-        });
-      } catch (err) {
-        console.error('Error refreshing conversation:', err);
-      }
-    };
-
-    const intervalId = setInterval(refreshConversation, 5000);
-    return () => clearInterval(intervalId);
-  }, [conversationId]);
-
-  // Mise à jour de l'état auto-pilot quand la conversation change
-  useEffect(() => {
-    if (conversation?.autoPilot !== undefined) {
-      setIsAutoPilot(conversation.autoPilot);
-    }
-  }, [conversation?.autoPilot]);
-
-  // Afficher une notification quand l'auto-pilot change
-  useEffect(() => {
-    if (conversation?.messages?.length > 0) {
-      const lastMessage = conversation.messages[conversation.messages.length - 1];
-      if (lastMessage.emergencyTags?.length > 0 && !isAutoPilot) {
-        // Afficher une notification toast ou une alerte
-        alert('Auto-pilot désactivé à cause d\'une urgence détectée');
-      }
-    }
-  }, [isAutoPilot, conversation?.messages]);
-
-  // Ajuste la hauteur du textarea au fur et à mesure
-  useEffect(() => {
-    const textarea = textareaRef.current;
-    if (!textarea) return;
-
-    const adjustHeight = () => {
-      textarea.style.height = 'auto';
-      
-      // Calculer le nombre de lignes
-      const lineHeight = parseInt(getComputedStyle(textarea).lineHeight || '20');
-      const paddingY = 16; // 2 * 8px (py-2)
-      const lines = Math.ceil((textarea.scrollHeight - paddingY) / lineHeight);
-      setTextareaLines(lines);
-
-      // Limiter à 4 lignes avec scroll
-      const maxHeight = (lineHeight * 4) + paddingY;
-      textarea.style.height = `${Math.min(textarea.scrollHeight, maxHeight)}px`;
-      textarea.style.overflowY = lines > 4 ? 'auto' : 'hidden';
-    };
-
-    adjustHeight();
-    textarea.addEventListener('input', adjustHeight);
-    return () => textarea.removeEventListener('input', adjustHeight);
-  }, [newMessage]);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newMessage.trim() || sending) return;
-
-    setSending(true);
-    const tempId = `temp-${Date.now()}`;
-
+    setIsLoading(true);
     try {
-      if (!conversation || !conversation.guestPhone) {
-        throw new Error('Missing conversation data');
-      }
-
-      // Message "temporaire"
-      const messageData: Message = {
-        id: tempId,
-        text: newMessage.trim(),
-        timestamp: new Date(),
+      const message: Message = {
+        id: Date.now().toString(),
+        conversationId: conversation.id,
+        content: newMessage,
         sender: 'host',
+        timestamp: new Date(),
         type: 'text',
-        status: 'pending',
+        status: 'sent'
       };
 
-      // On l'ajoute tout de suite localement
-      setConversation((prev) => {
-        if (!prev) return prev;
-        return {
-          ...prev,
-          messages: [...prev.messages, messageData],
-        };
-      });
-
-      // Réinitialiser le textarea
+      await sendMessage(message);
       setNewMessage('');
-      setTextareaLines(1);
-      const textarea = textareaRef.current;
-      if (textarea) {
-        textarea.style.height = '40px';
-        textarea.style.overflowY = 'hidden';
+      scrollToBottom();
+
+      if (isAutoPilot) {
+        const response = await aiService.generateResponse({
+          propertyName: conversation.propertyName,
+          propertyType: conversation.propertyType,
+          checkIn: conversation.checkIn,
+          checkOut: conversation.checkOut,
+          guestName: conversation.guestName,
+          previousMessages: conversation.messages
+        });
+
+        if (response) {
+          const aiMessage: Message = {
+            id: Date.now().toString(),
+            conversationId: conversation.id,
+            content: response,
+            sender: 'host',
+            timestamp: new Date(),
+            type: 'text',
+            status: 'sent'
+          };
+
+          await sendMessage(aiMessage);
+          scrollToBottom();
+        }
       }
-
-      // Envoi au backend
-      const response = await fetch('/.netlify/functions/send-message', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          propertyId,
-          message: messageData.text,
-          guestPhone: conversation.guestPhone,
-          isHost: true,
-          conversationId,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to send message');
-      }
-
-      // On re-fetch la conversation pour voir le message "officiel"
-      await fetchConversation();
     } catch (error) {
       console.error('Error sending message:', error);
-      setConversation((prev) => {
-        if (!prev) return prev;
-        return {
-          ...prev,
-          messages: prev.messages.map((msg) =>
-            msg.id === tempId ? { ...msg, status: 'failed' } : msg
-          ),
-        };
-      });
     } finally {
-      setSending(false);
+      setIsLoading(false);
     }
   };
 
-  const handleAutoPilotToggle = async () => {
-    if (!conversationId || !conversation) return;
-    
-    try {
-      // Mettre à jour l'interface immédiatement pour une meilleure réactivité
-      const newAutoPilotState = !isAutoPilot;
-      setIsAutoPilot(newAutoPilotState);
-      
-      // Mettre à jour dans la base de données
-      await conversationService.updateConversation(conversationId, {
-        'Auto Pilot': newAutoPilotState
-      });
-      
-      // Mettre à jour l'état local de la conversation
-      setConversation(prev => prev ? {
-        ...prev,
-        autoPilot: newAutoPilotState
-      } : prev);
-      
-    } catch (error) {
-      // En cas d'erreur, revenir à l'état précédent
-      setIsAutoPilot(!isAutoPilot);
-      console.error('Error updating Auto Pilot state:', error);
+  const handleKeyDown = (event: React.KeyboardEvent) => {
+    if (event.key === 'Enter' && !event.shiftKey) {
+      event.preventDefault();
+      handleSendMessage(event);
     }
   };
 
-  const handleGenerateResponse = async () => {
-    if (!conversation || !property || generatingResponse) {
-      console.warn('Cannot generate response:', {
-        hasConversation: !!conversation,
-        hasProperty: !!property,
-        isGenerating: generatingResponse
-      });
-      return;
-    }
-    
-    try {
-      setGeneratingResponse(true);
-      
-      // Récupérer le dernier message du client s'il existe
-      const lastGuestMessage = [...conversation.messages]
-        .reverse()
-        .find(msg => msg.sender === 'guest');
-        
-      if (!lastGuestMessage) {
-        console.warn('No guest message found to generate response for');
-        return;
-      }
-
-      console.log('Generating response with context:', {
-        property: property.name,
-        lastMessage: lastGuestMessage.text,
-        checkIn: conversation.checkIn,
-        checkOut: conversation.checkOut
-      });
-
-      // Créer le contexte de réservation
-      const bookingContext = {
-        hasBooking: true,
-        checkIn: conversation.checkIn,
-        checkOut: conversation.checkOut,
-        guestCount: conversation.guestCount || 1,
-      };
-
-      // Configuration de l'IA
-      const aiConfig = {
-        language: 'fr',
-        tone: 'friendly' as const,
-        shouldIncludeEmoji: true
-      };
-
-      // Générer la réponse
-      const response = await aiService.generateResponse(
-        lastGuestMessage,
-        property,
-        bookingContext,
-        conversation.messages.slice(-10),
-        aiConfig
-      );
-
-      console.log('AI response generated:', response);
-
-      if (response) {
-        setNewMessage(response);
-      }
-    } catch (error) {
-      console.error('Error generating response:', error);
-    } finally {
-      setGeneratingResponse(false);
-    }
-  };
-
-  const handleDismissAlert = (tag: string) => {
-    setDismissedAlerts(prev => new Set([...prev, tag]));
-  };
-
-  if (loading) {
+  if (!conversation) {
     return (
-      <div className="flex items-center justify-center min-h-[100dvh]">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-[100dvh] p-6">
-        <div className="bg-red-50 text-red-600 p-4 rounded-lg">{error}</div>
-      </div>
+      <Container>
+        <Typography>Loading...</Typography>
+      </Container>
     );
   }
 
   return (
-    <div className="fixed inset-0 flex flex-col bg-white">
-      {/* Header fixé */}
-      <div className="fixed top-0 left-0 right-0 flex items-center justify-between px-4 py-3 bg-white border-b z-50">
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => navigate(-1)}
-            className="p-2 -ml-2 hover:bg-gray-50 rounded-full"
-          >
-            <ArrowLeft className="w-6 h-6 text-gray-700" />
-          </button>
-          <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
-            <span className="text-gray-600 text-sm font-medium">
-              {conversation?.guestName?.charAt(0).toUpperCase()}
-            </span>
-          </div>
-          <div>
-            <h2 className="font-medium">{conversation?.guestName || 'Conversation'}</h2>
-            <p className="text-xs text-gray-500">
-              {conversation?.checkIn && new Date(conversation.checkIn).toLocaleDateString()}
-              {' - '}
-              {conversation?.checkOut && new Date(conversation.checkOut).toLocaleDateString()}
-            </p>
-          </div>
-        </div>
+    <Box
+      sx={{
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100vh',
+        overflow: 'hidden'
+      }}
+    >
+      <ConversationHeader
+        title={conversation.guestName}
+        subtitle={
+          <>
+            Check-in:{' '}
+            {conversation?.checkIn && new Date(conversation.checkIn).toLocaleDateString()}
+            <br />
+            Check-out:{' '}
+            {conversation?.checkOut && new Date(conversation.checkOut).toLocaleDateString()}
+          </>
+        }
+      />
 
-        <button
-          onClick={handleAutoPilotToggle}
-          className={`flex items-center gap-2 px-3 py-1.5 rounded-full ${
-            isAutoPilot
-              ? 'bg-blue-100 text-blue-700'
-              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-          }`}
-        >
-          <Zap className={`w-4 h-4 ${isAutoPilot ? 'text-blue-500' : 'text-gray-400'}`} />
-          <span className="text-sm font-medium">
-            AI {isAutoPilot ? 'ON' : 'OFF'}
-          </span>
-        </button>
-      </div>
-
-      {/* Espacement pour le header fixe */}
-      <div className="h-[72px]" />
-
-      {/* Alert d'urgence */}
-      {conversation?.messages?.length > 0 && 
-       conversation.messages[conversation.messages.length - 1].emergencyTags
-         ?.filter(tag => !dismissedAlerts.has(tag))
-         .map(tag => (
-           <EmergencyAlert 
-             key={tag} 
-             tag={tag} 
-             onClose={() => handleDismissAlert(tag)}
-           />
-      ))}
-
-      {/* Messages */}
-      <div 
-        ref={messagesContainerRef}
-        className="flex-1 overflow-y-auto px-4 pb-4"
+      <Box
+        ref={messageListRef}
+        sx={{
+          flex: 1,
+          overflow: 'auto',
+          padding: 2,
+          display: 'flex',
+          flexDirection: 'column'
+        }}
       >
-        {conversation?.messages.map((message, index) => (
-          <div
-            key={message.id || index}
-            className={`flex ${message.sender === 'guest' ? 'justify-start' : 'justify-end'} mb-2`}
-          >
-            <div
-              className={`max-w-[75%] rounded-2xl px-4 py-2 ${
-                message.sender === 'guest'
-                  ? 'bg-gray-100 text-gray-900 rounded-tl-sm'
-                  : 'bg-blue-500 text-white rounded-tr-sm'
-              }`}
-            >
-              {message.text}
-            </div>
-          </div>
-        ))}
-        <div ref={messagesEndRef} />
-      </div>
+        <MessageList messages={conversation.messages} />
+      </Box>
 
-      {/* Input */}
-      <div className="bg-white border-t px-4 py-2">
-        <form onSubmit={handleSubmit} className="flex items-end gap-2">
-          <textarea
-            ref={textareaRef}
-            value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                handleSubmit(e);
-              }
-            }}
-            placeholder="Tapez votre message..."
-            rows={1}
-            className={`flex-1 resize-none py-2 px-4 border border-gray-300 focus:border-blue-500 focus:ring-blue-500 min-h-[40px] bg-transparent transition-all duration-200 ${
-              textareaLines === 1
-                ? 'rounded-full'
-                : textareaLines === 2
-                ? 'rounded-2xl'
-                : textareaLines === 3
-                ? 'rounded-xl'
-                : 'rounded-lg'
-            }`}
-            style={{ 
-              height: 40,
-              maxHeight: textareaLines > 4 ? '100px' : 'none',
-              lineHeight: '20px'
-            }}
-          />
-          <button
-            type="button"
-            onClick={handleGenerateResponse}
-            disabled={generatingResponse}
-            className="p-2 text-blue-500 hover:text-blue-600 disabled:opacity-50 h-[40px] w-[40px] flex items-center justify-center flex-shrink-0"
-          >
-            <Sparkles className="w-5 h-5" />
-          </button>
-          <button
-            type="submit"
-            disabled={!newMessage.trim() || sending}
-            className="p-2 bg-blue-500 text-white rounded-full hover:bg-blue-600 disabled:opacity-50 h-[40px] w-[40px] flex items-center justify-center flex-shrink-0"
-          >
-            <Send className="w-5 h-5" />
-          </button>
-        </form>
-      </div>
-    </div>
+      <Box
+        component="form"
+        onSubmit={handleSendMessage}
+        sx={{
+          p: 2,
+          backgroundColor: 'background.paper',
+          borderTop: 1,
+          borderColor: 'divider',
+          display: 'flex',
+          gap: 1
+        }}
+      >
+        <TextField
+          inputRef={textareaRef}
+          fullWidth
+          multiline
+          maxRows={4}
+          value={newMessage}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewMessage(e.target.value)}
+          onKeyDown={handleKeyDown}
+          disabled={isLoading}
+          placeholder="Type your message..."
+          sx={{
+            '& .MuiOutlinedInput-root': {
+              borderRadius: 2
+            }
+          }}
+        />
+        <Button
+          type="submit"
+          variant="contained"
+          disabled={isLoading || !newMessage.trim()}
+          sx={{ minWidth: 100 }}
+        >
+          Send
+        </Button>
+      </Box>
+    </Box>
   );
 };
-
-export default ConversationDetail;

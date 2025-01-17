@@ -1,47 +1,49 @@
 export interface Message {
   id: string;
-  text: string;
+  conversationId: string;
+  content: string;
   timestamp: Date;
-  isUser?: boolean;  // Optional car remplacé par sender
-  sender: 'host' | 'guest';
-  type?: 'text' | 'image' | 'video' | 'audio';
-  status?: 'pending' | 'sent' | 'delivered' | 'read' | 'failed';
-  emergencyTags?: EmergencyTag[];
-  metadata?: {
-    platform?: 'whatsapp' | 'sms' | 'email';
-    waMessageId?: string;
-    waNotifyName?: string;
-  };
+  sender: 'guest' | 'host';
+  type?: 'text' | 'image' | 'file';
+  status?: 'sent' | 'delivered' | 'read';
 }
 
 export interface Conversation {
   id: string;
+  propertyId: string;
+  propertyName: string;
+  propertyType: string;
   guestName: string;
-  guestEmail: string;
-  guestPhone: string;
+  checkIn: string;
+  checkOut: string;
   messages: Message[];
-  properties: string[];
-  autoPilot: boolean;
-  unreadCount: number;
-  propertyName?: string;
+  unreadCount?: number;
+  lastMessage?: Message;
 }
 
-export type EmergencyTag = 
-  | 'client_mecontent'
-  | 'probleme_technique'
-  | 'probleme_stock'
-  | 'reponse_inconnue'
-  | 'urgence';
+export type EmergencyTag = 'urgent' | 'maintenance' | 'security' | 'health';
 
-export interface Property {
-  id: string;
-  name: string;
-  aiInstructions?: {
-    id: string;
-    propertyId: string;
-    type: string;
-    content: string;
-    isActive: boolean;
-    priority: number;
-  }[];
+export interface AIConfig {
+  language: 'fr' | 'en';
+  tone: 'friendly' | 'professional';
+  shouldIncludeEmoji?: boolean;
+}
+
+export interface AIResponseContext {
+  propertyName: string;
+  propertyType: string;
+  checkIn: string;
+  checkOut: string;
+  guestName: string;
+  previousMessages: Message[];
+}
+
+export interface BookingContext {
+  propertyId: string;
+  checkIn: string;
+  checkOut: string;
+  guestName: string;
+  guestEmail?: string;
+  guestPhone?: string;
+  numberOfGuests?: number;
 }

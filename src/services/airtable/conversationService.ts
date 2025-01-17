@@ -1,303 +1,160 @@
-import { base } from './config';
+import { base } from './base';
 import { handleServiceError } from '../../utils/error';
-import axios from 'axios';
 import type { Conversation, Message, EmergencyTag } from '../../types';
 
-const parseMessages = (rawMessages: any): Message[] => {
-  try {
-    if (!rawMessages) return [];
-    
-    let messages: Message[] = typeof rawMessages === 'string' 
-      ? JSON.parse(rawMessages) 
-      : rawMessages;
-
-    return messages.map(msg => ({
-      ...msg,
-      timestamp: new Date(msg.timestamp),
-      sender: msg.sender === 'Host' || msg.sender === 'host' 
-        ? 'host' 
-        : 'guest',
-      type: msg.type || 'text',
-      status: msg.status || 'sent'
-    })).sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
-
-  } catch (error) {
-    console.warn('Failed to parse messages:', error);
-    return [];
-  }
-};
-
-const mapAirtableToConversation = (record: any): Conversation => {
-  const propertyIds = record.get('Properties');
-  return {
-    id: record.id,
-    propertyId: Array.isArray(propertyIds) ? propertyIds[0] : propertyIds,
-    guestName: record.get('Guest Name') || '',
-    guestEmail: record.get('Guest Email') || '',
-    guestPhone: record.get('Guest phone number') || '',
-    checkIn: record.get('Check-in Date') || '',
-    checkOut: record.get('Check-out Date') || '',
-    autoPilot: record.get('Auto Pilot') || false,
-    messages: parseMessages(record.get('Messages')),
-    unreadCount: record.get('UnreadCount') || 0
-  };
-};
-
-const sendNotification = async (title: string, body: string) => {
-  try {
-    console.log('Sending notification:', { title, body });
-    const response = await axios.post(`${process.env.REACT_APP_API_URL}/send-notification`, {
-      title,
-      body,
-    });
-    console.log('Notification sent:', response.data);
-  } catch (error) {
-    console.error('Error sending notification:', error);
-  }
-};
-
-// Mots-clés pour détecter les cas d'urgence
-const EMERGENCY_KEYWORDS = {
-  client_mecontent: ['insatisfait', 'mécontent', 'déçu', 'remboursement', 'plainte', 'inacceptable'],
-  probleme_technique: ['panne', 'cassé', 'ne fonctionne pas', 'problème', 'fuite', 'électricité'],
-  probleme_stock: ['manque', 'vide', 'épuisé', 'plus de', 'besoin de'],
-  reponse_inconnue: ['pas de réponse', 'sans réponse', 'urgent', 'besoin maintenant'],
-  urgence: ['urgent', 'immédiat', 'emergency', 'secours', 'danger', 'grave']
-};
-
-// Fonction pour détecter les tags d'urgence dans un message
-const detectEmergencyTags = (message: string): EmergencyTag[] => {
-  const lowercaseMessage = message.toLowerCase();
-  return Object.entries(EMERGENCY_KEYWORDS).reduce((tags: EmergencyTag[], [tag, keywords]) => {
-    if (keywords.some(keyword => lowercaseMessage.includes(keyword))) {
-      tags.push(tag as EmergencyTag);
-    }
-    return tags;
-  }, []);
-};
+const CONVERSATIONS_TABLE = 'Conversations';
+const MESSAGES_TABLE = 'Messages';
 
 export const conversationService = {
-  async fetchAllConversations(): Promise<Conversation[]> {
-    try {
-      if (!base) throw new Error('Airtable is not configured');
+  // Convertir les messages Airtable en messages de l'application
+  mapMessages: (messages: any[]): Message[] => {
+    return messages.map(msg => ({
+      id: msg.id,
+      conversationId: msg.conversationId,
+      content: msg.content,
+      timestamp: new Date(msg.timestamp),
+      sender: msg.sender === 'Host' || msg.sender === 'host' ? 'host' : 'guest',
+      type: msg.type || 'text',
+      status: msg.status || 'sent'
+    }));
+  },
 
-      const records = await base('Conversations')
+  // Convertir une conversation Airtable en conversation de l'application
+  mapConversation: (record: any, messages: Message[] = [], propertyIds: string | string[] = []): Conversation => ({
+    id: record.id,
+    propertyId: Array.isArray(propertyIds) ? propertyIds[0] : propertyIds,
+    propertyName: record.propertyName || '',
+    propertyType: record.propertyType || '',
+    guestName: record.guestName || '',
+    checkIn: record.checkIn || '',
+    checkOut: record.checkOut || '',
+    messages,
+    unreadCount: record.unreadCount || 0,
+    lastMessage: messages[messages.length - 1]
+  }),
+
+  // Récupérer toutes les conversations
+  async getConversations(): Promise<Conversation[]> {
+    try {
+      const records = await base(CONVERSATIONS_TABLE)
         .select({
-          fields: [
-            'Properties',
-            'Guest Name',
-            'Guest Email',
-            'Guest phone number',
-            'Messages',
-            'Check-in Date',
-            'Check-out Date',
-            'Auto Pilot',
-            'UnreadCount'
-          ],
+          view: 'Grid view',
+          sort: [{ field: 'Created', direction: 'desc' }]
         })
         .all();
 
-      return records.map(mapAirtableToConversation);
-    } catch (error) {
-      console.error('Error fetching all conversations:', error);
-      throw error;
-    }
-  },
+      const conversations: Conversation[] = [];
 
-  async fetchConversationById(conversationId: string): Promise<Conversation> {
-    try {
-      if (!base) throw new Error('Airtable is not configured');
-      if (!conversationId) throw new Error('Conversation ID is required');
-
-      console.log('Fetching conversation:', conversationId);
-      const record = await base('Conversations').find(conversationId);
-      
-      if (!record) {
-        throw new Error(`Conversation not found: ${conversationId}`);
+      for (const record of records) {
+        const messages = await this.getMessages(record.id);
+        conversations.push(
+          this.mapConversation(
+            {
+              id: record.id,
+              ...record.fields
+            },
+            messages,
+            record.fields.PropertyId
+          )
+        );
       }
 
-      return mapAirtableToConversation(record);
+      return conversations;
     } catch (error) {
-      console.error('Error fetching conversation:', error);
-      throw error;
+      throw handleServiceError(error, 'conversationService.getConversations');
     }
   },
 
-  async fetchPropertyConversations(propertyId: string): Promise<Conversation[]> {
+  // Récupérer une conversation par son ID
+  async getConversation(id: string): Promise<Conversation> {
     try {
-      if (!base) throw new Error('Airtable is not configured');
-      if (!propertyId) throw new Error('Property ID is required');
+      const record = await base(CONVERSATIONS_TABLE).find(id);
+      const messages = await this.getMessages(id);
 
-      console.log('Fetching conversations for property:', propertyId);
-      const records = await base('Conversations')
+      return this.mapConversation(
+        {
+          id: record.id,
+          ...record.fields
+        },
+        messages,
+        record.fields.PropertyId
+      );
+    } catch (error) {
+      throw handleServiceError(error, 'conversationService.getConversation');
+    }
+  },
+
+  // Récupérer les messages d'une conversation
+  async getMessages(conversationId: string): Promise<Message[]> {
+    try {
+      const records = await base(MESSAGES_TABLE)
         .select({
-          filterByFormula: `SEARCH("${propertyId}", {Properties})`,
-          fields: [
-            'Properties',
-            'Guest Name',
-            'Guest Email',
-            'Guest phone number',
-            'Messages',
-            'Check-in Date',
-            'Check-out Date',
-            'Auto Pilot',
-            'UnreadCount'
-          ],
+          filterByFormula: `{ConversationId} = '${conversationId}'`,
+          sort: [{ field: 'Created', direction: 'asc' }]
         })
         .all();
 
-      return records.map(mapAirtableToConversation);
+      return this.mapMessages(
+        records.map(record => ({
+          id: record.id,
+          ...record.fields,
+          conversationId
+        }))
+      );
     } catch (error) {
-      console.error('Error fetching property conversations:', error);
-      throw error;
+      throw handleServiceError(error, 'conversationService.getMessages');
     }
   },
 
-  async updateConversation(
-    conversationId: string, 
-    data: { Messages?: string; unreadCount?: number; 'Auto Pilot'?: boolean }
-  ): Promise<Conversation> {
+  // Envoyer un message
+  async sendMessage(conversationId: string, content: string, sender: 'guest' | 'host'): Promise<Message> {
     try {
-      if (!base) throw new Error('Airtable is not configured');
+      const record = await base(MESSAGES_TABLE).create({
+        ConversationId: conversationId,
+        Content: content,
+        Sender: sender,
+        Timestamp: new Date().toISOString()
+      });
 
-      const formattedData: Record<string, any> = {};
-      
-      if (data.Messages) {
-        formattedData.Messages = data.Messages;
-        const messages = JSON.parse(data.Messages);
-        if (Array.isArray(messages) && messages.length > 0) {
-          const lastMessage = messages[messages.length - 1];
-          if (lastMessage.sender === 'guest' && lastMessage.text?.trim()) {
-            // Détecter les tags d'urgence dans le dernier message
-            const emergencyTags = detectEmergencyTags(lastMessage.text);
-            
-            // Si des tags d'urgence sont détectés
-            if (emergencyTags.length > 0) {
-              console.log('Emergency tags detected:', emergencyTags);
-              
-              // Ajouter les tags au message
-              lastMessage.emergencyTags = emergencyTags;
-              
-              // Désactiver l'Auto Pilot
-              formattedData['Auto Pilot'] = false;
-              
-              // Mettre à jour le message avec les tags
-              messages[messages.length - 1] = lastMessage;
-              formattedData.Messages = JSON.stringify(messages);
-              
-              // Envoyer une notification d'urgence
-              await sendNotification(
-                'Message urgent détecté !',
-                `Auto-pilot désactivé\nTags: ${emergencyTags.join(', ')}\nMessage: ${lastMessage.text}`
-              );
-            }
-
-            // Envoyer une notification normale si ce n'est pas un message WhatsApp
-            if (lastMessage.platform !== 'whatsapp') {
-              await sendNotification(
-                'Nouveau message', 
-                lastMessage.text
-              );
-            }
-          }
-        }
-      }
-
-      if (data.unreadCount !== undefined) {
-        formattedData.UnreadCount = data.unreadCount;
-      }
-
-      if (data['Auto Pilot'] !== undefined) {
-        formattedData['Auto Pilot'] = data['Auto Pilot'];
-      }
-
-      const record = await base('Conversations').update(conversationId, formattedData);
-      return mapAirtableToConversation(record);
+      return {
+        id: record.id,
+        conversationId,
+        content,
+        sender,
+        timestamp: new Date(),
+        type: 'text',
+        status: 'sent'
+      };
     } catch (error) {
-      throw handleServiceError(error);
+      throw handleServiceError(error, 'conversationService.sendMessage');
     }
   },
 
+  // Marquer une conversation comme lue
+  async markAsRead(conversationId: string): Promise<void> {
+    try {
+      const conversation = await this.getConversation(conversationId);
+      if (conversation.unreadCount === 0) return;
+
+      await base(CONVERSATIONS_TABLE).update(conversationId, {
+        UnreadCount: 0
+      });
+    } catch (error) {
+      throw handleServiceError(error, 'conversationService.markAsRead');
+    }
+  },
+
+  // Incrémenter le compteur de messages non lus
   async incrementUnreadCount(conversationId: string): Promise<void> {
     try {
-      if (!base) throw new Error('Airtable is not configured');
-
-      // Récupérer le compteur actuel
-      const conversation = await this.fetchConversationById(conversationId);
+      const conversation = await this.getConversation(conversationId);
       const currentCount = conversation.unreadCount || 0;
-      const newCount = currentCount + 1;
 
-      // Mettre à jour directement dans Airtable
-      await base('Conversations').update(conversationId, {
-        'UnreadCount': newCount
-      });
-
-      // Mettre à jour localement via updateConversation
-      await this.updateConversation(conversationId, {
-        unreadCount: newCount
+      await base(CONVERSATIONS_TABLE).update(conversationId, {
+        UnreadCount: currentCount + 1
       });
     } catch (error) {
-      console.error('Error incrementing unread count:', error);
-      throw error;
-    }
-  },
-
-  async markConversationAsRead(conversationId: string): Promise<void> {
-    try {
-      if (!base) throw new Error('Airtable is not configured');
-
-      // Mettre à jour directement dans Airtable
-      await base('Conversations').update(conversationId, {
-        'UnreadCount': 0
-      });
-
-      // Mettre à jour localement via updateConversation
-      await this.updateConversation(conversationId, {
-        unreadCount: 0
-      });
-    } catch (error) {
-      console.error('Error marking conversation as read:', error);
-      throw error;
-    }
-  },
-
-  async addConversation(data: Record<string, any>): Promise<Conversation> {
-    try {
-      if (!base) throw new Error('Airtable is not configured');
-
-      console.log('Creating new conversation with data:', data);
-
-      // S'assurer que Properties est un tableau
-      const formattedData = {
-        ...data,
-        Properties: Array.isArray(data.Properties) ? data.Properties : [data.Properties],
-        Messages: data.Messages || '[]',
-        'Auto Pilot': false, // Désactivé par défaut
-        'UnreadCount': 0
-      };
-
-      console.log('Formatted data for Airtable:', formattedData);
-
-      const record = await base('Conversations').create(formattedData);
-      console.log('Created conversation record:', record.id);
-      
-      return mapAirtableToConversation(record);
-    } catch (error) {
-      console.error('Error adding conversation:', error);
-      throw error;
-    }
-  },
-
-  async deleteConversation(conversationId: string): Promise<boolean> {
-    try {
-      if (!base) throw new Error('Airtable is not configured');
-      if (!conversationId) throw new Error('Conversation ID is required');
-
-      await base('Conversations').destroy(conversationId);
-      return true;
-    } catch (error) {
-      console.error('Error deleting conversation:', error);
-      throw error;
+      throw handleServiceError(error, 'conversationService.incrementUnreadCount');
     }
   }
 };
