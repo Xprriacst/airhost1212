@@ -163,6 +163,24 @@ const ConversationDetail: React.FC = () => {
     return () => clearInterval(intervalId);
   }, [conversationId]);
 
+  // Mise à jour de l'état auto-pilot quand la conversation change
+  useEffect(() => {
+    if (conversation?.autoPilot !== undefined) {
+      setIsAutoPilot(conversation.autoPilot);
+    }
+  }, [conversation?.autoPilot]);
+
+  // Afficher une notification quand l'auto-pilot change
+  useEffect(() => {
+    if (conversation?.messages?.length > 0) {
+      const lastMessage = conversation.messages[conversation.messages.length - 1];
+      if (lastMessage.emergencyTags?.length > 0 && !isAutoPilot) {
+        // Afficher une notification toast ou une alerte
+        alert('Auto-pilot désactivé à cause d\'une urgence détectée');
+      }
+    }
+  }, [isAutoPilot, conversation?.messages]);
+
   // Ajuste la hauteur du textarea au fur et à mesure
   useEffect(() => {
     const textarea = textareaRef.current;
@@ -375,46 +393,36 @@ const ConversationDetail: React.FC = () => {
 
   return (
     <div className="fixed inset-0 flex flex-col bg-white">
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 bg-white border-b sticky top-0 z-10">
-        <div className="flex items-center gap-2">
-          <button
+      {/* Header avec indication d'auto-pilot */}
+      <div className="flex items-center justify-between p-4 border-b">
+        <div className="flex items-center space-x-4">
+          <button 
             onClick={() => navigate(-1)}
-            className="p-2 -ml-2 hover:bg-gray-50 rounded-full"
+            className="p-2 hover:bg-gray-100 rounded-full"
           >
-            <ArrowLeft className="w-6 h-6 text-gray-700" />
+            <ArrowLeft className="w-6 h-6" />
           </button>
-          <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
-            <span className="text-gray-600 text-sm font-medium">
-              {conversation?.guestName?.charAt(0).toUpperCase()}
-            </span>
-          </div>
           <div>
-            <h2 className="font-medium">{conversation?.guestName || 'Conversation'}</h2>
-            <p className="text-xs text-gray-500">
-              {conversation?.checkIn && new Date(conversation.checkIn).toLocaleDateString()}
-              {' - '}
-              {conversation?.checkOut && new Date(conversation.checkOut).toLocaleDateString()}
+            <h1 className="text-lg font-medium">{conversation?.guestName || 'Guest'}</h1>
+            <p className="text-sm text-gray-500">
+              {conversation?.checkIn && conversation?.checkOut 
+                ? `${new Date(conversation.checkIn).toLocaleDateString()} - ${new Date(conversation.checkOut).toLocaleDateString()}`
+                : 'Invalid Date - Invalid Date'
+              }
             </p>
           </div>
         </div>
-
-        <button
-          onClick={handleAutoPilotToggle}
-          className={`flex items-center gap-2 px-3 py-1.5 rounded-full ${
-            isAutoPilot
-              ? 'bg-blue-100 text-blue-700'
-              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-          }`}
-        >
-          <Zap className={`w-4 h-4 ${isAutoPilot ? 'text-blue-500' : 'text-gray-400'}`} />
-          <span className="text-sm font-medium">
-            {isAutoPilot ? 'Auto-pilot ON' : 'Auto-pilot OFF'}
-          </span>
-        </button>
+        <div className="flex items-center space-x-2">
+          <div className={`flex items-center px-3 py-1 rounded-full ${
+            isAutoPilot ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+          }`}>
+            <Zap className="w-4 h-4 mr-1" />
+            <span className="text-sm">Auto-pilot {isAutoPilot ? 'ON' : 'OFF'}</span>
+          </div>
+        </div>
       </div>
 
-      {/* Alert d'urgence - afficher pour le dernier message s'il a des tags */}
+      {/* Alert d'urgence */}
       {conversation?.messages?.length > 0 && 
        conversation.messages[conversation.messages.length - 1].emergencyTags?.map(tag => (
         <EmergencyAlert key={tag} tag={tag} />

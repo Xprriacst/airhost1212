@@ -171,15 +171,24 @@ export const conversationService = {
             // Détecter les tags d'urgence dans le dernier message
             const emergencyTags = detectEmergencyTags(lastMessage.text);
             
-            // Si des tags d'urgence sont détectés, désactiver l'Auto Pilot
+            // Si des tags d'urgence sont détectés
             if (emergencyTags.length > 0) {
               console.log('Emergency tags detected:', emergencyTags);
+              
+              // Ajouter les tags au message
+              lastMessage.emergencyTags = emergencyTags;
+              
+              // Désactiver l'Auto Pilot
               formattedData['Auto Pilot'] = false;
+              
+              // Mettre à jour le message avec les tags
+              messages[messages.length - 1] = lastMessage;
+              formattedData.Messages = JSON.stringify(messages);
               
               // Envoyer une notification d'urgence
               await sendNotification(
                 'Message urgent détecté !',
-                `Tags: ${emergencyTags.join(', ')}\\nMessage: ${lastMessage.text}`
+                `Auto-pilot désactivé\nTags: ${emergencyTags.join(', ')}\nMessage: ${lastMessage.text}`
               );
             }
 
