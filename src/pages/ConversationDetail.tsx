@@ -1,13 +1,13 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Send, Sparkles, Zap } from 'lucide-react';
+import { ArrowLeft, Send, Sparkles, Zap, X } from 'lucide-react';
 import { conversationService } from '../services';
 import { propertyService } from '../services/airtable/propertyService';
 import { aiService } from '../services/ai/aiService';
 import type { Conversation, Message, Property } from '../types';
 import { AlertTriangle, Clock, Package, Wrench } from 'lucide-react';
 
-const EmergencyAlert = ({ tag }: { tag: string }) => {
+const EmergencyAlert = ({ tag, onClose }: { tag: string; onClose: () => void }) => {
   const getEmergencyInfo = () => {
     switch (tag) {
       case 'urgence':
@@ -35,7 +35,7 @@ const EmergencyAlert = ({ tag }: { tag: string }) => {
         return {
           title: 'Problème de stock',
           description: 'Il manque des consommables',
-          color: 'yellow',
+          color: 'gray',
           icon: Package
         };
       case 'reponse_inconnue':
@@ -56,14 +56,20 @@ const EmergencyAlert = ({ tag }: { tag: string }) => {
   const IconComponent = info.icon;
 
   return (
-    <div className={`bg-${info.color}-50 border-l-4 border-${info.color}-500 p-4 mb-4`}>
-      <div className="flex items-start">
-        <div className={`p-2 rounded-lg bg-${info.color}-100 text-${info.color}-600`}>
+    <div className={`bg-white border-l-4 border-${info.color}-500 p-4 mb-4 relative`}>
+      <button 
+        onClick={onClose}
+        className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
+      >
+        <X className="w-5 h-5" />
+      </button>
+      <div className="flex items-start pr-8">
+        <div className={`p-2 text-${info.color}-600`}>
           <IconComponent className="w-5 h-5" />
         </div>
         <div className="ml-3">
-          <h3 className={`text-${info.color}-800 font-medium`}>{info.title}</h3>
-          <p className={`text-${info.color}-600 text-sm mt-1`}>{info.description}</p>
+          <h3 className="text-gray-800 font-medium">{info.title}</h3>
+          <p className="text-gray-600 mt-1">{info.description}</p>
         </div>
       </div>
     </div>
@@ -85,6 +91,7 @@ const ConversationDetail: React.FC = () => {
   const [generatingResponse, setGeneratingResponse] = useState(false);
   const [isAutoPilot, setIsAutoPilot] = useState(false);
   const [textareaLines, setTextareaLines] = useState(1);
+  const [dismissedAlerts, setDismissedAlerts] = useState<Set<string>>(new Set());
 
   // Récupérer la conversation
   useEffect(() => {
@@ -375,6 +382,10 @@ const ConversationDetail: React.FC = () => {
     }
   };
 
+  const handleDismissAlert = (tag: string) => {
+    setDismissedAlerts(prev => new Set([...prev, tag]));
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[100dvh]">
@@ -393,44 +404,58 @@ const ConversationDetail: React.FC = () => {
 
   return (
     <div className="fixed inset-0 flex flex-col bg-white">
-      {/* Header avec indication d'auto-pilot */}
-      <div className="flex items-center justify-between p-4 border-b">
-        <div className="flex items-center space-x-4">
-          <button 
+      {/* Header fixé */}
+      <div className="fixed top-0 left-0 right-0 flex items-center justify-between px-4 py-3 bg-white border-b z-50">
+        <div className="flex items-center gap-2">
+          <button
             onClick={() => navigate(-1)}
-            className="p-2 hover:bg-gray-100 rounded-full"
+            className="p-2 -ml-2 hover:bg-gray-50 rounded-full"
           >
-            <ArrowLeft className="w-6 h-6" />
+            <ArrowLeft className="w-6 h-6 text-gray-700" />
           </button>
+          <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
+            <span className="text-gray-600 text-sm font-medium">
+              {conversation?.guestName?.charAt(0).toUpperCase()}
+            </span>
+          </div>
           <div>
-            <h1 className="text-lg font-medium">{conversation?.guestName || 'Guest'}</h1>
-            <p className="text-sm text-gray-500">
-              {conversation?.checkIn && conversation?.checkOut 
-                ? `${new Date(conversation.checkIn).toLocaleDateString()} - ${new Date(conversation.checkOut).toLocaleDateString()}`
-                : 'Invalid Date - Invalid Date'
-              }
+            <h2 className="font-medium">{conversation?.guestName || 'Conversation'}</h2>
+            <p className="text-xs text-gray-500">
+              {conversation?.checkIn && new Date(conversation.checkIn).toLocaleDateString()}
+              {' - '}
+              {conversation?.checkOut && new Date(conversation.checkOut).toLocaleDateString()}
             </p>
           </div>
         </div>
-        <div className="flex items-center space-x-2">
-          <button
-            onClick={handleAutoPilotToggle}
-            className={`flex items-center px-3 py-1 rounded-full ${
-              isAutoPilot 
-                ? 'bg-green-100 text-green-800 hover:bg-green-200' 
-                : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
-            }`}
-          >
-            <Zap className="w-4 h-4 mr-1" />
-            <span className="text-sm">Auto-pilot {isAutoPilot ? 'ON' : 'OFF'}</span>
-          </button>
-        </div>
+
+        <button
+          onClick={handleAutoPilotToggle}
+          className={`flex items-center gap-2 px-3 py-1.5 rounded-full ${
+            isAutoPilot
+              ? 'bg-blue-100 text-blue-700'
+              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+          }`}
+        >
+          <Zap className={`w-4 h-4 ${isAutoPilot ? 'text-blue-500' : 'text-gray-400'}`} />
+          <span className="text-sm font-medium">
+            AI {isAutoPilot ? 'ON' : 'OFF'}
+          </span>
+        </button>
       </div>
+
+      {/* Espacement pour le header fixe */}
+      <div className="h-[72px]" />
 
       {/* Alert d'urgence */}
       {conversation?.messages?.length > 0 && 
-       conversation.messages[conversation.messages.length - 1].emergencyTags?.map(tag => (
-        <EmergencyAlert key={tag} tag={tag} />
+       conversation.messages[conversation.messages.length - 1].emergencyTags
+         ?.filter(tag => !dismissedAlerts.has(tag))
+         .map(tag => (
+           <EmergencyAlert 
+             key={tag} 
+             tag={tag} 
+             onClose={() => handleDismissAlert(tag)}
+           />
       ))}
 
       {/* Messages */}
