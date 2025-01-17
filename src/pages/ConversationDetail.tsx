@@ -413,12 +413,17 @@ const ConversationDetail: React.FC = () => {
           </div>
         </div>
         <div className="flex items-center space-x-2">
-          <div className={`flex items-center px-3 py-1 rounded-full ${
-            isAutoPilot ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-          }`}>
+          <button
+            onClick={handleAutoPilotToggle}
+            className={`flex items-center px-3 py-1 rounded-full ${
+              isAutoPilot 
+                ? 'bg-green-100 text-green-800 hover:bg-green-200' 
+                : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
+            }`}
+          >
             <Zap className="w-4 h-4 mr-1" />
             <span className="text-sm">Auto-pilot {isAutoPilot ? 'ON' : 'OFF'}</span>
-          </div>
+          </button>
         </div>
       </div>
 
