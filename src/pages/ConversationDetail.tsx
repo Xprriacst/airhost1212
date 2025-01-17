@@ -86,6 +86,9 @@ export const ConversationDetail: React.FC = () => {
       console.error('Error sending message:', error);
     } finally {
       setIsLoading(false);
+      if (textareaRef.current) {
+        textareaRef.current.focus();
+      }
     }
   };
 
@@ -110,7 +113,13 @@ export const ConversationDetail: React.FC = () => {
         display: 'flex',
         flexDirection: 'column',
         height: '100vh',
-        overflow: 'hidden'
+        width: '100%',
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        bgcolor: 'background.default'
       }}
     >
       <ConversationHeader
@@ -131,7 +140,10 @@ export const ConversationDetail: React.FC = () => {
         sx={{
           flex: 1,
           overflow: 'auto',
-          padding: 2,
+          mt: '80px', // Hauteur du header
+          mb: '80px', // Hauteur de la zone de message
+          px: 2,
+          py: 1,
           display: 'flex',
           flexDirection: 'column'
         }}
@@ -143,12 +155,17 @@ export const ConversationDetail: React.FC = () => {
         component="form"
         onSubmit={handleSendMessage}
         sx={{
+          position: 'fixed',
+          bottom: 0,
+          left: 0,
+          right: 0,
           p: 2,
           backgroundColor: 'background.paper',
           borderTop: 1,
           borderColor: 'divider',
           display: 'flex',
-          gap: 1
+          gap: 1,
+          minHeight: '80px'
         }}
       >
         <TextField
@@ -157,7 +174,7 @@ export const ConversationDetail: React.FC = () => {
           multiline
           maxRows={4}
           value={newMessage}
-          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewMessage(e.target.value)}
+          onChange={(e) => setNewMessage(e.target.value)}
           onKeyDown={handleKeyDown}
           disabled={isLoading}
           placeholder="Type your message..."

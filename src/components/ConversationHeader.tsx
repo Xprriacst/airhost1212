@@ -6,10 +6,7 @@ interface ConversationHeaderProps {
   subtitle: React.ReactNode;
 }
 
-export const ConversationHeader: React.FC<ConversationHeaderProps> = ({
-  title,
-  subtitle
-}) => {
+export const ConversationHeader: React.FC<ConversationHeaderProps> = ({ title, subtitle }) => {
   return (
     <Box
       data-testid="conversation-header"
@@ -18,14 +15,16 @@ export const ConversationHeader: React.FC<ConversationHeaderProps> = ({
         top: 0,
         left: 0,
         right: 0,
-        p: 2,
-        bgcolor: 'background.paper',
+        zIndex: 1100,
+        backgroundColor: 'background.paper',
         borderBottom: 1,
         borderColor: 'divider',
-        zIndex: 'appBar'
+        padding: 2,
+        height: 'auto',
+        minHeight: '80px'
       }}
     >
-      <Typography variant="h6" component="h1">
+      <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 1 }}>
         {title}
       </Typography>
       <Typography variant="body2" color="text.secondary">
