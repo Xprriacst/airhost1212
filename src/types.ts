@@ -6,6 +6,12 @@ export interface Message {
   sender: 'host' | 'guest';
   type?: 'text' | 'image' | 'video' | 'audio';
   status?: 'pending' | 'sent' | 'delivered' | 'read' | 'failed';
+  emergencyTags?: EmergencyTag[];
+  metadata?: {
+    platform?: 'whatsapp' | 'sms' | 'email';
+    waMessageId?: string;
+    waNotifyName?: string;
+  };
 }
 
 export interface Conversation {
