@@ -18,7 +18,7 @@ const normalizePhoneNumber = (phone: string): string => {
 // Fonction de formatage du numéro de téléphone pour WhatsApp
 const formatPhoneForWhatsApp = (phone: string): string => {
   const normalized = normalizePhoneNumber(phone);
-  return `33${normalized}`;
+  return `33${normalized}@c.us`;  // Ajout direct du @c.us pour le format WhatsApp
 };
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -113,20 +113,14 @@ export const handler: Handler = async (event) => {
       Messages: JSON.stringify(updatedMessages)
     });
 
-    // Formater le numéro de téléphone pour WhatsApp
-    const formattedPhone = formatPhoneForWhatsApp(payload.guestPhone);
-    console.log('📱 Phone number formatting:', {
-      original: payload.guestPhone,
-      formatted: formattedPhone
-    });
-
-    // Formater le message
+    // Formater le message (supprimer les retours à la ligne multiples)
     const formattedMessage = payload.message
       .replace(/\n{2,}/g, ' ')
       .replace(/\n/g, ' ');
 
+    // Créer le payload pour Make exactement comme attendu
     const makePayload = {
-      chatId: formattedPhone + '@c.us',
+      chatId: formatPhoneForWhatsApp(payload.guestPhone),
       message: formattedMessage
     };
 
