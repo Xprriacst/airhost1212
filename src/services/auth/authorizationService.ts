@@ -34,7 +34,10 @@ class AuthorizationService {
     try {
       const userProperties = await this.getUserProperties(userId);
       const propertyIds = Array.isArray(propertyId) ? propertyId : [propertyId];
-      return userProperties.some(up => propertyIds.includes(up.propertyId));
+      console.log('Checking access to properties:', propertyIds, 'for user properties:', userProperties);
+      const hasAccess = userProperties.some(up => propertyIds.includes(up.propertyId));
+      console.log('Access result:', hasAccess);
+      return hasAccess;
     } catch (error) {
       console.error('Error checking property access:', error);
       return false;

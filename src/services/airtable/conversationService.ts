@@ -125,9 +125,10 @@ export const conversationService = {
       }
 
       const conversation = mapAirtableToConversation(record);
-      const propertyId = record.get('Properties');
-      const hasAccess = await authorizationService.canAccessProperty(user.id, propertyId);
+      // Utiliser la propriété déjà mappée dans la conversation
+      const hasAccess = await authorizationService.canAccessProperty(user.id, conversation.propertyId);
       if (!hasAccess) {
+        console.error('Access denied to property:', conversation.propertyId);
         throw new Error('Access denied to this conversation');
       }
 
@@ -313,9 +314,10 @@ export const conversationService = {
       console.log('Created conversation record:', record.id);
       
       const conversation = mapAirtableToConversation(record);
-      const propertyId = record.get('Properties');
-      const hasAccess = await authorizationService.canAccessProperty(user.id, propertyId);
+      // Utiliser la propriété déjà mappée dans la conversation
+      const hasAccess = await authorizationService.canAccessProperty(user.id, conversation.propertyId);
       if (!hasAccess) {
+        console.error('Access denied to property:', conversation.propertyId);
         throw new Error('Access denied to this conversation');
       }
 
