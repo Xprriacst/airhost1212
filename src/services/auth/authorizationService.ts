@@ -40,6 +40,20 @@ class AuthorizationService {
     }
   }
 
+  async canAccessConversation(userId: string, conversation: Conversation): Promise<boolean> {
+    try {
+      const propertyId = conversation.fields?.Properties?.[0] || conversation.propertyId;
+      if (!propertyId) {
+        console.error('No property ID found for conversation');
+        return false;
+      }
+      return this.canAccessProperty(userId, propertyId);
+    } catch (error) {
+      console.error('Error checking conversation access:', error);
+      return false;
+    }
+  }
+
   async filterAccessibleProperties(userId: string, properties: Property[]): Promise<Property[]> {
     try {
       const userProperties = await this.getUserProperties(userId);
