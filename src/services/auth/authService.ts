@@ -82,4 +82,8 @@ export class AuthService {
       throw new Error(`Erreur lors de la connexion: ${error.message}`);
     }
   }
+
+  static getUsers(query: { filterByFormula?: string; fields?: string[] }) {
+    return base(this.TABLE_NAME).select(query);
+  }
 }

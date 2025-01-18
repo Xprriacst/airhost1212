@@ -1,4 +1,5 @@
 import { conversationService as airtableConversationService } from './airtable/conversationService';
+import { authorizationService } from './authorizationService';
 import type { Conversation } from '../types';
 import axios from 'axios';
 
@@ -15,19 +16,35 @@ const sendNotification = async (title: string, body: string) => {
 };
 
 export const conversationService = {
-  async fetchAllConversations(): Promise<Conversation[]> {
-    return airtableConversationService.fetchAllConversations();
+  async fetchAllConversations(userId: string): Promise<Conversation[]> {
+    const conversations = await airtableConversationService.fetchAllConversations();
+    return authorizationService.filterAccessibleConversations(userId, conversations);
   },
 
-  async fetchPropertyConversations(propertyId: string): Promise<Conversation[]> {
+  async fetchPropertyConversations(userId: string, propertyId: string): Promise<Conversation[]> {
+    const canAccess = await authorizationService.canAccessProperty(userId, propertyId);
+    if (!canAccess) {
+      throw new Error('Unauthorized access to property conversations');
+    }
     return airtableConversationService.fetchPropertyConversations(propertyId);
   },
 
-  async fetchConversationById(conversationId: string): Promise<Conversation> {
-    return airtableConversationService.fetchConversationById(conversationId);
+  async fetchConversationById(userId: string, conversationId: string): Promise<Conversation> {
+    const conversation = await airtableConversationService.fetchConversationById(conversationId);
+    const canAccess = await authorizationService.canAccessConversation(userId, conversation);
+    if (!canAccess) {
+      throw new Error('Unauthorized access to conversation');
+    }
+    return conversation;
   },
 
-  async updateConversation(conversationId: string, data: Record<string, any>) {
+  async updateConversation(userId: string, conversationId: string, data: Record<string, any>) {
+    const conversation = await airtableConversationService.fetchConversationById(conversationId);
+    const canAccess = await authorizationService.canAccessConversation(userId, conversation);
+    if (!canAccess) {
+      throw new Error('Unauthorized access to update conversation');
+    }
+
     const result = await airtableConversationService.updateConversation(conversationId, data);
     
     // Si c'est un nouveau message
@@ -44,11 +61,20 @@ export const conversationService = {
     return result;
   },
 
-  async addConversation(conversationData: Record<string, any>) {
+  async addConversation(userId: string, conversationData: Record<string, any>) {
+    const canAccess = await authorizationService.canAccessProperty(userId, conversationData.propertyId);
+    if (!canAccess) {
+      throw new Error('Unauthorized access to add conversation');
+    }
     return airtableConversationService.addConversation(conversationData);
   },
 
-  async deleteConversation(conversationId: string) {
+  async deleteConversation(userId: string, conversationId: string) {
+    const conversation = await airtableConversationService.fetchConversationById(conversationId);
+    const canAccess = await authorizationService.canAccessConversation(userId, conversation);
+    if (!canAccess) {
+      throw new Error('Unauthorized access to delete conversation');
+    }
     return airtableConversationService.deleteConversation(conversationId);
   },
 };
