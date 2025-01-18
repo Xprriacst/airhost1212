@@ -1,8 +1,8 @@
-export interface UserPropertyRecord {
+export interface UserProperty {
   userId: string;
   propertyId: string;
   role: 'owner' | 'manager' | 'viewer';
-  createdAt: Date;
+  createdAt: string;
   createdBy: string;
 }
 

@@ -1,51 +1,53 @@
 import { base } from './config';
 import { handleServiceError } from '../../utils/error';
-import { UserPropertyRecord } from '../../types/auth';
+import { UserProperty } from '../../types/auth';
 
-const mapAirtableToUserProperty = (record: any): UserPropertyRecord => ({
+const mapAirtableToUserProperty = (record: any): UserProperty => ({
   userId: record.get('User ID'),
   propertyId: record.get('Property ID'),
   role: record.get('Role'),
-  createdAt: new Date(record.get('Created At')),
-  createdBy: record.get('Created By'),
+  createdAt: record.get('createdAt'),
+  createdBy: record.get('createdBy'),
 });
 
 export const userPropertyService = {
-  async getUserProperties(userId: string): Promise<UserPropertyRecord[]> {
+  async getUserProperties(userId: string): Promise<UserProperty[]> {
     try {
       if (!base) throw new Error('Airtable is not configured');
 
       const records = await base('User Properties')
         .select({
           filterByFormula: `{User ID} = '${userId}'`,
-          fields: ['User ID', 'Property ID', 'Role', 'Created At', 'Created By']
+          fields: ['User ID', 'Property ID', 'Role', 'createdAt', 'createdBy']
         })
         .all();
 
       return records.map(mapAirtableToUserProperty);
     } catch (error) {
+      console.error('Error getting user properties:', error);
       throw handleServiceError(error);
     }
   },
 
-  async getPropertyUsers(propertyId: string): Promise<UserPropertyRecord[]> {
+  async getPropertyUsers(propertyId: string): Promise<UserProperty[]> {
     try {
       if (!base) throw new Error('Airtable is not configured');
 
       const records = await base('User Properties')
         .select({
           filterByFormula: `{Property ID} = '${propertyId}'`,
-          fields: ['User ID', 'Property ID', 'Role', 'Created At', 'Created By']
+          fields: ['User ID', 'Property ID', 'Role', 'createdAt', 'createdBy']
         })
         .all();
 
       return records.map(mapAirtableToUserProperty);
     } catch (error) {
+      console.error('Error getting property users:', error);
       throw handleServiceError(error);
     }
   },
 
-  async addUserProperty(data: Omit<UserPropertyRecord, 'createdAt'>): Promise<UserPropertyRecord> {
+  async addUserProperty(data: UserProperty): Promise<UserProperty> {
     try {
       if (!base) throw new Error('Airtable is not configured');
 
@@ -53,11 +55,13 @@ export const userPropertyService = {
         'User ID': data.userId,
         'Property ID': data.propertyId,
         'Role': data.role,
-        'Created By': data.createdBy
+        'createdAt': data.createdAt,
+        'createdBy': data.createdBy
       });
 
       return mapAirtableToUserProperty(record);
     } catch (error) {
+      console.error('Error adding user property:', error);
       throw handleServiceError(error);
     }
   },
@@ -66,7 +70,7 @@ export const userPropertyService = {
     userId: string,
     propertyId: string,
     role: 'owner' | 'manager' | 'viewer'
-  ): Promise<UserPropertyRecord> {
+  ): Promise<UserProperty> {
     try {
       if (!base) throw new Error('Airtable is not configured');
 
