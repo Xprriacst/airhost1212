@@ -6,6 +6,26 @@ import type { Property } from '../../types';
 import { authService, authorizationService } from '..';
 
 export const propertyService = {
+  async getAllPropertiesWithoutFiltering(): Promise<Property[]> {
+    try {
+      if (!base) {
+        throw new Error('Airtable is not configured');
+      }
+
+      const records = await base('Properties')
+        .select({
+          view: 'Grid view',
+          fields: ['Name', 'Address', 'Photos']
+        })
+        .all();
+
+      return records.map(mapRecordToProperty);
+    } catch (error) {
+      console.error('Error fetching all properties:', error);
+      throw error;
+    }
+  },
+
   async fetchPropertyById(id: string): Promise<Property> {
     try {
       if (!base) {
@@ -47,13 +67,7 @@ export const propertyService = {
       const records = await base('Properties')
         .select({ 
           view: 'Grid view',
-          fields: [
-            'Name',
-            'Address',
-            'Photos',
-            'AIInstructions',
-            'AutoPilot'
-          ]
+          fields: ['Name', 'Address', 'Photos']
         })
         .all();
 
@@ -88,9 +102,7 @@ export const propertyService = {
       const record = await base('Properties').update(id, {
         Name: propertyData.name,
         Address: propertyData.address,
-        Photos: propertyData.photos,
-        AIInstructions: propertyData.aiInstructions,
-        AutoPilot: propertyData.autoPilot
+        Photos: propertyData.photos
       });
 
       return mapRecordToProperty(record);

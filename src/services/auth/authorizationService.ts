@@ -8,11 +8,11 @@ export const authorizationService = {
         throw new Error('Airtable is not configured');
       }
 
-      const records = await base('UserProperties')
+      const records = await base('User Properties')
         .select({
-          filterByFormula: `AND({UserId} = '${userId}', {PropertyId} = '${propertyId}')`,
+          filterByFormula: `AND({User ID} = '${userId}', {Property ID} = '${propertyId}')`,
           maxRecords: 1,
-          fields: ['UserId', 'PropertyId', 'Role']
+          fields: ['User ID', 'Property ID', 'Role']
         })
         .firstPage();
 
@@ -44,16 +44,16 @@ export const authorizationService = {
       }
 
       // Récupérer toutes les associations utilisateur-propriété pour cet utilisateur
-      const records = await base('UserProperties')
+      const records = await base('User Properties')
         .select({
-          filterByFormula: `{UserId} = '${userId}'`,
-          fields: ['UserId', 'PropertyId', 'Role']
+          filterByFormula: `{User ID} = '${userId}'`,
+          fields: ['User ID', 'Property ID', 'Role']
         })
         .all();
 
       // Créer un Set des IDs de propriétés accessibles
       const accessiblePropertyIds = new Set(
-        records.map(record => record.get('PropertyId'))
+        records.map(record => record.get('Property ID'))
       );
 
       // Filtrer les propriétés
@@ -71,16 +71,16 @@ export const authorizationService = {
       }
 
       // Récupérer toutes les associations utilisateur-propriété pour cet utilisateur
-      const records = await base('UserProperties')
+      const records = await base('User Properties')
         .select({
-          filterByFormula: `{UserId} = '${userId}'`,
-          fields: ['UserId', 'PropertyId', 'Role']
+          filterByFormula: `{User ID} = '${userId}'`,
+          fields: ['User ID', 'Property ID', 'Role']
         })
         .all();
 
       // Créer un Set des IDs de propriétés accessibles
       const accessiblePropertyIds = new Set(
-        records.map(record => record.get('PropertyId'))
+        records.map(record => record.get('Property ID'))
       );
 
       // Filtrer les conversations

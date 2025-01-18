@@ -61,6 +61,7 @@ class AuthService {
         createdAt: record.fields.createdAt as string,
       };
 
+      console.log('[Auth] Created user with ID:', user.id);
       this.setCurrentUser(user);
       return user;
     } catch (error) {
@@ -105,6 +106,7 @@ class AuthService {
         throw new Error('Email ou mot de passe incorrect');
       }
 
+      console.log('[Auth] User ID:', user.id);
       this.setCurrentUser(user);
       return user;
     } catch (error) {
