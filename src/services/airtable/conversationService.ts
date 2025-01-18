@@ -2,6 +2,7 @@ import { base } from './config';
 import { handleServiceError } from '../../utils/error';
 import axios from 'axios';
 import type { Conversation, Message, EmergencyTag } from '../../types';
+import { authService, authorizationService } from '..';
 
 const parseMessages = (rawMessages: any): Message[] => {
   try {
@@ -81,6 +82,9 @@ export const conversationService = {
     try {
       if (!base) throw new Error('Airtable is not configured');
 
+      const user = authService.getCurrentUser();
+      if (!user) throw new Error('User not authenticated');
+
       const records = await base('Conversations')
         .select({
           fields: [
@@ -97,7 +101,8 @@ export const conversationService = {
         })
         .all();
 
-      return records.map(mapAirtableToConversation);
+      const conversations = records.map(mapAirtableToConversation);
+      return await authorizationService.filterAccessibleConversations(user.id, conversations);
     } catch (error) {
       console.error('Error fetching all conversations:', error);
       throw error;
@@ -109,6 +114,9 @@ export const conversationService = {
       if (!base) throw new Error('Airtable is not configured');
       if (!conversationId) throw new Error('Conversation ID is required');
 
+      const user = authService.getCurrentUser();
+      if (!user) throw new Error('User not authenticated');
+
       console.log('Fetching conversation:', conversationId);
       const record = await base('Conversations').find(conversationId);
       
@@ -116,7 +124,14 @@ export const conversationService = {
         throw new Error(`Conversation not found: ${conversationId}`);
       }
 
-      return mapAirtableToConversation(record);
+      const conversation = mapAirtableToConversation(record);
+      const propertyId = record.get('Properties');
+      const hasAccess = await authorizationService.canAccessProperty(user.id, propertyId);
+      if (!hasAccess) {
+        throw new Error('Access denied to this conversation');
+      }
+
+      return conversation;
     } catch (error) {
       console.error('Error fetching conversation:', error);
       throw error;
@@ -127,6 +142,9 @@ export const conversationService = {
     try {
       if (!base) throw new Error('Airtable is not configured');
       if (!propertyId) throw new Error('Property ID is required');
+
+      const user = authService.getCurrentUser();
+      if (!user) throw new Error('User not authenticated');
 
       console.log('Fetching conversations for property:', propertyId);
       const records = await base('Conversations')
@@ -146,7 +164,8 @@ export const conversationService = {
         })
         .all();
 
-      return records.map(mapAirtableToConversation);
+      const conversations = records.map(mapAirtableToConversation);
+      return await authorizationService.filterAccessibleConversations(user.id, conversations);
     } catch (error) {
       console.error('Error fetching property conversations:', error);
       throw error;
@@ -159,6 +178,9 @@ export const conversationService = {
   ): Promise<Conversation> {
     try {
       if (!base) throw new Error('Airtable is not configured');
+
+      const user = authService.getCurrentUser();
+      if (!user) throw new Error('User not authenticated');
 
       const formattedData: Record<string, any> = {};
       
@@ -222,6 +244,9 @@ export const conversationService = {
     try {
       if (!base) throw new Error('Airtable is not configured');
 
+      const user = authService.getCurrentUser();
+      if (!user) throw new Error('User not authenticated');
+
       // Récupérer le compteur actuel
       const conversation = await this.fetchConversationById(conversationId);
       const currentCount = conversation.unreadCount || 0;
@@ -246,6 +271,9 @@ export const conversationService = {
     try {
       if (!base) throw new Error('Airtable is not configured');
 
+      const user = authService.getCurrentUser();
+      if (!user) throw new Error('User not authenticated');
+
       // Mettre à jour directement dans Airtable
       await base('Conversations').update(conversationId, {
         'UnreadCount': 0
@@ -265,6 +293,9 @@ export const conversationService = {
     try {
       if (!base) throw new Error('Airtable is not configured');
 
+      const user = authService.getCurrentUser();
+      if (!user) throw new Error('User not authenticated');
+
       console.log('Creating new conversation with data:', data);
 
       // S'assurer que Properties est un tableau
@@ -281,7 +312,14 @@ export const conversationService = {
       const record = await base('Conversations').create(formattedData);
       console.log('Created conversation record:', record.id);
       
-      return mapAirtableToConversation(record);
+      const conversation = mapAirtableToConversation(record);
+      const propertyId = record.get('Properties');
+      const hasAccess = await authorizationService.canAccessProperty(user.id, propertyId);
+      if (!hasAccess) {
+        throw new Error('Access denied to this conversation');
+      }
+
+      return conversation;
     } catch (error) {
       console.error('Error adding conversation:', error);
       throw error;
@@ -292,6 +330,9 @@ export const conversationService = {
     try {
       if (!base) throw new Error('Airtable is not configured');
       if (!conversationId) throw new Error('Conversation ID is required');
+
+      const user = authService.getCurrentUser();
+      if (!user) throw new Error('User not authenticated');
 
       await base('Conversations').destroy(conversationId);
       return true;

@@ -15,29 +15,41 @@ export interface Property {
   name: string;
   address: string;
   description?: string;
-  photos: string[];
-  aiInstructions?: AIInstruction[];
+  photos?: string[];
+  aiInstructions?: string;
   autoPilot?: boolean;
 }
 
 export interface Message {
   id: string;
-  text: string;
-  isUser: boolean;
-  timestamp: Date;
-  sender: string;
+  content: string;
+  role: 'user' | 'assistant';
+  timestamp: string;
 }
 
 export interface Conversation {
   id: string;
-  propertyId: string;
-  guestName: string;
-  guestEmail: string;
-  guestPhone: string;
-  checkIn: string;
-  checkOut: string;
-  autoPilot: boolean;
-  messages: Message[];
+  fields: {
+    PropertyId?: string;
+    UserId?: string;
+    Message?: string;
+    CreatedAt?: string;
+    Properties?: string[];
+    'Guest Name'?: string;
+    'Guest Email'?: string;
+    'Guest phone number'?: string;
+    Messages?: string;
+    'Check-in Date'?: string;
+    'Check-out Date'?: string;
+    'Auto Pilot'?: boolean;
+    UnreadCount?: number;
+  };
+}
+
+export interface EmergencyTag {
+  name: string;
+  color: string;
+  priority: number;
 }
 
 export interface AuthState {

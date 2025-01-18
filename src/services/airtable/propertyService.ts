@@ -80,25 +80,21 @@ export const propertyService = {
         throw new Error('User not authenticated');
       }
 
-      // Vérifier si l'utilisateur a accès à cette propriété
-      const hasAccess = await authorizationService.canAccessProperty(user.id, id);
-      if (!hasAccess) {
-        throw new Error('Access denied to this property');
-      }
-
       // Vérifier si l'utilisateur a le rôle approprié pour modifier la propriété
-      const userRole = await authorizationService.getUserRole(user.id, id);
-      if (userRole !== 'owner' && userRole !== 'manager') {
+      const role = await authorizationService.getUserPropertyRole(user.id, id);
+      if (!role || !['owner', 'manager'].includes(role)) {
         throw new Error('Insufficient permissions to update this property');
       }
 
       const record = await base('Properties').update(id, {
-        Name: propertyData.name,
-        Address: propertyData.address,
-        Description: propertyData.description,
-        Photos: propertyData.photos,
-        'AI Instructions': propertyData.aiInstructions,
-        'Auto Pilot': propertyData.autoPilot
+        fields: {
+          Name: propertyData.name,
+          Address: propertyData.address,
+          Description: propertyData.description,
+          Photos: propertyData.photos,
+          'AI Instructions': propertyData.aiInstructions,
+          'Auto Pilot': propertyData.autoPilot
+        }
       });
 
       return mapRecordToProperty(record);
@@ -120,8 +116,8 @@ export const propertyService = {
       }
 
       // Vérifier si l'utilisateur a le rôle approprié pour supprimer la propriété
-      const userRole = await authorizationService.getUserRole(user.id, id);
-      if (userRole !== 'owner') {
+      const role = await authorizationService.getUserPropertyRole(user.id, id);
+      if (role !== 'owner') {
         throw new Error('Only property owners can delete properties');
       }
 
