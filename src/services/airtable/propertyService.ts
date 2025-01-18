@@ -4,7 +4,7 @@ import { mapRecordToProperty } from './mappers';
 import { handleServiceError } from '../../utils/error';
 import type { Property } from '../../types';
 import { authorizationService } from '../authorizationService';
-import { getUser } from '../../utils/auth';
+import { authService } from '../auth/authService';
 
 export const propertyService = {
   async fetchPropertyById(id: string): Promise<Property> {
@@ -13,7 +13,7 @@ export const propertyService = {
         throw new Error('Airtable is not configured');
       }
 
-      const user = getUser();
+      const user = authService.getCurrentUser();
       if (!user) {
         throw new Error('User not authenticated');
       }
@@ -39,7 +39,7 @@ export const propertyService = {
         return mockProperties;
       }
 
-      const user = getUser();
+      const user = authService.getCurrentUser();
       if (!user) {
         throw new Error('User not authenticated');
       }
@@ -74,7 +74,7 @@ export const propertyService = {
         throw new Error('Airtable is not configured');
       }
 
-      const user = getUser();
+      const user = authService.getCurrentUser();
       if (!user) {
         throw new Error('User not authenticated');
       }
@@ -114,7 +114,7 @@ export const propertyService = {
         throw new Error('Airtable is not configured');
       }
 
-      const user = getUser();
+      const user = authService.getCurrentUser();
       if (!user) {
         throw new Error('User not authenticated');
       }
