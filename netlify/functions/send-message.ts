@@ -6,6 +6,21 @@ const MAKE_WEBHOOK_URL = 'https://hook.eu1.make.com/6nnd7wwqw2srqyar2jwwtqqliyn8
 const MAX_RETRIES = 3;
 const RETRY_DELAY = 1000;
 
+// Fonction de formatage du numéro de téléphone pour la comparaison
+const normalizePhoneNumber = (phone: string): string => {
+  return phone
+    .replace(/^\+/, '')     // Supprimer le + initial s'il existe
+    .replace(/\D/g, '')     // Supprimer tous les autres caractères non numériques
+    .replace(/^0/, '')      // Supprimer le 0 initial s'il existe
+    .replace(/^33/, '');    // Supprimer le 33 initial s'il existe
+};
+
+// Fonction de formatage du numéro de téléphone pour WhatsApp
+const formatPhoneForWhatsApp = (phone: string): string => {
+  const normalized = normalizePhoneNumber(phone);
+  return `33${normalized}`;
+};
+
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 const corsHeaders = {
@@ -67,7 +82,7 @@ export const handler: Handler = async (event) => {
     // Récupérer la conversation
     console.log('🔍 Fetching conversations for property:', payload.propertyId);
     const conversations = await conversationService.fetchPropertyConversations(payload.propertyId);
-    const conversation = conversations.find(c => c.guestPhone === payload.guestPhone);
+    const conversation = conversations.find(c => normalizePhoneNumber(c.guestPhone) === normalizePhoneNumber(payload.guestPhone));
 
     if (!conversation) {
       console.error('❌ Conversation not found');
@@ -98,35 +113,31 @@ export const handler: Handler = async (event) => {
       Messages: JSON.stringify(updatedMessages)
     });
 
+    // Formater le numéro de téléphone pour WhatsApp
+    const formattedPhone = formatPhoneForWhatsApp(payload.guestPhone);
+    console.log('📱 Phone number formatting:', {
+      original: payload.guestPhone,
+      formatted: formattedPhone
+    });
+
+    // Formater le message
+    const formattedMessage = payload.message
+      .replace(/\n{2,}/g, ' ')
+      .replace(/\n/g, ' ');
+
+    const makePayload = {
+      chatId: formattedPhone + '@c.us',
+      message: formattedMessage
+    };
+
+    console.log('📤 Sending to Make.com:', makePayload);
+
     // Tentatives d'envoi avec retry
     for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
       try {
         console.log(`📤 Attempt ${attempt}/${MAX_RETRIES} to send message to Make.com`);
         console.log('Sending to URL:', MAKE_WEBHOOK_URL);
         console.log('Original payload:', payload);
-        
-        // Formater le numéro de téléphone pour Waapi
-        const formattedPhone = payload.guestPhone
-          .replace(/^\+/, '')     // Supprimer le + initial s'il existe
-          .replace(/\D/g, '')     // Supprimer tous les autres caractères non numériques
-          .replace(/^0/, '')      // Supprimer le 0 initial s'il existe
-          .replace(/^33/, '')     // Supprimer le 33 initial s'il existe
-          .replace(/^/, '33');    // Ajouter 33 au début
-        
-        // Formater le message en remplaçant les retours à la ligne par des espaces
-        const formattedMessage = payload.message
-          .replace(/\n{2,}/g, ' ') // Remplacer les doubles retours à la ligne par un espace
-          .replace(/\n/g, ' ');    // Remplacer les retours à la ligne simples par un espace
-        
-        const makePayload = {
-          chatId: formattedPhone + '@c.us',
-          message: formattedMessage
-        };
-        
-        console.log('Formatted phone:', formattedPhone + '@c.us');
-        console.log('Message length:', payload.message.length);
-        console.log('Message content:', payload.message);
-        console.log('Final payload to Make:', JSON.stringify(makePayload, null, 2));
         
         const response = await axios.post(MAKE_WEBHOOK_URL, makePayload, {
           headers: {
