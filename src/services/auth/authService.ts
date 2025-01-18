@@ -87,3 +87,5 @@ export class AuthService {
     return base(this.TABLE_NAME).select(query);
   }
 }
+
+export const authService = new AuthService();
