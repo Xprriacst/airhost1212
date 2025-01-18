@@ -29,6 +29,10 @@ import ChatSandbox from './pages/ChatSandbox';
 import EmergencyCases from './pages/EmergencyCases';
 
 import { notificationService } from './services/notificationService';
+import { LoginPage } from './pages/Auth/LoginPage';
+import { RegisterPage } from './pages/Auth/RegisterPage';
+import { ProtectedRoute } from './components/ProtectedRoute';
+import { useAuthStore } from './stores/authStore';
 
 const AppContent = () => {
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
@@ -257,9 +261,32 @@ const AppContent = () => {
 };
 
 function App() {
+  const { isAuthenticated } = useAuthStore();
+
   return (
     <Router>
-      <AppContent />
+      <Routes>
+        <Route
+          path="/login"
+          element={
+            isAuthenticated ? <Navigate to="/" /> : <LoginPage />
+          }
+        />
+        <Route
+          path="/register"
+          element={
+            isAuthenticated ? <Navigate to="/" /> : <RegisterPage />
+          }
+        />
+        <Route
+          path="/*"
+          element={
+            <ProtectedRoute>
+              <AppContent />
+            </ProtectedRoute>
+          }
+        />
+      </Routes>
     </Router>
   );
 }
