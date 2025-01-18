@@ -6,8 +6,8 @@ const mapAirtableToUserProperty = (record: any): UserProperty => ({
   userId: record.get('User ID'),
   propertyId: record.get('Property ID'),
   role: record.get('Role'),
-  createdAt: record.get('createdAt'),
-  createdBy: record.get('createdBy'),
+  createdAt: record.get('Date'),
+  createdBy: record.get('Created By'),
 });
 
 export const userPropertyService = {
@@ -18,7 +18,7 @@ export const userPropertyService = {
       const records = await base('User Properties')
         .select({
           filterByFormula: `{User ID} = '${userId}'`,
-          fields: ['User ID', 'Property ID', 'Role', 'createdAt', 'createdBy']
+          fields: ['User ID', 'Property ID', 'Role', 'Date', 'Created By']
         })
         .all();
 
@@ -36,7 +36,7 @@ export const userPropertyService = {
       const records = await base('User Properties')
         .select({
           filterByFormula: `{Property ID} = '${propertyId}'`,
-          fields: ['User ID', 'Property ID', 'Role', 'createdAt', 'createdBy']
+          fields: ['User ID', 'Property ID', 'Role', 'Date', 'Created By']
         })
         .all();
 
@@ -55,8 +55,8 @@ export const userPropertyService = {
         'User ID': data.userId,
         'Property ID': data.propertyId,
         'Role': data.role,
-        'createdAt': data.createdAt,
-        'createdBy': data.createdBy
+        'Date': data.createdAt,
+        'Created By': data.createdBy
       });
 
       return mapAirtableToUserProperty(record);
