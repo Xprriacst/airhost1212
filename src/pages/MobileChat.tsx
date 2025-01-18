@@ -6,6 +6,7 @@ import { aiService } from '../services/aiService';
 import { conversationService } from '../services/conversationService';
 import { messageService } from '../services/messageService';
 import { notificationService } from '../services/notificationService';
+import { propertyService } from '../services/propertyService';
 import ChatMessage from '../components/ChatMessage';
 import ResponseSuggestion from '../components/ResponseSuggestion';
 
@@ -92,7 +93,7 @@ const MobileChat: React.FC = () => {
       text,
       isUser: true,
       timestamp: new Date(),
-      sender: 'Hôte'
+      sender: 'host'
     };
 
     setMessages(prev => [...prev, newMessage]);
@@ -103,19 +104,15 @@ const MobileChat: React.FC = () => {
 
     try {
       // Sauvegarder le message dans Airtable
+      if (!conversation?.id) {
+        throw new Error('Conversation ID is missing');
+      }
+
       console.log('💾 Saving message to Airtable...');
-      await conversationService.updateConversation(conversation.id, {
-        Messages: JSON.stringify([...messages, newMessage])
-      });
+      await messageService.addMessageToConversation(conversation.id, newMessage);
       console.log('✅ Message saved to Airtable');
 
       // Envoyer le message à Make.com
-      console.log('📝 Conversation details:', {
-        guestEmail: conversation?.guestEmail,
-        propertyId: conversation?.propertyId,
-        rawConversation: conversation
-      });
-      
       if (!conversation?.guestEmail || !conversation?.propertyId) {
         console.error('❌ Missing required conversation data:', {
           hasGuestEmail: Boolean(conversation?.guestEmail),
@@ -127,28 +124,31 @@ const MobileChat: React.FC = () => {
       console.log('📤 Sending message to Make.com...');
       await messageService.sendMessage(newMessage, conversation.guestEmail, conversation.propertyId);
       console.log('✅ Message sent to Make.com');
+
+      if (isAutoPilot) {
+        setIsGenerating(true);
+        try {
+          const property = await propertyService.fetchPropertyById(conversation.propertyId);
+          const response = await aiService.generateResponse(newMessage, property);
+          setShouldScrollToBottom(true);
+          const aiMessage: Message = {
+            id: Date.now().toString(),
+            text: response,
+            isUser: false,
+            timestamp: new Date(),
+            sender: 'ai'
+          };
+          
+          setMessages(prev => [...prev, aiMessage]);
+          await messageService.addMessageToConversation(conversation.id, aiMessage);
+        } catch (error) {
+          console.error('Error generating AI response:', error);
+        } finally {
+          setIsGenerating(false);
+        }
+      }
     } catch (error) {
       console.error('❌ Error:', error);
-    }
-
-    if (isAutoPilot) {
-      setIsGenerating(true);
-      try {
-        const response = await aiService.generateResponse(newMessage, {} as Property);
-        setShouldScrollToBottom(true);
-        const aiMessage: Message = {
-          id: Date.now().toString(),
-          text: response,
-          isUser: true,
-          timestamp: new Date(),
-          sender: 'AI Assistant'
-        };
-        setMessages(prev => [...prev, aiMessage]);
-      } catch (error) {
-        console.error('Error generating AI response:', error);
-      } finally {
-        setIsGenerating(false);
-      }
     }
   };
 

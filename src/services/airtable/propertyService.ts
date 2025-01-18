@@ -15,7 +15,7 @@ export const propertyService = {
       const records = await base('Properties')
         .select({
           view: 'Grid view',
-          fields: ['ID', 'Description', 'Photos', 'AI Instructions', 'Auto Pilot', 'Conversations']
+          fields: ['ID', 'Name', 'Address', 'Description', 'Photos', 'AI Instructions', 'Auto Pilot', 'Conversations']
         })
         .all();
 
@@ -23,6 +23,29 @@ export const propertyService = {
     } catch (error) {
       console.error('Error fetching all properties:', error);
       throw error;
+    }
+  },
+
+  async getProperties(): Promise<Property[]> {
+    try {
+      const user = authService.getCurrentUser();
+      if (!user) {
+        console.warn('User not authenticated, returning empty properties list');
+        return [];
+      }
+
+      const allProperties = await this.getAllPropertiesWithoutFiltering();
+      const authorizedProperties = await Promise.all(
+        allProperties.map(async (property) => {
+          const hasAccess = await authorizationService.canAccessProperty(user.id, property.id);
+          return hasAccess ? property : null;
+        })
+      );
+
+      return authorizedProperties.filter((p): p is Property => p !== null);
+    } catch (error) {
+      console.error('Error fetching properties:', error);
+      return handleServiceError(error, 'Property.getProperties');
     }
   },
 
@@ -37,7 +60,6 @@ export const propertyService = {
         throw new Error('User not authenticated');
       }
 
-      // Vérifier si l'utilisateur a accès à cette propriété
       const hasAccess = await authorizationService.canAccessProperty(user.id, id);
       if (!hasAccess) {
         throw new Error('Access denied to this property');
@@ -51,65 +73,34 @@ export const propertyService = {
     }
   },
 
-  async getProperties(): Promise<Property[]> {
-    try {
-      if (!base) {
-        console.warn('Airtable is not configured. Using mock data.');
-        return mockProperties;
-      }
-
-      const user = authService.getCurrentUser();
-      if (!user) {
-        throw new Error('User not authenticated');
-      }
-
-      // Récupérer toutes les propriétés
-      const records = await base('Properties')
-        .select({ 
-          view: 'Grid view',
-          fields: ['ID', 'Description', 'Photos', 'AI Instructions', 'Auto Pilot', 'Conversations']
-        })
-        .all();
-
-      // Convertir les records en propriétés
-      const properties = records.map(mapRecordToProperty);
-
-      // Filtrer les propriétés selon les autorisations de l'utilisateur
-      return await authorizationService.filterAccessibleProperties(user.id, properties);
-    } catch (error) {
-      console.error('Error fetching properties:', error);
-      throw error;
-    }
-  },
-
   async updateProperty(id: string, propertyData: Partial<Property>): Promise<Property | null> {
     try {
-      if (!base) {
-        throw new Error('Airtable is not configured');
-      }
+      if (!base) throw new Error('Airtable is not configured');
 
       const user = authService.getCurrentUser();
       if (!user) {
         throw new Error('User not authenticated');
       }
 
-      // Vérifier si l'utilisateur a accès à cette propriété
       const hasAccess = await authorizationService.canAccessProperty(user.id, id);
       if (!hasAccess) {
         throw new Error('Access denied to this property');
       }
 
-      const record = await base('Properties').update(id, {
-        Description: propertyData.description,
-        Photos: propertyData.photos,
-        'AI Instructions': propertyData.aiInstructions,
-        'Auto Pilot': propertyData.autoPilot
-      });
+      const updateData: Record<string, any> = {};
 
+      if (propertyData.name) updateData['Name'] = propertyData.name;
+      if (propertyData.address) updateData['Address'] = propertyData.address;
+      if (propertyData.description) updateData['Description'] = propertyData.description;
+      if (propertyData.aiInstructions) {
+        updateData['AI Instructions'] = JSON.stringify(propertyData.aiInstructions);
+      }
+
+      const record = await base('Properties').update(id, updateData);
       return mapRecordToProperty(record);
     } catch (error) {
       console.error('Error updating property:', error);
-      throw error;
+      return null;
     }
   },
 
@@ -124,7 +115,6 @@ export const propertyService = {
         throw new Error('User not authenticated');
       }
 
-      // Vérifier si l'utilisateur a accès à cette propriété
       const hasAccess = await authorizationService.canAccessProperty(user.id, id);
       if (!hasAccess) {
         throw new Error('Access denied to this property');
@@ -134,7 +124,7 @@ export const propertyService = {
       return true;
     } catch (error) {
       console.error('Error deleting property:', error);
-      throw error;
+      return handleServiceError(error, 'Property.deleteProperty');
     }
   }
 };
