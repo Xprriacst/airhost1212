@@ -2,10 +2,19 @@ import { base } from '../airtable/config';
 import { LoginCredentials, RegisterCredentials, User } from '../../types';
 import bcrypt from 'bcryptjs';
 
-export class AuthService {
+class AuthService {
   private static TABLE_NAME = 'Users';
+  private currentUser: User | null = null;
 
-  static async register(credentials: RegisterCredentials): Promise<User> {
+  getCurrentUser(): User | null {
+    return this.currentUser;
+  }
+
+  setCurrentUser(user: User | null) {
+    this.currentUser = user;
+  }
+
+  async register(credentials: RegisterCredentials): Promise<User> {
     try {
       // Vérifier si l'utilisateur existe déjà
       const existingUsers = await base(this.TABLE_NAME)
@@ -36,20 +45,22 @@ export class AuthService {
       ]);
 
       const record = records[0];
-      
-      return {
+      const user = {
         id: record.id,
         email: record.fields.email as string,
         name: record.fields.name as string,
         role: record.fields.role as 'admin' | 'user',
         createdAt: record.fields.createdAt as string,
       };
+      
+      this.setCurrentUser(user);
+      return user;
     } catch (error) {
       throw new Error(`Erreur lors de l'inscription: ${error.message}`);
     }
   }
 
-  static async login(credentials: LoginCredentials): Promise<User> {
+  async login(credentials: LoginCredentials): Promise<User> {
     try {
       const records = await base(this.TABLE_NAME)
         .select({
@@ -71,19 +82,26 @@ export class AuthService {
         throw new Error('Email ou mot de passe incorrect');
       }
 
-      return {
+      const user = {
         id: record.id,
         email: record.fields.email as string,
         name: record.fields.name as string,
         role: record.fields.role as 'admin' | 'user',
         createdAt: record.fields.createdAt as string,
       };
+
+      this.setCurrentUser(user);
+      return user;
     } catch (error) {
       throw new Error(`Erreur lors de la connexion: ${error.message}`);
     }
   }
 
-  static getUsers(query: { filterByFormula?: string; fields?: string[] }) {
+  logout() {
+    this.setCurrentUser(null);
+  }
+
+  getUsers(query: { filterByFormula?: string; fields?: string[] }) {
     return base(this.TABLE_NAME).select(query);
   }
 }
