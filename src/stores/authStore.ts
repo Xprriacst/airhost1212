@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { AuthState, LoginCredentials, RegisterCredentials } from '../types';
-import { AuthService } from '../services/auth/authService';
+import { authService } from '../services/auth/authService';
 
 export const useAuthStore = create<
   AuthState & {
@@ -17,7 +17,7 @@ export const useAuthStore = create<
   login: async (credentials) => {
     set({ isLoading: true, error: null });
     try {
-      const user = await AuthService.login(credentials);
+      const user = await authService.login(credentials);
       set({ user, isAuthenticated: true, isLoading: false });
     } catch (error) {
       set({ error: error.message, isLoading: false });
@@ -27,7 +27,7 @@ export const useAuthStore = create<
   register: async (credentials) => {
     set({ isLoading: true, error: null });
     try {
-      const user = await AuthService.register(credentials);
+      const user = await authService.register(credentials);
       set({ user, isAuthenticated: true, isLoading: false });
     } catch (error) {
       set({ error: error.message, isLoading: false });
@@ -35,6 +35,7 @@ export const useAuthStore = create<
   },
 
   logout: () => {
+    authService.logout();
     set({ user: null, isAuthenticated: false });
   },
 }));
