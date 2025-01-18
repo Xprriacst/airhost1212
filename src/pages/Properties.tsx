@@ -3,16 +3,16 @@ import { useNavigate } from 'react-router-dom';
 import { propertyService } from '../services';
 import PropertyEditModal from '../components/PropertyEditModal';
 import PropertyDetailsModal from '../components/PropertyDetailsModal';
+import { Property } from '../types';
 
 const Properties: React.FC = () => {
   const navigate = useNavigate();
-  const [properties, setProperties] = useState<any[]>([]);
+  const [properties, setProperties] = useState<Property[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedProperty, setSelectedProperty] = useState<any | null>(null);
-  const [detailsProperty, setDetailsProperty] = useState<any | null>(null); // For showing details
+  const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
+  const [detailsProperty, setDetailsProperty] = useState<Property | null>(null);
 
-  // Fetch properties on mount
   useEffect(() => {
     fetchProperties();
   }, []);
@@ -20,25 +20,34 @@ const Properties: React.FC = () => {
   const fetchProperties = async () => {
     try {
       setLoading(true);
+      setError(null);
       const fetchedProperties = await propertyService.getProperties();
       setProperties(fetchedProperties);
+      setLoading(false);
     } catch (err) {
       console.error('Error fetching properties:', err);
-      setError('Failed to load properties. Please try again later.');
-    } finally {
+      setError(err instanceof Error ? err.message : 'Failed to load properties. Please try again later.');
       setLoading(false);
     }
   };
 
-  const handleViewDetails = (property: any) => {
-    setDetailsProperty(property); // Set the property to show in the modal
+  const handleViewDetails = (property: Property) => {
+    setDetailsProperty(property);
   };
 
-  const handleSave = async (updatedProperty: any) => {
-    setProperties((prev) =>
-      prev.map((p) => (p.id === updatedProperty.id ? updatedProperty : p))
-    );
-    setSelectedProperty(null); // Close edit modal
+  const handleSave = async (updatedProperty: Property) => {
+    try {
+      const result = await propertyService.updateProperty(updatedProperty.id, updatedProperty);
+      if (result) {
+        setProperties((prev) =>
+          prev.map((p) => (p.id === updatedProperty.id ? result : p))
+        );
+        setSelectedProperty(null);
+      }
+    } catch (err) {
+      console.error('Error updating property:', err);
+      setError(err instanceof Error ? err.message : 'Failed to update property');
+    }
   };
 
   const handleDelete = async (propertyId: string) => {
@@ -48,88 +57,97 @@ const Properties: React.FC = () => {
         setProperties((prev) => prev.filter((p) => p.id !== propertyId));
       } catch (err) {
         console.error('Error deleting property:', err);
-        setError('Failed to delete property. Please try again.');
+        setError(err instanceof Error ? err.message : 'Failed to delete property');
       }
     }
   };
 
   if (loading) {
     return (
-      <div className="p-6 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      <div className="flex items-center justify-center h-screen">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-gray-900"></div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="p-6">
-        <div className="bg-red-50 text-red-600 p-4 rounded-lg mb-4">{error}</div>
+      <div className="flex flex-col items-center justify-center h-screen">
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
+          <strong className="font-bold">Error: </strong>
+          <span className="block sm:inline">{error}</span>
+        </div>
+        <button
+          onClick={fetchProperties}
+          className="mt-4 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
+
+  if (properties.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center h-screen">
+        <div className="text-gray-600 text-xl">
+          No properties available
+        </div>
+        <p className="text-gray-500 mt-2">
+          You don't have access to any properties yet.
+        </p>
       </div>
     );
   }
 
   return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">My Properties</h1>
-      </div>
-
-      {properties.length === 0 ? (
-        <div className="text-center py-12">
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No Properties</h3>
-          <p className="text-gray-500">Start by adding your first property.</p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {properties.map((property) => (
-            <div
-              key={property.id}
-              className="bg-white rounded-xl shadow-md overflow-hidden cursor-pointer"
-              onClick={() => handleViewDetails(property)} // Open the details modal
-            >
-              <div className="relative h-48">
-                <img
-                  src={
-                    property.photos?.[0] ||
-                    'https://images.unsplash.com/photo-1564013799919-ab600027ffc6'
-                  }
-                  alt={property.name}
-                  className="w-full h-full object-cover"
-                />
-              </div>
-              <div className="p-6">
-                <h3 className="text-xl font-semibold text-gray-900">{property.name}</h3>
-                <p className="text-gray-600">{property.address}</p>
+    <div className="container mx-auto px-4 py-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {properties.map((property) => (
+          <div
+            key={property.id}
+            className="bg-white rounded-lg shadow-lg overflow-hidden"
+          >
+            <div className="p-6">
+              <h3 className="text-xl font-semibold mb-2">{property.name}</h3>
+              <p className="text-gray-600 mb-4">{property.address}</p>
+              <div className="flex justify-between">
                 <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleDelete(property.id);
-                  }}
-                  className="text-red-600 hover:underline mt-2 block"
+                  onClick={() => handleViewDetails(property)}
+                  className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+                >
+                  View Details
+                </button>
+                <button
+                  onClick={() => setSelectedProperty(property)}
+                  className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded ml-2"
+                >
+                  Edit
+                </button>
+                <button
+                  onClick={() => handleDelete(property.id)}
+                  className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded ml-2"
                 >
                   Delete
                 </button>
               </div>
             </div>
-          ))}
-        </div>
-      )}
+          </div>
+        ))}
+      </div>
 
-      {/* Details Modal */}
-      {detailsProperty && (
-        <PropertyDetailsModal
-          property={detailsProperty}
-          onClose={() => setDetailsProperty(null)}
-        />
-      )}
-
-      {/* Edit Modal */}
       {selectedProperty && (
         <PropertyEditModal
           property={selectedProperty}
           onClose={() => setSelectedProperty(null)}
           onSave={handleSave}
+        />
+      )}
+
+      {detailsProperty && (
+        <PropertyDetailsModal
+          property={detailsProperty}
+          onClose={() => setDetailsProperty(null)}
         />
       )}
     </div>

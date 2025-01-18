@@ -131,6 +131,9 @@ export default function Conversations() {
         ) : conversations.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-gray-500">
             <p>Aucune conversation</p>
+            <p className="text-gray-600 mt-2">
+              Vous n'avez accès à aucune conversation pour le moment.
+            </p>
           </div>
         ) : (
           <div className="divide-y">

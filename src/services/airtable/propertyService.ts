@@ -50,22 +50,21 @@ export const propertyService = {
           fields: [
             'Name',
             'Address',
-            'Description',
             'Photos',
-            'AI Instructions',
-            'Auto Pilot'
+            'AIInstructions',
+            'AutoPilot'
           ]
         })
         .all();
 
-      // Convertir les enregistrements en propriétés
+      // Convertir les records en propriétés
       const properties = records.map(mapRecordToProperty);
 
       // Filtrer les propriétés selon les autorisations de l'utilisateur
       return await authorizationService.filterAccessibleProperties(user.id, properties);
     } catch (error) {
       console.error('Error fetching properties:', error);
-      throw handleServiceError(error);
+      throw error;
     }
   },
 
@@ -80,27 +79,24 @@ export const propertyService = {
         throw new Error('User not authenticated');
       }
 
-      // Vérifier si l'utilisateur a le rôle approprié pour modifier la propriété
-      const role = await authorizationService.getUserPropertyRole(user.id, id);
-      if (!role || !['owner', 'manager'].includes(role)) {
-        throw new Error('Insufficient permissions to update this property');
+      // Vérifier si l'utilisateur a accès à cette propriété
+      const hasAccess = await authorizationService.canAccessProperty(user.id, id);
+      if (!hasAccess) {
+        throw new Error('Access denied to this property');
       }
 
       const record = await base('Properties').update(id, {
-        fields: {
-          Name: propertyData.name,
-          Address: propertyData.address,
-          Description: propertyData.description,
-          Photos: propertyData.photos,
-          'AI Instructions': propertyData.aiInstructions,
-          'Auto Pilot': propertyData.autoPilot
-        }
+        Name: propertyData.name,
+        Address: propertyData.address,
+        Photos: propertyData.photos,
+        AIInstructions: propertyData.aiInstructions,
+        AutoPilot: propertyData.autoPilot
       });
 
       return mapRecordToProperty(record);
     } catch (error) {
       console.error('Error updating property:', error);
-      throw handleServiceError(error);
+      throw error;
     }
   },
 
@@ -115,17 +111,17 @@ export const propertyService = {
         throw new Error('User not authenticated');
       }
 
-      // Vérifier si l'utilisateur a le rôle approprié pour supprimer la propriété
-      const role = await authorizationService.getUserPropertyRole(user.id, id);
-      if (role !== 'owner') {
-        throw new Error('Only property owners can delete properties');
+      // Vérifier si l'utilisateur a accès à cette propriété
+      const hasAccess = await authorizationService.canAccessProperty(user.id, id);
+      if (!hasAccess) {
+        throw new Error('Access denied to this property');
       }
 
       await base('Properties').destroy(id);
       return true;
     } catch (error) {
       console.error('Error deleting property:', error);
-      throw handleServiceError(error);
+      throw error;
     }
   }
 };
