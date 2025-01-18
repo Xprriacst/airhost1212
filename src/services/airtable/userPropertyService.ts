@@ -1,13 +1,6 @@
 import { base } from './config';
 import { handleServiceError } from '../../utils/error';
-
-interface UserPropertyRecord {
-  userId: string;
-  propertyId: string;
-  role: 'owner' | 'manager' | 'viewer';
-  createdAt: Date;
-  createdBy: string;
-}
+import { UserPropertyRecord } from '../../types/auth';
 
 const mapAirtableToUserProperty = (record: any): UserPropertyRecord => ({
   userId: record.get('User ID'),
@@ -60,8 +53,7 @@ export const userPropertyService = {
         'User ID': data.userId,
         'Property ID': data.propertyId,
         'Role': data.role,
-        'Created At': new Date().toISOString(),
-        'Created By': data.createdBy,
+        'Created By': data.createdBy
       });
 
       return mapAirtableToUserProperty(record);
@@ -78,21 +70,24 @@ export const userPropertyService = {
     try {
       if (!base) throw new Error('Airtable is not configured');
 
+      // Trouver l'enregistrement existant
       const records = await base('User Properties')
         .select({
           filterByFormula: `AND({User ID} = '${userId}', {Property ID} = '${propertyId}')`,
+          maxRecords: 1
         })
         .all();
 
       if (records.length === 0) {
-        throw new Error('User property association not found');
+        throw new Error('User property relationship not found');
       }
 
-      const record = await base('User Properties').update(records[0].id, {
-        'Role': role,
+      // Mettre à jour le rôle
+      const updatedRecord = await base('User Properties').update(records[0].id, {
+        'Role': role
       });
 
-      return mapAirtableToUserProperty(record);
+      return mapAirtableToUserProperty(updatedRecord);
     } catch (error) {
       throw handleServiceError(error);
     }
@@ -105,6 +100,7 @@ export const userPropertyService = {
       const records = await base('User Properties')
         .select({
           filterByFormula: `AND({User ID} = '${userId}', {Property ID} = '${propertyId}')`,
+          maxRecords: 1
         })
         .all();
 
@@ -114,5 +110,5 @@ export const userPropertyService = {
     } catch (error) {
       throw handleServiceError(error);
     }
-  },
+  }
 };

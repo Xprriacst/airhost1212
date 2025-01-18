@@ -1,4 +1,5 @@
-import { User, Property, Conversation } from '../types';
+import { Property, Conversation } from '../types';
+import { User } from '../types/auth';
 import { userPropertyService } from './airtable/userPropertyService';
 
 class AuthorizationService {
