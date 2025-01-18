@@ -112,18 +112,18 @@ const MobileChat: React.FC = () => {
       await messageService.addMessageToConversation(conversation.id, newMessage);
       console.log('✅ Message saved to Airtable');
 
-      // Envoyer le message à Make.com
-      if (!conversation?.guestEmail || !conversation?.propertyId) {
+      // Envoyer le message à WhatsApp via la fonction Netlify
+      if (!conversation?.guestPhone || !conversation?.propertyId) {
         console.error('❌ Missing required conversation data:', {
-          hasGuestEmail: Boolean(conversation?.guestEmail),
+          hasGuestPhone: Boolean(conversation?.guestPhone),
           hasPropertyId: Boolean(conversation?.propertyId)
         });
         return;
       }
 
-      console.log('📤 Sending message to Make.com...');
-      await messageService.sendMessage(newMessage, conversation.guestEmail, conversation.propertyId);
-      console.log('✅ Message sent to Make.com');
+      console.log('📤 Sending message to WhatsApp...');
+      await messageService.sendMessage(newMessage, conversation.guestPhone, conversation.propertyId);
+      console.log('✅ Message sent to WhatsApp');
 
       if (isAutoPilot) {
         setIsGenerating(true);

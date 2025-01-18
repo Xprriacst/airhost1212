@@ -2,6 +2,8 @@ import { base } from './config';
 import { handleServiceError } from '../../utils/error';
 import type { Message } from '../../types';
 
+const NETLIFY_FUNCTION_URL = '/.netlify/functions/send-message';
+
 export const messageService = {
   async addMessageToConversation(
     conversationId: string,
@@ -23,6 +25,40 @@ export const messageService = {
       return true;
     } catch (error) {
       console.error('Error adding message:', error);
+      throw error;
+    }
+  },
+
+  async sendMessage(message: Message, guestPhone: string, propertyId: string): Promise<boolean> {
+    try {
+      console.log('📤 Sending message to Netlify function:', {
+        message,
+        guestPhone,
+        propertyId
+      });
+
+      const response = await fetch(NETLIFY_FUNCTION_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: message.text,
+          guestPhone,
+          propertyId
+        })
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        console.error('❌ Error sending message:', error);
+        throw new Error(`Failed to send message: ${error.message || 'Unknown error'}`);
+      }
+
+      console.log('✅ Message sent successfully');
+      return true;
+    } catch (error) {
+      console.error('❌ Error in sendMessage:', error);
       throw error;
     }
   }
