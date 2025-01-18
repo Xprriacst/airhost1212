@@ -13,7 +13,7 @@ class AuthorizationService {
       const records = await base('User Properties')
         .select({
           filterByFormula: `{User ID} = '${userId}'`,
-          fields: ['User ID', 'Property ID', 'Role', 'createdAt', 'createdBy']
+          fields: ['User ID', 'Property ID', 'Role', 'Date', 'Created By']
         })
         .firstPage();
 
@@ -21,8 +21,8 @@ class AuthorizationService {
         userId: record.get('User ID') as string,
         propertyId: record.get('Property ID') as string,
         role: record.get('Role') as string,
-        createdAt: record.get('createdAt') as string,
-        createdBy: record.get('createdBy') as string
+        createdAt: record.get('Date') as string,
+        createdBy: record.get('Created By') as string
       }));
     } catch (error) {
       console.error('Error fetching user properties:', error);
