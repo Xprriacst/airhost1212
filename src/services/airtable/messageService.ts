@@ -4,18 +4,6 @@ import type { Message } from '../../types';
 
 const NETLIFY_FUNCTION_URL = '/.netlify/functions/send-message';
 
-// Fonction de formatage du numéro de téléphone
-const formatPhoneNumber = (phone: string): string => {
-  // Supprimer tous les caractères non numériques
-  const cleaned = phone.replace(/\D/g, '');
-  // Supprimer le 0 initial si présent
-  const withoutLeadingZero = cleaned.replace(/^0/, '');
-  // Supprimer le 33 initial si présent
-  const normalized = withoutLeadingZero.replace(/^33/, '');
-  // Ajouter le +33
-  return `+33${normalized}`;
-};
-
 export const messageService = {
   async addMessageToConversation(
     conversationId: string,
@@ -43,14 +31,10 @@ export const messageService = {
 
   async sendMessage(message: Message, guestPhone: string, propertyId: string): Promise<boolean> {
     try {
-      // Formater le numéro de téléphone
-      const formattedPhone = formatPhoneNumber(guestPhone);
-
       console.log('📤 Sending message to Netlify function:', {
         message: message.text,
-        guestPhone: formattedPhone,
+        guestPhone,
         propertyId,
-        originalPhone: guestPhone
       });
 
       const response = await fetch(NETLIFY_FUNCTION_URL, {
@@ -60,9 +44,8 @@ export const messageService = {
         },
         body: JSON.stringify({
           message: message.text,
-          guestPhone: formattedPhone,
-          propertyId,
-          platform: 'whatsapp'
+          guestPhone,
+          propertyId
         })
       });
 
@@ -72,7 +55,8 @@ export const messageService = {
         throw new Error(`Failed to send message: ${error.message || 'Unknown error'}`);
       }
 
-      console.log('✅ Message sent successfully');
+      const result = await response.json();
+      console.log('✅ Message sent successfully:', result);
       return true;
     } catch (error) {
       console.error('❌ Error in sendMessage:', error);
