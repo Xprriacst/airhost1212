@@ -1,8 +1,8 @@
 import { base } from '../airtable/config';
-import type { Property, Conversation } from '../../types';
+import type { Property, Conversation, UserProperty } from '../../types';
 
 class AuthorizationService {
-  async getUserProperties(userId: string): Promise<any[]> {
+  async getUserProperties(userId: string): Promise<UserProperty[]> {
     try {
       if (!base) {
         throw new Error('Airtable is not configured');
@@ -13,19 +13,19 @@ class AuthorizationService {
       const records = await base('User Properties')
         .select({
           filterByFormula: `{User ID} = '${userId}'`,
-          fields: ['User ID', 'Property ID', 'Role', 'Date', 'Created By']
+          fields: ['User ID', 'Property ID', 'Role', 'createdAt', 'createdBy']
         })
-        .all();
+        .firstPage();
 
       return records.map(record => ({
-        userId: record.get('User ID'),
-        propertyId: record.get('Property ID'),
-        role: record.get('Role'),
-        date: record.get('Date'),
-        createdBy: record.get('Created By')
+        userId: record.get('User ID') as string,
+        propertyId: record.get('Property ID') as string,
+        role: record.get('Role') as string,
+        createdAt: record.get('createdAt') as string,
+        createdBy: record.get('createdBy') as string
       }));
     } catch (error) {
-      console.error('Error getting user properties:', error);
+      console.error('Error fetching user properties:', error);
       throw error;
     }
   }
