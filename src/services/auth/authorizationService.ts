@@ -11,7 +11,8 @@ export const authorizationService = {
       const records = await base('UserProperties')
         .select({
           filterByFormula: `AND({UserId} = '${userId}', {PropertyId} = '${propertyId}')`,
-          maxRecords: 1
+          maxRecords: 1,
+          fields: ['UserId', 'PropertyId', 'Role']
         })
         .firstPage();
 
@@ -45,7 +46,8 @@ export const authorizationService = {
       // Récupérer toutes les associations utilisateur-propriété pour cet utilisateur
       const records = await base('UserProperties')
         .select({
-          filterByFormula: `{UserId} = '${userId}'`
+          filterByFormula: `{UserId} = '${userId}'`,
+          fields: ['UserId', 'PropertyId', 'Role']
         })
         .all();
 
@@ -71,7 +73,8 @@ export const authorizationService = {
       // Récupérer toutes les associations utilisateur-propriété pour cet utilisateur
       const records = await base('UserProperties')
         .select({
-          filterByFormula: `{UserId} = '${userId}'`
+          filterByFormula: `{UserId} = '${userId}'`,
+          fields: ['UserId', 'PropertyId', 'Role']
         })
         .all();
 
@@ -81,9 +84,10 @@ export const authorizationService = {
       );
 
       // Filtrer les conversations
-      return conversations.filter(conversation => 
-        accessiblePropertyIds.has(conversation.fields.PropertyId as string)
-      );
+      return conversations.filter(conversation => {
+        const propertyId = conversation.fields.Properties?.[0];
+        return propertyId && accessiblePropertyIds.has(propertyId);
+      });
     } catch (error) {
       console.error('Error filtering accessible conversations:', error);
       throw error;
