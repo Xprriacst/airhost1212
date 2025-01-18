@@ -8,17 +8,25 @@ const RETRY_DELAY = 1000;
 
 // Fonction de formatage du numéro de téléphone pour la comparaison
 const normalizePhoneNumber = (phone: string): string => {
-  return phone
+  const normalized = phone
     .replace(/^\+/, '')     // Supprimer le + initial s'il existe
     .replace(/\D/g, '')     // Supprimer tous les autres caractères non numériques
     .replace(/^0/, '')      // Supprimer le 0 initial s'il existe
     .replace(/^33/, '');    // Supprimer le 33 initial s'il existe
+  console.log(' Normalized phone:', normalized);
+  return normalized;
 };
 
 // Fonction de formatage du numéro de téléphone pour WhatsApp
 const formatPhoneForWhatsApp = (phone: string): string => {
   const normalized = normalizePhoneNumber(phone);
-  return `33${normalized}@c.us`;  // Ajout direct du @c.us pour le format WhatsApp
+  const formatted = `33${normalized}@c.us`;
+  console.log(' Formatted phone for WhatsApp:', {
+    original: phone,
+    normalized,
+    formatted
+  });
+  return formatted;
 };
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -30,14 +38,14 @@ const corsHeaders = {
 };
 
 export const handler: Handler = async (event) => {
-  console.log('🚀 Send Message Function Called');
+  console.log(' Send Message Function Called');
   console.log('Method:', event.httpMethod);
-  console.log('Headers:', event.headers);
-  console.log('Body:', event.body);
+  console.log('Headers:', JSON.stringify(event.headers, null, 2));
+  console.log('Raw body:', event.body);
 
   // Gérer les requêtes OPTIONS (CORS preflight)
   if (event.httpMethod === 'OPTIONS') {
-    console.log('👋 Handling OPTIONS request');
+    console.log(' Handling OPTIONS request');
     return {
       statusCode: 204,
       headers: corsHeaders,
@@ -46,7 +54,7 @@ export const handler: Handler = async (event) => {
   }
 
   if (event.httpMethod !== 'POST') {
-    console.warn('❌ Method not allowed:', event.httpMethod);
+    console.warn(' Method not allowed:', event.httpMethod);
     return {
       statusCode: 405,
       headers: corsHeaders,
@@ -56,11 +64,11 @@ export const handler: Handler = async (event) => {
 
   try {
     const payload = JSON.parse(event.body || '{}');
-    console.log('📦 Parsed payload:', payload);
+    console.log(' Parsed payload:', JSON.stringify(payload, null, 2));
 
     // Validation
     if (!payload.message || !payload.guestPhone || !payload.propertyId) {
-      console.error('❌ Missing required fields in payload:', {
+      console.error(' Missing required fields in payload:', {
         hasMessage: Boolean(payload.message),
         hasGuestPhone: Boolean(payload.guestPhone),
         hasPropertyId: Boolean(payload.propertyId)
@@ -80,12 +88,12 @@ export const handler: Handler = async (event) => {
     }
 
     // Récupérer la conversation
-    console.log('🔍 Fetching conversations for property:', payload.propertyId);
+    console.log(' Fetching conversations for property:', payload.propertyId);
     const conversations = await conversationService.fetchPropertyConversations(payload.propertyId);
     const conversation = conversations.find(c => normalizePhoneNumber(c.guestPhone) === normalizePhoneNumber(payload.guestPhone));
 
     if (!conversation) {
-      console.error('❌ Conversation not found');
+      console.error(' Conversation not found');
       return {
         statusCode: 404,
         headers: corsHeaders,
@@ -103,7 +111,7 @@ export const handler: Handler = async (event) => {
       status: 'pending'
     };
 
-    console.log('📝 Adding message to conversation:', {
+    console.log(' Adding message to conversation:', {
       conversationId: conversation.id,
       message: newMessage
     });
@@ -113,7 +121,7 @@ export const handler: Handler = async (event) => {
       Messages: JSON.stringify(updatedMessages)
     });
 
-    // Formater le message (supprimer les retours à la ligne multiples)
+    // Formater le message
     const formattedMessage = payload.message
       .replace(/\n{2,}/g, ' ')
       .replace(/\n/g, ' ');
@@ -124,12 +132,15 @@ export const handler: Handler = async (event) => {
       message: formattedMessage
     };
 
-    console.log('📤 Sending to Make.com:', makePayload);
+    console.log(' Sending to Make.com:', {
+      url: MAKE_WEBHOOK_URL,
+      payload: makePayload
+    });
 
     // Tentatives d'envoi avec retry
     for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
       try {
-        console.log(`📤 Attempt ${attempt}/${MAX_RETRIES} to send message to Make.com`);
+        console.log(` Attempt ${attempt}/${MAX_RETRIES} to send message to Make.com`);
         console.log('Sending to URL:', MAKE_WEBHOOK_URL);
         console.log('Original payload:', payload);
         
@@ -139,7 +150,7 @@ export const handler: Handler = async (event) => {
           }
         });
 
-        console.log('✅ Message sent successfully to Make.com:', {
+        console.log(' Message sent successfully to Make.com:', {
           status: response.status,
           data: response.data
         });
@@ -165,11 +176,11 @@ export const handler: Handler = async (event) => {
           })
         };
       } catch (error) {
-        console.error(`❌ Attempt ${attempt} failed:`, error);
+        console.error(` Attempt ${attempt} failed:`, error);
         
         if (attempt < MAX_RETRIES) {
           const delay = RETRY_DELAY * Math.pow(2, attempt - 1);
-          console.log(`⏳ Waiting ${delay}ms before next attempt...`);
+          console.log(` Waiting ${delay}ms before next attempt...`);
           await sleep(delay);
         } else {
           // Marquer le message comme échoué
@@ -190,7 +201,7 @@ export const handler: Handler = async (event) => {
 
     throw new Error('Failed to send message after all retries');
   } catch (error) {
-    console.error('❌ Error in send-message function:', error);
+    console.error(' Error in send-message function:', error);
     return {
       statusCode: 500,
       headers: corsHeaders,
