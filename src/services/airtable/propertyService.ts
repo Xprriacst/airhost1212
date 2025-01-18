@@ -3,8 +3,7 @@ import { mockProperties } from './mockData';
 import { mapRecordToProperty } from './mappers';
 import { handleServiceError } from '../../utils/error';
 import type { Property } from '../../types';
-import { authorizationService } from '../authorizationService';
-import { authService } from '../auth/authService';
+import { authService, authorizationService } from '..';
 
 export const propertyService = {
   async fetchPropertyById(id: string): Promise<Property> {
