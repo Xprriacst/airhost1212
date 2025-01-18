@@ -1,5 +1,5 @@
 import { base } from '../airtable/config';
-import { LoginCredentials, RegisterCredentials, User } from '../../types';
+import type { LoginCredentials, RegisterCredentials, User } from '../../types';
 import bcrypt from 'bcryptjs';
 
 class AuthService {
@@ -10,11 +10,7 @@ class AuthService {
     return this.currentUser;
   }
 
-  setCurrentUser(user: User | null) {
-    this.currentUser = user;
-  }
-
-  logout() {
+  logout(): void {
     this.currentUser = null;
   }
 
@@ -32,7 +28,7 @@ class AuthService {
         .firstPage();
 
       if (existingUsers.length > 0) {
-        throw new Error('Un utilisateur avec cet email existe déjà');
+        throw new Error('User already exists');
       }
 
       // Hasher le mot de passe
@@ -44,28 +40,27 @@ class AuthService {
         {
           fields: {
             email: credentials.email,
-            password: hashedPassword,
             name: credentials.name,
             role: 'user',
+            password: hashedPassword,
             createdAt: new Date().toISOString(),
           },
         },
       ]);
 
-      const record = records[0];
       const user = {
-        id: record.id,
-        email: record.fields.email as string,
-        name: record.fields.name as string,
-        role: record.fields.role as 'admin' | 'user',
-        createdAt: record.fields.createdAt as string,
+        id: records[0].id,
+        email: records[0].get('email') as string,
+        name: records[0].get('name') as string,
+        role: records[0].get('role') as string,
+        createdAt: records[0].get('createdAt') as string,
       };
 
       console.log('[Auth] Created user with ID:', user.id);
-      this.setCurrentUser(user);
+      this.currentUser = user;
       return user;
     } catch (error) {
-      console.error('Error registering user:', error);
+      console.error('Registration error:', error);
       throw error;
     }
   }
@@ -84,33 +79,32 @@ class AuthService {
         .firstPage();
 
       if (records.length === 0) {
-        throw new Error('Email ou mot de passe incorrect');
+        throw new Error('User not found');
       }
 
-      const record = records[0];
       const user = {
-        id: record.id,
-        email: record.fields.email as string,
-        name: record.fields.name as string,
-        role: record.fields.role as 'admin' | 'user',
-        createdAt: record.fields.createdAt as string,
+        id: records[0].id,
+        email: records[0].get('email') as string,
+        name: records[0].get('name') as string,
+        role: records[0].get('role') as string,
+        createdAt: records[0].get('createdAt') as string,
       };
 
       // Vérifier le mot de passe
       const isValid = await bcrypt.compare(
         credentials.password,
-        record.fields.password as string
+        records[0].get('password') as string
       );
 
       if (!isValid) {
-        throw new Error('Email ou mot de passe incorrect');
+        throw new Error('Invalid password');
       }
 
       console.log('[Auth] User ID:', user.id);
-      this.setCurrentUser(user);
+      this.currentUser = user;
       return user;
     } catch (error) {
-      console.error('Error logging in:', error);
+      console.error('Login error:', error);
       throw error;
     }
   }

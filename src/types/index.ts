@@ -10,14 +10,21 @@ export interface AIInstruction {
   priority: number;
 }
 
+export interface User {
+  id: string;
+  email: string;
+  name: string;
+  role: string;
+  createdAt: string;
+}
+
 export interface Property {
   id: string;
-  name: string;
-  address: string;
   description?: string;
   photos?: string[];
   aiInstructions?: string;
   autoPilot?: boolean;
+  conversations?: string[];
 }
 
 export interface Message {
@@ -30,19 +37,13 @@ export interface Message {
 export interface Conversation {
   id: string;
   fields: {
-    PropertyId?: string;
-    UserId?: string;
-    Message?: string;
-    CreatedAt?: string;
     Properties?: string[];
     'Guest Name'?: string;
+    'Guest First Name'?: string;
+    'Guest Last Name'?: string;
     'Guest Email'?: string;
-    'Guest phone number'?: string;
-    Messages?: string;
-    'Check-in Date'?: string;
-    'Check-out Date'?: string;
-    'Auto Pilot'?: boolean;
-    UnreadCount?: number;
+    Messages?: string[];
+    'Check-in'?: string;
   };
 }
 
@@ -64,6 +65,16 @@ export interface LoginCredentials {
   password: string;
 }
 
-export interface RegisterCredentials extends LoginCredentials {
+export interface RegisterCredentials {
+  email: string;
+  password: string;
   name: string;
+}
+
+export interface UserProperty {
+  userId: string;
+  propertyId: string;
+  role: string;
+  date?: string;
+  createdBy?: string;
 }

@@ -15,7 +15,7 @@ export const propertyService = {
       const records = await base('Properties')
         .select({
           view: 'Grid view',
-          fields: ['Name', 'Address', 'Photos']
+          fields: ['ID', 'Description', 'Photos', 'AI Instructions', 'Auto Pilot', 'Conversations']
         })
         .all();
 
@@ -67,7 +67,7 @@ export const propertyService = {
       const records = await base('Properties')
         .select({ 
           view: 'Grid view',
-          fields: ['Name', 'Address', 'Photos']
+          fields: ['ID', 'Description', 'Photos', 'AI Instructions', 'Auto Pilot', 'Conversations']
         })
         .all();
 
@@ -100,9 +100,10 @@ export const propertyService = {
       }
 
       const record = await base('Properties').update(id, {
-        Name: propertyData.name,
-        Address: propertyData.address,
-        Photos: propertyData.photos
+        Description: propertyData.description,
+        Photos: propertyData.photos,
+        'AI Instructions': propertyData.aiInstructions,
+        'Auto Pilot': propertyData.autoPilot
       });
 
       return mapRecordToProperty(record);

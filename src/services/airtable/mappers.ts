@@ -1,31 +1,27 @@
-import type { Property } from '../../types';
+import type { Property, Conversation } from '../../types';
 
-export const mapRecordToProperty = (record: any): Property => {
-  const aiInstructions = record.get('AI Instructions');
-  let parsedInstructions;
-  
-  try {
-    parsedInstructions = aiInstructions ? JSON.parse(aiInstructions) : [];
-  } catch (error) {
-    console.warn('Failed to parse AI Instructions:', error);
-    parsedInstructions = [];
-  }
-
+export function mapRecordToProperty(record: any): Property {
   return {
     id: record.id,
-    name: record.get('Name') || '',
-    address: record.get('Address') || '',
-    description: record.get('Description') || '',
-    photos: record.get('Photos') || [],
-    aiInstructions: parsedInstructions,
-    autoPilot: record.get('Auto Pilot') || false,
-    rules: record.get('Rules') || '',
-    amenities: record.get('Amenities') || [],
-    restaurants: record.get('Restaurants') || [],
-    fastFood: record.get('Fast Food') || [],
-    wifiInformation: record.get('WiFi Information') || '',
-    checkInInstructions: record.get('Check-in Instructions') || '',
-    capacity: record.get('Capacity'),
-    emergencyContacts: record.get('Emergency Contacts') || []
+    description: record.get('Description'),
+    photos: record.get('Photos'),
+    aiInstructions: record.get('AI Instructions'),
+    autoPilot: record.get('Auto Pilot'),
+    conversations: record.get('Conversations')
   };
-};
+}
+
+export function mapRecordToConversation(record: any): Conversation {
+  return {
+    id: record.id,
+    fields: {
+      Properties: record.get('Properties'),
+      'Guest Name': record.get('Guest Name'),
+      'Guest First Name': record.get('Guest First Name'),
+      'Guest Last Name': record.get('Guest Last Name'),
+      'Guest Email': record.get('Guest Email'),
+      Messages: record.get('Messages'),
+      'Check-in': record.get('Check-in')
+    }
+  };
+}
