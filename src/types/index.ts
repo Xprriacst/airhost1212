@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { User } from './auth';
 
 export interface AIInstruction {
   id: string;
@@ -37,14 +38,6 @@ export interface Conversation {
   checkOut: string;
   autoPilot: boolean;
   messages: Message[];
-}
-
-export interface User {
-  id: string;
-  email: string;
-  name: string;
-  role: 'admin' | 'user';
-  createdAt: string;
 }
 
 export interface AuthState {
