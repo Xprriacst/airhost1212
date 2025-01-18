@@ -30,10 +30,11 @@ class AuthorizationService {
     }
   }
 
-  async canAccessProperty(userId: string, propertyId: string): Promise<boolean> {
+  async canAccessProperty(userId: string, propertyId: string | string[]): Promise<boolean> {
     try {
       const userProperties = await this.getUserProperties(userId);
-      return userProperties.some(up => up.propertyId === propertyId);
+      const propertyIds = Array.isArray(propertyId) ? propertyId : [propertyId];
+      return userProperties.some(up => propertyIds.includes(up.propertyId));
     } catch (error) {
       console.error('Error checking property access:', error);
       return false;
