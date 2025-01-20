@@ -87,62 +87,70 @@ export default function ConversationList({
 
   return (
     <div className="divide-y">
-      {uniqueConversations.map((conversation) => (
-        <div 
-          key={conversation.id}
-          className="flex items-center gap-4 p-4 hover:bg-gray-100 cursor-pointer"
-          onClick={() => onSelectConversation(conversation)}
-        >
-          {/* Avatar circle */}
-          <div className="relative flex-shrink-0">
-            <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center">
-              <span className="text-gray-600 text-lg font-medium">
-                {conversation.guestName.charAt(0).toUpperCase()}
-              </span>
-            </div>
-          </div>
+      {uniqueConversations.map((conversation) => {
+        // Parse messages safely
+        const messages = conversation.Messages ? JSON.parse(conversation.Messages) : [];
+        const lastMessage = messages[messages.length - 1];
+        const guestName = conversation['Guest Name'] || 'Invité';
+        const unreadCount = conversation.UnreadCount || 0;
 
-          {/* Message content */}
-          <div className="flex-1 min-w-0">
-            <div className="flex justify-between items-center">
-              <span className={`font-medium ${conversation.unreadCount > 0 ? 'font-semibold text-black' : 'text-gray-900'}`}>
-                {conversation.guestName}
-              </span>
-              <div className="flex items-center gap-2">
-                {conversation.unreadCount > 0 && (
-                  <div className="bg-green-500 text-white rounded-full min-w-[20px] h-5 flex items-center justify-center text-xs px-1.5">
-                    {conversation.unreadCount}
-                  </div>
-                )}
-                <span className="text-xs text-gray-500">
-                  {formatTimestamp(conversation.messages[conversation.messages.length - 1]?.timestamp)}
+        return (
+          <div 
+            key={conversation.id}
+            className="flex items-center gap-4 p-4 hover:bg-gray-100 cursor-pointer"
+            onClick={() => onSelectConversation(conversation)}
+          >
+            {/* Avatar circle */}
+            <div className="relative flex-shrink-0">
+              <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center">
+                <span className="text-gray-600 text-lg font-medium">
+                  {guestName.charAt(0).toUpperCase()}
                 </span>
               </div>
             </div>
-            <div className={`mt-0.5 text-sm truncate ${conversation.unreadCount > 0 ? 'text-gray-900 font-medium' : 'text-gray-500'}`}>
-              {conversation.messages[conversation.messages.length - 1]?.text || 'Aucun message'}
+
+            {/* Message content */}
+            <div className="flex-1 min-w-0">
+              <div className="flex justify-between items-center">
+                <span className={`font-medium ${unreadCount > 0 ? 'font-semibold text-black' : 'text-gray-900'}`}>
+                  {guestName}
+                </span>
+                <div className="flex items-center gap-2">
+                  {unreadCount > 0 && (
+                    <div className="bg-green-500 text-white rounded-full min-w-[20px] h-5 flex items-center justify-center text-xs px-1.5">
+                      {unreadCount}
+                    </div>
+                  )}
+                  <span className="text-xs text-gray-500">
+                    {lastMessage?.timestamp ? formatTimestamp(new Date(lastMessage.timestamp)) : ''}
+                  </span>
+                </div>
+              </div>
+              <div className={`mt-0.5 text-sm truncate ${unreadCount > 0 ? 'text-gray-900 font-medium' : 'text-gray-500'}`}>
+                {lastMessage?.body || 'Aucun message'}
+              </div>
+            </div>
+
+            {/* Auto-pilot button */}
+            <div className="flex items-center">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onToggleAutoPilot(conversation.id);
+                }}
+                className={`p-2 rounded-lg ${
+                  autoPilotStates[conversation.id] 
+                    ? 'text-blue-500 bg-blue-50 hover:bg-blue-100'
+                    : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
+                }`}
+                title={autoPilotStates[conversation.id] ? "Désactiver Auto-pilot" : "Activer Auto-pilot"}
+              >
+                <MessageSquare className="w-5 h-5" />
+              </button>
             </div>
           </div>
-
-          {/* Auto-pilot button */}
-          <div className="flex items-center">
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onToggleAutoPilot(conversation.id);
-              }}
-              className={`p-2 rounded-lg ${
-                autoPilotStates[conversation.id] 
-                  ? 'text-blue-500 bg-blue-50 hover:bg-blue-100'
-                  : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
-              }`}
-              title={autoPilotStates[conversation.id] ? "Désactiver Auto-pilot" : "Activer Auto-pilot"}
-            >
-              <MessageSquare className="w-5 h-5" />
-            </button>
-          </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
