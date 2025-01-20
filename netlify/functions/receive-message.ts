@@ -170,7 +170,8 @@ export const handler: Handler = async (event) => {
 
     if (conversation) {
       // Update existing conversation
-      const updatedMessages = [...(conversation.Messages || []), {
+      const currentMessages = conversation.Messages ? JSON.parse(conversation.Messages) : [];
+      const updatedMessages = [...currentMessages, {
         id: Date.now().toString(),
         text: data.message,
         timestamp: new Date(),
@@ -227,7 +228,7 @@ export const handler: Handler = async (event) => {
         status: 'success',
         conversation: {
           id: conversation.id,
-          propertyId: conversation.Properties[0],
+          propertyId: propertyId,
           guestName: conversation['Guest Name'],
           guestPhone: conversation['Guest phone number'],
           isNewConversation: !conversation
