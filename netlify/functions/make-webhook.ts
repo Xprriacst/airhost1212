@@ -27,6 +27,15 @@ const waapiMessageSchema = z.object({
   })
 });
 
+// Fonction pour formater le numéro de téléphone
+const formatPhoneNumber = (phone: string): string => {
+  const cleaned = phone.replace(/\D/g, '').replace(/@c\.us$/, '');
+  const withoutLeadingZero = cleaned.replace(/^0/, '');
+  return withoutLeadingZero.startsWith('33') 
+    ? `+${withoutLeadingZero}`
+    : `+33${withoutLeadingZero}`;
+};
+
 export const handler: Handler = async (event) => {
   console.log('🚀 WAAPI Make.com Webhook Called');
   console.log('Method:', event.httpMethod);
@@ -74,8 +83,13 @@ export const handler: Handler = async (event) => {
       };
     }
 
-    // Formater le numéro de téléphone (retirer @c.us et formater pour la France)
-    const phoneNumber = wapiData.data.message._data.from.replace('@c.us', '');
+    // Formater le numéro de téléphone
+    const phoneNumber = formatPhoneNumber(wapiData.data.message._data.from);
+    
+    // Construire l'URL pour receive-message en utilisant le host de la requête
+    const host = event.headers.host || 'whimsical-beignet-91329f.netlify.app';
+    const protocol = event.headers['x-forwarded-proto'] || 'https';
+    const receiveMessageUrl = `${protocol}://${host}/.netlify/functions/receive-message`;
     
     // Transférer le message au endpoint receive-message
     const messagePayload = {
@@ -91,9 +105,12 @@ export const handler: Handler = async (event) => {
       isHost: false
     };
 
-    console.log('📤 Forwarding to receive-message:', messagePayload);
+    console.log('📤 Forwarding to receive-message:', {
+      url: receiveMessageUrl,
+      payload: messagePayload
+    });
 
-    const response = await fetch('https://whimsical-beignet-91329f.netlify.app/.netlify/functions/receive-message', {
+    const response = await fetch(receiveMessageUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -102,7 +119,8 @@ export const handler: Handler = async (event) => {
     });
 
     if (!response.ok) {
-      throw new Error(`Failed to forward message: ${response.status} ${response.statusText}`);
+      const errorText = await response.text();
+      throw new Error(`Failed to forward message: ${response.status} ${response.statusText}\n${errorText}`);
     }
 
     const result = await response.json();
