@@ -64,13 +64,30 @@ export default function Conversations() {
         
         // Trier les conversations
         fetchedConversations.sort((a, b) => {
-          if (b.unreadCount !== a.unreadCount) {
-            return b.unreadCount - a.unreadCount;
+          // D'abord par nombre de messages non lus
+          const unreadCountA = a.unreadCount || 0;
+          const unreadCountB = b.unreadCount || 0;
+          if (unreadCountB !== unreadCountA) {
+            return unreadCountB - unreadCountA;
           }
-          const aLastMessage = a.messages[a.messages.length - 1];
-          const bLastMessage = b.messages[b.messages.length - 1];
-          if (!aLastMessage || !bLastMessage) return 0;
-          return new Date(bLastMessage.timestamp).getTime() - new Date(aLastMessage.timestamp).getTime();
+
+          // Ensuite par date du dernier message
+          try {
+            const messagesA = a.messages ? JSON.parse(a.messages) : [];
+            const messagesB = b.messages ? JSON.parse(b.messages) : [];
+            
+            const lastMessageA = messagesA[messagesA.length - 1];
+            const lastMessageB = messagesB[messagesB.length - 1];
+
+            if (!lastMessageA && !lastMessageB) return 0;
+            if (!lastMessageA) return 1;
+            if (!lastMessageB) return -1;
+
+            return new Date(lastMessageB.timestamp).getTime() - new Date(lastMessageA.timestamp).getTime();
+          } catch (error) {
+            console.warn('Error parsing messages during sort:', error);
+            return 0;
+          }
         });
 
         // Mise à jour optimisée
