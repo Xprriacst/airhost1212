@@ -164,15 +164,13 @@ export const handler: Handler = async (event) => {
       return { statusCode: 404, body: JSON.stringify({ error: 'Property not found' }) };
     }
 
-    // Create new conversation
-    const conversation = await conversationService.addConversationWithoutAuth({
-      Properties: [propertyId],
-      'Guest Name': data.waNotifyName || data.guestName || 'Guest',
-      'Guest Email': data.guestEmail || '',
-      'Guest phone number': data.guestPhone,
-      'Check-in Date': data.checkInDate,
-      'Check-out Date': data.checkOutDate,
-      Messages: JSON.stringify([{
+    // Get all conversations and find one with matching phone number
+    const conversations = await conversationService.getAllConversationsWithoutAuth();
+    let conversation = conversations.find(conv => conv['Guest phone number'] === data.guestPhone);
+
+    if (conversation) {
+      // Update existing conversation
+      const updatedMessages = [...(conversation.Messages || []), {
         id: Date.now().toString(),
         text: data.message,
         timestamp: new Date(),
@@ -183,15 +181,41 @@ export const handler: Handler = async (event) => {
           ...(data.waMessageId && { waMessageId: data.waMessageId }),
           ...(data.waNotifyName && { waNotifyName: data.waNotifyName })
         }
-      }]),
-      'Auto Pilot': false
-    });
+      }];
+
+      conversation = await conversationService.updateConversationWithoutAuth(conversation.id, {
+        Messages: JSON.stringify(updatedMessages)
+      });
+    } else {
+      // Create new conversation
+      conversation = await conversationService.addConversationWithoutAuth({
+        Properties: [propertyId],
+        'Guest Name': data.waNotifyName || data.guestName || 'Guest',
+        'Guest Email': data.guestEmail || '',
+        'Guest phone number': data.guestPhone,
+        'Check-in Date': data.checkInDate,
+        'Check-out Date': data.checkOutDate,
+        Messages: JSON.stringify([{
+          id: Date.now().toString(),
+          text: data.message,
+          timestamp: new Date(),
+          sender: data.isHost ? 'host' : 'guest',
+          type: 'text',
+          metadata: {
+            platform: data.platform,
+            ...(data.waMessageId && { waMessageId: data.waMessageId }),
+            ...(data.waNotifyName && { waNotifyName: data.waNotifyName })
+          }
+        }]),
+        'Auto Pilot': false
+      });
+    }
     
-    // Send notification for new conversation
+    // Send notification
     try {
       await sendNotification(
         'Nouveau message',
-        `${conversation.guestName || 'Guest'}: ${data.message}`
+        `${conversation['Guest Name'] || 'Guest'}: ${data.message}`
       );
     } catch (error) {
       console.error('Failed to send notification:', error);
@@ -203,9 +227,10 @@ export const handler: Handler = async (event) => {
         status: 'success',
         conversation: {
           id: conversation.id,
-          propertyId: conversation.propertyId,
-          guestName: conversation.guestName,
-          guestPhone: conversation.guestPhone
+          propertyId: conversation.Properties[0],
+          guestName: conversation['Guest Name'],
+          guestPhone: conversation['Guest phone number'],
+          isNewConversation: !conversation
         }
       })
     };

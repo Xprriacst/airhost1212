@@ -241,6 +241,37 @@ export const conversationService = {
     }
   },
 
+  async updateConversationWithoutAuth(conversationId: string, data: Record<string, any>): Promise<Conversation> {
+    try {
+      if (!base) {
+        throw new Error('Airtable is not configured');
+      }
+
+      const record = await base('Conversations').update(conversationId, data);
+      return mapAirtableToConversation(record);
+    } catch (error) {
+      console.error('Error updating conversation:', error);
+      throw error;
+    }
+  },
+
+  async getAllConversationsWithoutAuth(): Promise<Conversation[]> {
+    try {
+      if (!base) {
+        throw new Error('Airtable is not configured');
+      }
+
+      const records = await base('Conversations').select({
+        view: 'Grid view'
+      }).all();
+
+      return records.map(mapAirtableToConversation);
+    } catch (error) {
+      console.error('Error getting conversations:', error);
+      throw error;
+    }
+  },
+
   async incrementUnreadCount(conversationId: string): Promise<void> {
     try {
       if (!base) throw new Error('Airtable is not configured');
