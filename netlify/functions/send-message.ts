@@ -88,9 +88,18 @@ export const handler: Handler = async (event) => {
     }
 
     // Récupérer la conversation
-    console.log(' Fetching conversations for property:', payload.propertyId);
-    const conversations = await conversationService.fetchPropertyConversations(payload.propertyId);
-    const conversation = conversations.find(c => normalizePhoneNumber(c.guestPhone) === normalizePhoneNumber(payload.guestPhone));
+    console.log(' Fetching all conversations...');
+    const conversations = await conversationService.getAllConversationsWithoutAuth();
+    console.log(` Found ${conversations.length} conversations`);
+    
+    // Si un conversationId est fourni, l'utiliser directement
+    let conversation;
+    if (payload.conversationId) {
+      conversation = conversations.find(c => c.id === payload.conversationId);
+    } else {
+      // Sinon chercher par numéro de téléphone
+      conversation = conversations.find(c => normalizePhoneNumber(c['Guest phone number']) === normalizePhoneNumber(payload.guestPhone));
+    }
 
     if (!conversation) {
       console.error(' Conversation not found');
@@ -116,8 +125,9 @@ export const handler: Handler = async (event) => {
       message: newMessage
     });
 
-    const updatedMessages = [...conversation.messages, newMessage];
-    await conversationService.updateConversation(conversation.id, {
+    const currentMessages = conversation.Messages ? JSON.parse(conversation.Messages) : [];
+    const updatedMessages = [...currentMessages, newMessage];
+    await conversationService.updateConversationWithoutAuth(conversation.id, {
       Messages: JSON.stringify(updatedMessages)
     });
 
@@ -162,7 +172,7 @@ export const handler: Handler = async (event) => {
             : msg
         );
 
-        await conversationService.updateConversation(conversation.id, {
+        await conversationService.updateConversationWithoutAuth(conversation.id, {
           Messages: JSON.stringify(sentMessages)
         });
 
@@ -190,7 +200,7 @@ export const handler: Handler = async (event) => {
               : msg
           );
 
-          await conversationService.updateConversation(conversation.id, {
+          await conversationService.updateConversationWithoutAuth(conversation.id, {
             Messages: JSON.stringify(failedMessages)
           });
 
