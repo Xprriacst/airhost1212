@@ -157,8 +157,8 @@ export const handler: Handler = async (event) => {
       return { statusCode: 400, body: JSON.stringify({ error: 'Property ID is required' }) };
     }
 
-    // Get property
-    const properties = await propertyService.getProperties();
+    // Get property without authentication check
+    const properties = await propertyService.getAllPropertiesWithoutFiltering();
     const property = properties.find((p) => p.id === propertyId);
     if (!property) {
       return { statusCode: 404, body: JSON.stringify({ error: 'Property not found' }) };
