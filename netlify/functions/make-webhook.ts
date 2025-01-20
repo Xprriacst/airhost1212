@@ -1,5 +1,6 @@
 import { Handler } from '@netlify/functions';
 import { z } from 'zod';
+import fetch from 'node-fetch';
 
 // Schéma de validation pour les messages WAAPI via Make.com
 const waapiMessageSchema = z.object({
