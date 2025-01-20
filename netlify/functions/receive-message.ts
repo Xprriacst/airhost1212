@@ -164,125 +164,60 @@ export const handler: Handler = async (event) => {
       return { statusCode: 404, body: JSON.stringify({ error: 'Property not found' }) };
     }
 
-    // Get conversations
-    const conversations = await conversationService.fetchPropertyConversations(propertyId);
-    let conversation = conversations.find((conv) => conv.guestPhone === data.guestPhone);
-
-    // Create new conversation if needed
-    if (!conversation) {
-      conversation = await conversationService.addConversation({
-        Properties: [propertyId],
-        'Guest Name': data.waNotifyName || data.guestName || 'Guest',
-        'Guest Email': data.guestEmail || '',
-        'Guest phone number': data.guestPhone,
-        'Check-in Date': data.checkInDate,
-        'Check-out Date': data.checkOutDate,
-        Messages: JSON.stringify([{
-          id: Date.now().toString(),
-          text: data.message,
-          timestamp: new Date(),
-          sender: data.isHost ? 'host' : 'guest',
-          type: 'text',
-          metadata: {
-            platform: data.platform,
-            ...(data.waMessageId && { waMessageId: data.waMessageId }),
-            ...(data.waNotifyName && { waNotifyName: data.waNotifyName })
-          }
-        }]),
-        'Auto Pilot': false
-      });
-      
-      // Send notification for new conversation
-      try {
-        await sendNotification(
-          'Nouvelle conversation',
-          `${conversation.guestName}: ${data.message}`
-        );
-      } catch (error) {
-        console.error('Failed to send new conversation notification:', error);
-      }
-      
-      return {
-        statusCode: 200,
-        body: JSON.stringify({ 
-          status: 'success',
-          conversationId: conversation.id,
-          messageId: conversation.messages[0].id
-        }),
-      };
-    }
-
-    // Add message to existing conversation
-    if (!data.isHost) {
-      const newMessage = {
-        id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+    // Create new conversation
+    const conversation = await conversationService.addConversationWithoutAuth({
+      Properties: [propertyId],
+      'Guest Name': data.waNotifyName || data.guestName || 'Guest',
+      'Guest Email': data.guestEmail || '',
+      'Guest phone number': data.guestPhone,
+      'Check-in Date': data.checkInDate,
+      'Check-out Date': data.checkOutDate,
+      Messages: JSON.stringify([{
+        id: Date.now().toString(),
         text: data.message,
-        timestamp: new Date(data.timestamp || Date.now()),
-        sender: 'guest',
+        timestamp: new Date(),
+        sender: data.isHost ? 'host' : 'guest',
         type: 'text',
         metadata: {
           platform: data.platform,
           ...(data.waMessageId && { waMessageId: data.waMessageId }),
           ...(data.waNotifyName && { waNotifyName: data.waNotifyName })
         }
-      };
-
-      const updatedMessages = [...(conversation.messages || []), newMessage];
-      await conversationService.updateConversation(conversation.id, {
-        Messages: JSON.stringify(updatedMessages),
-      });
-
-      // Increment unread count
-      await conversationService.incrementUnreadCount(conversation.id);
-
-      // Send notification for new message
-      try {
-        await sendNotification(
-          'Nouveau message',
-          `${conversation.guestName}: ${data.message}`
-        );
-      } catch (error) {
-        console.error('Failed to send new message notification:', error);
-      }
-
-      return {
-        statusCode: 200,
-        body: JSON.stringify({ 
-          status: 'success',
-          conversationId: conversation.id,
-          messageId: newMessage.id
-        }),
-      };
+      }]),
+      'Auto Pilot': false
+    });
+    
+    // Send notification for new conversation
+    try {
+      await sendNotification(
+        'Nouveau message',
+        `${conversation.guestName || 'Guest'}: ${data.message}`
+      );
+    } catch (error) {
+      console.error('Failed to send notification:', error);
     }
 
     return {
       statusCode: 200,
-      body: JSON.stringify({ 
+      body: JSON.stringify({
         status: 'success',
-        conversationId: conversation.id,
-        skipped: true
-      }),
+        conversation: {
+          id: conversation.id,
+          propertyId: conversation.propertyId,
+          guestName: conversation.guestName,
+          guestPhone: conversation.guestPhone
+        }
+      })
     };
 
   } catch (error) {
-    console.error('🚨 Error processing message:', error);
-    
-    if (error instanceof z.ZodError) {
-      return {
-        statusCode: 400,
-        body: JSON.stringify({ 
-          error: 'Invalid request data',
-          details: error.errors
-        }),
-      };
-    }
-
+    console.error('❌ Error processing message:', error);
     return {
-      statusCode: 500,
+      statusCode: error instanceof z.ZodError ? 400 : 500,
       body: JSON.stringify({ 
-        error: 'Internal server error',
+        error: error instanceof z.ZodError ? 'Validation error' : 'Internal server error',
         message: error instanceof Error ? error.message : 'Unknown error'
-      }),
+      })
     };
   }
 };

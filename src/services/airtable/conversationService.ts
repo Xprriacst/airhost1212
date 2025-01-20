@@ -328,6 +328,20 @@ export const conversationService = {
     }
   },
 
+  async addConversationWithoutAuth(data: Record<string, any>): Promise<Conversation> {
+    try {
+      if (!base) {
+        throw new Error('Airtable is not configured');
+      }
+
+      const record = await base('Conversations').create(data);
+      return mapAirtableToConversation(record);
+    } catch (error) {
+      console.error('Error adding conversation:', error);
+      throw error;
+    }
+  },
+
   async deleteConversation(conversationId: string): Promise<boolean> {
     try {
       if (!base) throw new Error('Airtable is not configured');
