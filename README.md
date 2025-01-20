@@ -72,6 +72,26 @@
 - [ ] Envoi de fichiers (images/vidéos)
 - [ ] Catégorie Question/Réponse dans AI knowledge
 
+## 🔧 Informations de Déploiement
+
+### Netlify
+- **URL du site** : https://whimsical-beignet-91329f.netlify.app
+- **ID du site** : ffb49ecb-76d4-46a2-bbe2-d7622e8dfeef
+- **Clé d'API** : nfp_nPoYHg7YbGWgYduYjmrvvbuG4mmb2L3Ca885 (expire le 27/01/2025)
+
+### Commandes utiles pour vérifier le déploiement
+```bash
+# Vérifier le statut du dernier déploiement
+curl -H "Authorization: Bearer $NETLIFY_TOKEN" \
+  https://api.netlify.com/api/v1/sites/ffb49ecb-76d4-46a2-bbe2-d7622e8dfeef/deploys?per_page=1
+
+# Liste des déploiements
+curl -H "Authorization: Bearer $NETLIFY_TOKEN" \
+  https://api.netlify.com/api/v1/sites/ffb49ecb-76d4-46a2-bbe2-d7622e8dfeef/deploys
+```
+
+Note : La clé d'API Netlify expire dans 7 jours (le 27/01/2025). Pensez à la renouveler avant cette date.
+
 ## 🔍 Cas d'Urgence Identifiés
 - Client mécontent
 - Problème technique
