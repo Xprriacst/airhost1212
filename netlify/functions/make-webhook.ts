@@ -27,6 +27,14 @@ const waapiMessageSchema = z.object({
   })
 });
 
+// Schéma de validation pour les messages de Make.com
+const makeMessageSchema = z.object({
+  propertyId: z.string(),
+  message: z.string(),
+  guestPhone: z.string(),
+  webhookId: z.string()
+});
+
 // Fonction pour formater le numéro de téléphone
 const formatPhoneNumber = (phone: string): string => {
   const cleaned = phone.replace(/\D/g, '').replace(/@c\.us$/, '');
@@ -67,7 +75,61 @@ export const handler: Handler = async (event) => {
     console.log('📦 Parsed body:', JSON.stringify(body, null, 2));
 
     // Valider le message WAAPI
-    const wapiData = waapiMessageSchema.parse(body);
+    let wapiData;
+    try {
+      wapiData = waapiMessageSchema.parse(body);
+    } catch (error) {
+      // Valider le message Make
+      const makeData = makeMessageSchema.parse(body);
+      console.log('✅ Validated Make data:', JSON.stringify(makeData, null, 2));
+
+      // Construire l'URL pour receive-message en utilisant le host de la requête
+      const host = event.headers.host || 'whimsical-beignet-91329f.netlify.app';
+      const protocol = event.headers['x-forwarded-proto'] || 'https';
+      const receiveMessageUrl = `${protocol}://${host}/.netlify/functions/receive-message`;
+      
+      // Transférer le message au endpoint receive-message
+      const messagePayload = {
+        propertyId: makeData.propertyId,
+        message: makeData.message,
+        guestPhone: makeData.guestPhone,
+        platform: 'whatsapp',
+        webhookId: makeData.webhookId,
+        waMessageId: makeData.webhookId,
+        timestamp: new Date().toISOString()
+      };
+
+      console.log('📤 Forwarding to receive-message:', {
+        url: receiveMessageUrl,
+        payload: messagePayload
+      });
+
+      const response = await fetch(receiveMessageUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(messagePayload)
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Failed to forward message: ${response.status} ${response.statusText}\n${errorText}`);
+      }
+
+      const result = await response.json();
+      console.log('✅ Message forwarded successfully:', result);
+
+      return {
+        statusCode: 200,
+        body: JSON.stringify({ 
+          status: 'success',
+          messageId: messagePayload.webhookId,
+          forwardedResponse: result
+        })
+      };
+    }
+
     console.log('✅ Validated WAAPI data:', JSON.stringify(wapiData, null, 2));
 
     // Ne pas traiter les messages sortants
