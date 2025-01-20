@@ -165,8 +165,19 @@ export const handler: Handler = async (event) => {
     }
 
     // Get all conversations and find one with matching phone number
+    console.log('🔍 Fetching all conversations...');
     const conversations = await conversationService.getAllConversationsWithoutAuth();
-    let conversation = conversations.find(conv => conv['Guest phone number'] === data.guestPhone);
+    console.log(`✅ Found ${conversations.length} conversations`);
+    console.log('🔍 Looking for conversation with phone:', data.guestPhone);
+    let conversation = conversations.find(conv => {
+      console.log('Checking conversation:', {
+        id: conv.id,
+        phone: conv['Guest phone number'],
+        match: conv['Guest phone number'] === data.guestPhone
+      });
+      return conv['Guest phone number'] === data.guestPhone;
+    });
+    console.log('🔍 Conversation found:', conversation ? 'yes' : 'no');
 
     if (conversation) {
       // Update existing conversation
