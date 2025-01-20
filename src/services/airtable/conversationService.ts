@@ -30,16 +30,19 @@ const parseMessages = (rawMessages: any): Message[] => {
 
 // Mapping function for Airtable records
 const mapAirtableToConversation = (record: any): Conversation => {
+  const properties = record.fields.Properties;
   return {
     id: record.id,
-    Messages: record.fields.Messages,
-    Properties: record.fields.Properties,
+    propertyId: Array.isArray(properties) ? properties[0] : properties,
+    Properties: properties,
     'Guest Name': record.fields['Guest Name'],
     'Guest Email': record.fields['Guest Email'],
     'Guest phone number': record.fields['Guest phone number'],
+    Messages: record.fields.Messages,
     'Check-in Date': record.fields['Check-in Date'],
     'Check-out Date': record.fields['Check-out Date'],
-    'Auto Pilot': record.fields['Auto Pilot']
+    'Auto Pilot': record.fields['Auto Pilot'],
+    UnreadCount: record.fields.UnreadCount || 0
   };
 };
 

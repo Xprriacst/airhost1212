@@ -36,15 +36,16 @@ export interface Message {
 
 export interface Conversation {
   id: string;
-  fields: {
-    Properties?: string[];
-    'Guest Name'?: string;
-    'Guest First Name'?: string;
-    'Guest Last Name'?: string;
-    'Guest Email'?: string;
-    Messages?: string[];
-    'Check-in'?: string;
-  };
+  propertyId: string;
+  Properties: string | string[];
+  'Guest Name'?: string;
+  'Guest Email'?: string;
+  'Guest phone number'?: string;
+  Messages?: string;
+  'Check-in Date'?: string;
+  'Check-out Date'?: string;
+  'Auto Pilot'?: boolean;
+  UnreadCount?: number;
 }
 
 export interface EmergencyTag {
