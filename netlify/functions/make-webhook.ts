@@ -92,7 +92,7 @@ export const handler: Handler = async (event) => {
 
     console.log('📤 Forwarding to receive-message:', messagePayload);
 
-    const response = await fetch('/.netlify/functions/receive-message', {
+    const response = await fetch('https://whimsical-beignet-91329f.netlify.app/.netlify/functions/receive-message', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
