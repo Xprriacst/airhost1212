@@ -28,19 +28,18 @@ const parseMessages = (rawMessages: any): Message[] => {
   }
 };
 
+// Mapping function for Airtable records
 const mapAirtableToConversation = (record: any): Conversation => {
-  const propertyIds = record.get('Properties');
   return {
     id: record.id,
-    propertyId: Array.isArray(propertyIds) ? propertyIds[0] : propertyIds,
-    guestName: record.get('Guest Name') || '',
-    guestEmail: record.get('Guest Email') || '',
-    guestPhone: record.get('Guest phone number') || '',
-    checkIn: record.get('Check-in Date') || '',
-    checkOut: record.get('Check-out Date') || '',
-    autoPilot: record.get('Auto Pilot') || false,
-    messages: parseMessages(record.get('Messages')),
-    unreadCount: record.get('UnreadCount') || 0
+    Messages: record.fields.Messages,
+    Properties: record.fields.Properties,
+    'Guest Name': record.fields['Guest Name'],
+    'Guest Email': record.fields['Guest Email'],
+    'Guest phone number': record.fields['Guest phone number'],
+    'Check-in Date': record.fields['Check-in Date'],
+    'Check-out Date': record.fields['Check-out Date'],
+    'Auto Pilot': record.fields['Auto Pilot']
   };
 };
 
@@ -126,9 +125,9 @@ export const conversationService = {
 
       const conversation = mapAirtableToConversation(record);
       // Utiliser la propriété déjà mappée dans la conversation
-      const hasAccess = await authorizationService.canAccessProperty(user.id, conversation.propertyId);
+      const hasAccess = await authorizationService.canAccessProperty(user.id, conversation.Properties);
       if (!hasAccess) {
-        console.error('Access denied to property:', conversation.propertyId);
+        console.error('Access denied to property:', conversation.Properties);
         throw new Error('Access denied to this conversation');
       }
 
@@ -281,7 +280,7 @@ export const conversationService = {
 
       // Récupérer le compteur actuel
       const conversation = await this.fetchConversationById(conversationId);
-      const currentCount = conversation.unreadCount || 0;
+      const currentCount = conversation.UnreadCount || 0;
       const newCount = currentCount + 1;
 
       // Mettre à jour directement dans Airtable
@@ -346,9 +345,9 @@ export const conversationService = {
       
       const conversation = mapAirtableToConversation(record);
       // Utiliser la propriété déjà mappée dans la conversation
-      const hasAccess = await authorizationService.canAccessProperty(user.id, conversation.propertyId);
+      const hasAccess = await authorizationService.canAccessProperty(user.id, conversation.Properties);
       if (!hasAccess) {
-        console.error('Access denied to property:', conversation.propertyId);
+        console.error('Access denied to property:', conversation.Properties);
         throw new Error('Access denied to this conversation');
       }
 
