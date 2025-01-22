@@ -59,7 +59,8 @@ const mapAirtableToConversation = (record: any): Conversation => {
       'Guest Name': '',
       'Guest Email': '',
       'Guest phone number': '',
-      Messages: [],
+      Messages: '[]',
+      messages: [],
       'Check-in Date': '',
       'Check-out Date': '',
       'Auto Pilot': false,
@@ -69,7 +70,8 @@ const mapAirtableToConversation = (record: any): Conversation => {
   }
 
   const properties = record.fields.Properties || [];
-  const messages = parseMessages(record.fields.Messages);
+  const messagesStr = record.fields.Messages || '[]';
+  const messages = parseMessages(messagesStr);
   
   return {
     id: record.id,
@@ -78,7 +80,8 @@ const mapAirtableToConversation = (record: any): Conversation => {
     'Guest Name': record.fields['Guest Name'] || '',
     'Guest Email': record.fields['Guest Email'] || '',
     'Guest phone number': record.fields['Guest phone number'] || '',
-    Messages: messages,
+    Messages: messagesStr,
+    messages: messages,
     'Check-in Date': record.fields['Check-in Date'] || '',
     'Check-out Date': record.fields['Check-out Date'] || '',
     'Auto Pilot': record.fields['Auto Pilot'] || false,

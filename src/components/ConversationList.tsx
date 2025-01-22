@@ -36,14 +36,21 @@ const formatTimestamp = (timestamp: Date | undefined) => {
 
 const getLastMessage = (conversation: Conversation) => {
   try {
-    if (!conversation.Messages) return null;
+    const messagesStr = conversation?.messages || conversation?.Messages;
+    if (!messagesStr || typeof messagesStr !== 'string') {
+      console.warn('Invalid messages format:', messagesStr);
+      return null;
+    }
     
     // Nettoyage de la chaîne avant parsing
-    const cleanedString = conversation.Messages.trim();
+    const cleanedString = messagesStr.trim();
     if (!cleanedString) return null;
     
     const messages = JSON.parse(cleanedString);
-    if (!Array.isArray(messages) || messages.length === 0) return null;
+    if (!Array.isArray(messages) || messages.length === 0) {
+      console.warn('Messages is not an array or empty:', messages);
+      return null;
+    }
     
     return messages[messages.length - 1];
   } catch (error) {
