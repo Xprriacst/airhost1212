@@ -8,20 +8,32 @@ const parseMessages = (rawMessages: any): Message[] => {
   try {
     if (!rawMessages) return [];
     
-    let messages: Message[] = typeof rawMessages === 'string' 
-      ? JSON.parse(rawMessages) 
-      : rawMessages;
-
-    return messages.map(msg => ({
-      ...msg,
-      timestamp: new Date(msg.timestamp),
-      sender: msg.sender === 'Host' || msg.sender === 'host' 
-        ? 'host' 
-        : 'guest',
-      type: msg.type || 'text',
-      status: msg.status || 'sent'
-    })).sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
-
+    // Si c'est déjà un tableau, on l'utilise directement
+    if (Array.isArray(rawMessages)) {
+      return rawMessages.map(msg => ({
+        ...msg,
+        timestamp: new Date(msg.timestamp || new Date()),
+        sender: msg.sender === 'Host' || msg.sender === 'host' 
+          ? 'host' 
+          : 'guest',
+        type: msg.type || 'text',
+        status: msg.status || 'sent'
+      })).sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+    }
+    
+    // Si c'est une chaîne, on essaie de la parser
+    if (typeof rawMessages === 'string') {
+      try {
+        const parsed = JSON.parse(rawMessages);
+        return Array.isArray(parsed) ? parseMessages(parsed) : [];
+      } catch (e) {
+        console.warn('Failed to parse messages string:', e);
+        return [];
+      }
+    }
+    
+    console.warn('Unexpected messages format:', rawMessages);
+    return [];
   } catch (error) {
     console.warn('Failed to parse messages:', error);
     return [];
@@ -31,6 +43,8 @@ const parseMessages = (rawMessages: any): Message[] => {
 // Mapping function for Airtable records
 const mapAirtableToConversation = (record: any): Conversation => {
   const properties = record.fields.Properties;
+  const messages = parseMessages(record.fields.Messages);
+  
   return {
     id: record.id,
     propertyId: Array.isArray(properties) ? properties[0] : properties,
@@ -38,11 +52,12 @@ const mapAirtableToConversation = (record: any): Conversation => {
     'Guest Name': record.fields['Guest Name'],
     'Guest Email': record.fields['Guest Email'],
     'Guest phone number': record.fields['Guest phone number'],
-    Messages: record.fields.Messages,
+    Messages: messages,
     'Check-in Date': record.fields['Check-in Date'],
     'Check-out Date': record.fields['Check-out Date'],
     'Auto Pilot': record.fields['Auto Pilot'],
-    UnreadCount: record.fields.UnreadCount || 0
+    UnreadCount: record.fields.UnreadCount || 0,
+    fields: record.fields  // Garder les champs bruts pour la compatibilité
   };
 };
 
