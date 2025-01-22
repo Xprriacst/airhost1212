@@ -19,35 +19,51 @@ export default function Conversations() {
   useEffect(() => {
     // Fonction pour mettre à jour les conversations de manière optimisée
     const updateConversations = (newConversations: Conversation[]) => {
-      // Vérifier si les données ont réellement changé
-      const hasChanges = JSON.stringify(conversationsRef.current) !== JSON.stringify(newConversations);
-      
-      if (hasChanges) {
-        // Mettre à jour la référence
-        conversationsRef.current = newConversations;
-        
-        // Mettre à jour l'état React de manière optimisée
-        setConversations(prev => {
-          const updatedConversations = newConversations.map(newConv => {
-            // Trouver la conversation existante
-            const existingConv = prev.find(c => c.id === newConv.id);
-            if (!existingConv) return newConv;
-
-            // Ne mettre à jour que si nécessaire
-            if (
-              existingConv.messages.length !== newConv.messages.length ||
-              existingConv.unreadCount !== newConv.unreadCount ||
-              existingConv.autoPilot !== newConv.autoPilot
-            ) {
-              return newConv;
-            }
-            
-            // Sinon, garder l'instance existante pour éviter un re-render inutile
-            return existingConv;
-          });
-
-          return updatedConversations;
+      try {
+        // Vérifier si les données ont réellement changé en comparant les propriétés importantes
+        const hasChanges = newConversations.some((newConv, index) => {
+          const currentConv = conversationsRef.current[index];
+          if (!currentConv) return true;
+          
+          return (
+            newConv.id !== currentConv.id ||
+            newConv.propertyId !== currentConv.propertyId ||
+            newConv['Guest Name'] !== currentConv['Guest Name'] ||
+            newConv.UnreadCount !== currentConv.UnreadCount ||
+            newConv['Auto Pilot'] !== currentConv['Auto Pilot'] ||
+            JSON.stringify(newConv.Messages || []) !== JSON.stringify(currentConv.Messages || [])
+          );
         });
+        
+        if (hasChanges) {
+          // Mettre à jour la référence
+          conversationsRef.current = newConversations;
+          
+          // Mettre à jour l'état React de manière optimisée
+          setConversations(prev => {
+            const updatedConversations = newConversations.map(newConv => {
+              // Trouver la conversation existante
+              const existingConv = prev.find(c => c.id === newConv.id);
+              if (!existingConv) return newConv;
+
+              // Ne mettre à jour que si nécessaire
+              if (
+                existingConv.messages.length !== newConv.messages.length ||
+                existingConv.unreadCount !== newConv.unreadCount ||
+                existingConv.autoPilot !== newConv.autoPilot
+              ) {
+                return newConv;
+              }
+              
+              // Sinon, garder l'instance existante pour éviter un re-render inutile
+              return existingConv;
+            });
+
+            return updatedConversations;
+          });
+        }
+      } catch (error) {
+        console.error('Error updating conversations:', error);
       }
     };
 
