@@ -34,6 +34,24 @@ const formatTimestamp = (timestamp: Date | undefined) => {
   return date.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: '2-digit' });
 };
 
+const getLastMessage = (conversation: Conversation) => {
+  try {
+    if (!conversation.Messages) return null;
+    
+    // Nettoyage de la chaîne avant parsing
+    const cleanedString = conversation.Messages.trim();
+    if (!cleanedString) return null;
+    
+    const messages = JSON.parse(cleanedString);
+    if (!Array.isArray(messages) || messages.length === 0) return null;
+    
+    return messages[messages.length - 1];
+  } catch (error) {
+    console.warn('Failed to parse messages:', error);
+    return null;
+  }
+};
+
 export default function ConversationList({ 
   conversations, 
   autoPilotStates,
@@ -88,9 +106,7 @@ export default function ConversationList({
   return (
     <div className="divide-y">
       {uniqueConversations.map((conversation) => {
-        // Parse messages safely
-        const messages = conversation.Messages ? JSON.parse(conversation.Messages) : [];
-        const lastMessage = messages[messages.length - 1];
+        const lastMessage = getLastMessage(conversation);
         const guestName = conversation['Guest Name'] || 'Invité';
         const unreadCount = conversation.UnreadCount || 0;
 

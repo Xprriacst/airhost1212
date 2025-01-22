@@ -13,16 +13,50 @@ export const messageService = {
       if (!base) throw new Error('Airtable is not configured');
       if (!conversationId) throw new Error('Conversation ID is required');
 
-      const conversation = await base('Conversations').find(conversationId);
-      const existingMessages = JSON.parse(conversation.get('Messages') || '[]');
-      
-      const updatedMessages = [...existingMessages, message];
-      
-      await base('Conversations').update(conversationId, {
-        Messages: JSON.stringify(updatedMessages)
-      });
+      try {
+        const conversation = await base('Conversations').find(conversationId);
+        if (!conversation) {
+          console.error('Conversation not found:', conversationId);
+          return false;
+        }
 
-      return true;
+        try {
+          // Parse existing messages safely
+          const existingMessagesStr = conversation.get('Messages');
+          if (!existingMessagesStr || typeof existingMessagesStr !== 'string') {
+            console.warn('No messages found or invalid format:', existingMessagesStr);
+            return false;
+          }
+
+          const cleanedString = existingMessagesStr.trim();
+          if (!cleanedString) {
+            console.warn('Empty messages string');
+            return false;
+          }
+
+          const existingMessages = JSON.parse(cleanedString);
+          if (!Array.isArray(existingMessages)) {
+            console.warn('Messages is not an array:', existingMessages);
+            return false;
+          }
+
+          // Add the new message
+          existingMessages.push(message);
+
+          // Update conversation with new messages
+          await base('Conversations').update(conversationId, {
+            Messages: JSON.stringify(existingMessages)
+          });
+
+          return true;
+        } catch (error) {
+          console.error('Error parsing messages:', error);
+          return false;
+        }
+      } catch (error) {
+        console.error('Error updating conversation:', error);
+        return false;
+      }
     } catch (error) {
       console.error('Error adding message:', error);
       throw error;
