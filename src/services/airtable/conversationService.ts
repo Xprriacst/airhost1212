@@ -127,10 +127,17 @@ export const conversationService = {
       }
 
       const conversation = mapAirtableToConversation(record);
-      // Utiliser la propriété déjà mappée dans la conversation
-      const hasAccess = await authorizationService.canAccessProperty(user.id, conversation.Properties);
+      
+      // Utiliser Properties s'il existe, sinon utiliser propertyId
+      const propertyId = conversation.fields?.Properties?.[0] || conversation.propertyId;
+      if (!propertyId) {
+        throw new Error('No property ID found for conversation');
+      }
+      
+      console.log('[Conversation] Checking access to property:', propertyId, 'for user:', user.id);
+      const hasAccess = await authorizationService.canAccessProperty(user.id, propertyId);
       if (!hasAccess) {
-        console.error('Access denied to property:', conversation.Properties);
+        console.error('[Conversation] Access denied to property:', propertyId);
         throw new Error('Access denied to this conversation');
       }
 

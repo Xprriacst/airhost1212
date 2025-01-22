@@ -34,9 +34,15 @@ class AuthorizationService {
     try {
       const userProperties = await this.getUserProperties(userId);
       const propertyIds = Array.isArray(propertyId) ? propertyId : [propertyId];
-      console.log('Checking access to properties:', propertyIds, 'for user properties:', userProperties);
-      const hasAccess = userProperties.some(up => propertyIds.includes(up.propertyId));
-      console.log('Access result:', hasAccess);
+      
+      console.log('[Auth] Checking access for user', userId, 'to properties:', propertyIds);
+      console.log('[Auth] User properties:', userProperties);
+      
+      const hasAccess = propertyIds.some(pid => 
+        userProperties.some(up => up.propertyId === pid)
+      );
+      
+      console.log('[Auth] Access result:', hasAccess);
       return hasAccess;
     } catch (error) {
       console.error('Error checking property access:', error);
@@ -46,7 +52,7 @@ class AuthorizationService {
 
   async canAccessConversation(userId: string, conversation: Conversation): Promise<boolean> {
     try {
-      const propertyId = conversation.fields?.Properties?.[0] || conversation.propertyId;
+      const propertyId = conversation.propertyId;
       if (!propertyId) {
         console.error('No property ID found for conversation');
         return false;
