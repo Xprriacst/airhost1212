@@ -11,20 +11,28 @@ const parseMessages = (rawMessages: any): Message[] => {
     // Si c'est déjà un tableau, on l'utilise directement
     if (Array.isArray(rawMessages)) {
       return rawMessages.map(msg => ({
-        ...msg,
+        id: msg.id || `${Date.now()}`,
+        text: msg.text || '',
         timestamp: new Date(msg.timestamp || new Date()),
         sender: msg.sender === 'Host' || msg.sender === 'host' 
           ? 'host' 
           : 'guest',
         type: msg.type || 'text',
-        status: msg.status || 'sent'
+        status: msg.status || 'sent',
+        metadata: msg.metadata || {}
       })).sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
     }
     
     // Si c'est une chaîne, on essaie de la parser
     if (typeof rawMessages === 'string') {
       try {
-        const parsed = JSON.parse(rawMessages);
+        // Nettoyage de la chaîne avant parsing
+        const cleanedString = rawMessages.trim();
+        if (!cleanedString) return [];
+        
+        const parsed = JSON.parse(cleanedString);
+        if (!parsed) return [];
+        
         return Array.isArray(parsed) ? parseMessages(parsed) : [];
       } catch (e) {
         console.warn('Failed to parse messages string:', e);
@@ -32,7 +40,7 @@ const parseMessages = (rawMessages: any): Message[] => {
       }
     }
     
-    console.warn('Unexpected messages format:', rawMessages);
+    console.warn('Unexpected messages format:', typeof rawMessages);
     return [];
   } catch (error) {
     console.warn('Failed to parse messages:', error);
@@ -42,22 +50,40 @@ const parseMessages = (rawMessages: any): Message[] => {
 
 // Mapping function for Airtable records
 const mapAirtableToConversation = (record: any): Conversation => {
-  const properties = record.fields.Properties;
+  if (!record || !record.fields) {
+    console.warn('Invalid record format:', record);
+    return {
+      id: record?.id || '',
+      propertyId: '',
+      Properties: [],
+      'Guest Name': '',
+      'Guest Email': '',
+      'Guest phone number': '',
+      Messages: [],
+      'Check-in Date': '',
+      'Check-out Date': '',
+      'Auto Pilot': false,
+      UnreadCount: 0,
+      fields: record?.fields || {}
+    };
+  }
+
+  const properties = record.fields.Properties || [];
   const messages = parseMessages(record.fields.Messages);
   
   return {
     id: record.id,
     propertyId: Array.isArray(properties) ? properties[0] : properties,
     Properties: properties,
-    'Guest Name': record.fields['Guest Name'],
-    'Guest Email': record.fields['Guest Email'],
-    'Guest phone number': record.fields['Guest phone number'],
+    'Guest Name': record.fields['Guest Name'] || '',
+    'Guest Email': record.fields['Guest Email'] || '',
+    'Guest phone number': record.fields['Guest phone number'] || '',
     Messages: messages,
-    'Check-in Date': record.fields['Check-in Date'],
-    'Check-out Date': record.fields['Check-out Date'],
-    'Auto Pilot': record.fields['Auto Pilot'],
+    'Check-in Date': record.fields['Check-in Date'] || '',
+    'Check-out Date': record.fields['Check-out Date'] || '',
+    'Auto Pilot': record.fields['Auto Pilot'] || false,
     UnreadCount: record.fields.UnreadCount || 0,
-    fields: record.fields  // Garder les champs bruts pour la compatibilité
+    fields: record.fields
   };
 };
 
