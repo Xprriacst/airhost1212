@@ -50,7 +50,9 @@ export default function Conversations() {
     const fetchConversations = async () => {
       try {
         setIsInitialLoading(false);
-        const data = await conversationService.fetchConversations(propertyId);
+        const data = propertyId 
+          ? await conversationService.fetchPropertyConversations(propertyId)
+          : await conversationService.fetchAllConversations();
         updateConversations(data);
       } catch (error) {
         console.error('Error fetching conversations:', error);
