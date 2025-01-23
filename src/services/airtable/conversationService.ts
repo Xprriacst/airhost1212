@@ -210,13 +210,11 @@ export const conversationService = {
     }
   },
 
-  async fetchConversationById(conversationId: string): Promise<Conversation> {
+  async fetchConversationById(userId: string, conversationId: string): Promise<Conversation> {
     try {
       if (!base) throw new Error('Airtable is not configured');
       if (!conversationId) throw new Error('Conversation ID is required');
-
-      const user = authService.getCurrentUser();
-      if (!user) throw new Error('User not authenticated');
+      if (!userId) throw new Error('User ID is required');
 
       console.log('Fetching conversation:', conversationId);
       const record = await base('Conversations').find(conversationId);
@@ -227,14 +225,15 @@ export const conversationService = {
 
       const conversation = mapAirtableToConversation(record);
       
-      // Utiliser Properties s'il existe, sinon utiliser propertyId
-      const propertyId = conversation.fields?.Properties?.[0] || conversation.propertyId;
+      // Récupérer le propertyId depuis les champs Airtable
+      const propertyId = record.get('Property')?.[0] || record.get('Properties')?.[0];
       if (!propertyId) {
+        console.error('No property ID found for conversation:', conversationId);
         throw new Error('No property ID found for conversation');
       }
       
-      console.log('[Conversation] Checking access to property:', propertyId, 'for user:', user.id);
-      const hasAccess = await authorizationService.canAccessProperty(user.id, propertyId);
+      console.log('[Conversation] Checking access to property:', propertyId, 'for user:', userId);
+      const hasAccess = await authorizationService.canAccessProperty(userId, propertyId);
       if (!hasAccess) {
         console.error('[Conversation] Access denied to property:', propertyId);
         throw new Error('Access denied to this conversation');
@@ -388,7 +387,7 @@ export const conversationService = {
       if (!user) throw new Error('User not authenticated');
 
       // Récupérer le compteur actuel
-      const conversation = await this.fetchConversationById(conversationId);
+      const conversation = await this.fetchConversationById(user.id, conversationId);
       const currentCount = conversation.UnreadCount || 0;
       const newCount = currentCount + 1;
 
