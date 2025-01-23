@@ -101,7 +101,8 @@ const mapAirtableToConversation = (record: any): Conversation => {
     const fields = record.fields;
     
     // Validation des champs requis
-    if (!fields['Guest phone number']) {
+    const guestPhone = fields['Guest phone number'] || fields['GuestPhone'] || fields['guestPhone'];
+    if (!guestPhone) {
       console.warn('⚠️ Numéro de téléphone manquant pour la conversation:', record.id);
     }
     
@@ -146,7 +147,7 @@ const mapAirtableToConversation = (record: any): Conversation => {
       id: record.id || '',
       guestName,
       guestEmail: fields['Guest email'] || fields['GuestEmail'] || fields['guestEmail'] || '',
-      guestPhone: fields['Guest phone number'] || fields['GuestPhone'] || fields['guestPhone'] || '',
+      guestPhone,
       messages,
       properties: Array.isArray(properties) ? properties : [propertyId],
       propertyId,
@@ -311,43 +312,76 @@ export const conversationService = {
       const formattedData: Record<string, any> = {};
       
       if (data.Messages) {
-        formattedData.Messages = data.Messages;
-        const messages = JSON.parse(data.Messages);
-        if (Array.isArray(messages) && messages.length > 0) {
-          const lastMessage = messages[messages.length - 1];
-          if (lastMessage.sender === 'guest' && lastMessage.text?.trim()) {
-            // Détecter les tags d'urgence dans le dernier message
-            const emergencyTags = detectEmergencyTags(lastMessage.text);
+        try {
+          // Vérifier si les messages sont déjà un tableau
+          let messages = Array.isArray(data.Messages) ? data.Messages : JSON.parse(data.Messages);
+          
+          // S'assurer que c'est un tableau
+          if (!Array.isArray(messages)) {
+            console.warn('Format de messages invalide, conversion en tableau vide');
+            messages = [];
+          }
+          
+          // Valider et nettoyer chaque message
+          messages = messages.filter(msg => {
+            const isValid = msg && typeof msg === 'object' && 
+              (typeof msg.text === 'string' || typeof msg.content === 'string') &&
+              typeof msg.sender === 'string';
             
-            // Si des tags d'urgence sont détectés
-            if (emergencyTags.length > 0) {
-              console.log('Emergency tags detected:', emergencyTags);
-              
-              // Ajouter les tags au message
-              lastMessage.emergencyTags = emergencyTags;
-              
-              // Désactiver l'Auto Pilot
-              formattedData['Auto Pilot'] = false;
-              
-              // Mettre à jour le message avec les tags
-              messages[messages.length - 1] = lastMessage;
-              formattedData.Messages = JSON.stringify(messages);
-              
-              // Envoyer une notification d'urgence
-              await sendNotification(
-                'Message urgent détecté !',
-                `Auto-pilot désactivé\nTags: ${emergencyTags.join(', ')}\nMessage: ${lastMessage.text}`
-              );
+            if (!isValid) {
+              console.warn('Message invalide ignoré:', msg);
             }
+            return isValid;
+          }).map(msg => ({
+            id: msg.id || `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            text: msg.text || msg.content || '',
+            timestamp: msg.timestamp ? new Date(msg.timestamp) : new Date(),
+            sender: (msg.sender || '').toLowerCase() === 'host' ? 'host' : 'guest',
+            type: msg.type || 'text',
+            status: msg.status || 'sent',
+            metadata: msg.metadata || {}
+          }));
 
-            // Envoyer une notification normale si ce n'est pas un message WhatsApp
-            if (lastMessage.platform !== 'whatsapp') {
-              await sendNotification(
-                'Nouveau message', 
-                lastMessage.text
-              );
+          formattedData.Messages = JSON.stringify(messages);
+
+          if (messages.length > 0) {
+            const lastMessage = messages[messages.length - 1];
+            if (lastMessage.sender === 'guest' && lastMessage.text?.trim()) {
+              // Détecter les tags d'urgence dans le dernier message
+              const emergencyTags = detectEmergencyTags(lastMessage.text);
+              
+              // Si des tags d'urgence sont détectés
+              if (emergencyTags.length > 0) {
+                console.log('Emergency tags detected:', emergencyTags);
+                
+                // Ajouter les tags au message
+                lastMessage.emergencyTags = emergencyTags;
+                
+                // Désactiver l'Auto Pilot
+                formattedData['Auto Pilot'] = false;
+                
+                // Mettre à jour le message avec les tags
+                messages[messages.length - 1] = lastMessage;
+                formattedData.Messages = JSON.stringify(messages);
+                
+                // Envoyer une notification d'urgence
+                await sendNotification(
+                  'Message urgent détecté !',
+                  `Auto-pilot désactivé\nTags: ${emergencyTags.join(', ')}\nMessage: ${lastMessage.text}`
+                );
+              }
+
+              // Envoyer une notification normale si ce n'est pas un message WhatsApp
+              if (lastMessage.platform !== 'whatsapp') {
+                await sendNotification(
+                  'Nouveau message', 
+                  lastMessage.text
+                );
+              }
             }
           }
+        } catch (error) {
+          console.error('Erreur lors du traitement des messages:', error);
         }
       }
 

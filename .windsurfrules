@@ -1,0 +1,4 @@
+- Parle en français
+- tu peux grouper les commande git add, git commit, git push
+- Après chaque git push origin main, tu peux attendre quelques secondes et regarder si tout est bien déployé sur netlify avec la commande netlify
+curl -s https://api.netlify.com/api/v1/sites/whimsical-beignet-91329f.netlify.app/deploys?per_page=1
