@@ -166,10 +166,11 @@ export const handler: Handler = async (event) => {
       message: newMessage
     });
 
-    const currentMessages = conversation.Messages ? JSON.parse(conversation.Messages) : [];
+    // Utiliser le champ messages de la conversation
+    const currentMessages = conversation.messages || [];
     const updatedMessages = [...currentMessages, newMessage];
     await conversationService.updateConversationWithoutAuth(conversation.id, {
-      Messages: JSON.stringify(updatedMessages)
+      messages: JSON.stringify(updatedMessages)
     });
 
     // Formater le message
@@ -214,7 +215,7 @@ export const handler: Handler = async (event) => {
         );
 
         await conversationService.updateConversationWithoutAuth(conversation.id, {
-          Messages: JSON.stringify(sentMessages)
+          messages: JSON.stringify(sentMessages)
         });
 
         return {
@@ -242,7 +243,7 @@ export const handler: Handler = async (event) => {
           );
 
           await conversationService.updateConversationWithoutAuth(conversation.id, {
-            Messages: JSON.stringify(failedMessages)
+            messages: JSON.stringify(failedMessages)
           });
 
           throw error;
