@@ -92,23 +92,26 @@ const ConversationDetail: React.FC = () => {
   const [isAutoPilot, setIsAutoPilot] = useState(false);
   const [textareaLines, setTextareaLines] = useState(1);
   const [dismissedAlerts, setDismissedAlerts] = useState<Set<string>>(new Set());
+  const userId = localStorage.getItem('userId');
 
   // Récupérer la conversation
   useEffect(() => {
     const fetchConversation = async () => {
-      if (!conversationId) return;
+      if (!conversationId || !userId) return;
       try {
-        const data = await conversationService.fetchConversationById(conversationId);
+        const data = await conversationService.fetchConversationById(userId, conversationId);
+        console.log('Conversation loaded:', data);
         setConversation(data);
         setIsAutoPilot(data.autoPilot || false);
       } catch (err) {
+        console.error('Failed to load conversation:', err);
         setError('Failed to load conversation');
       } finally {
         setLoading(false);
       }
     };
     fetchConversation();
-  }, [conversationId]);
+  }, [conversationId, userId]);
 
   // Récupérer la propriété
   useEffect(() => {
@@ -153,7 +156,7 @@ const ConversationDetail: React.FC = () => {
 
     const refreshConversation = async () => {
       try {
-        const data = await conversationService.fetchConversationById(conversationId);
+        const data = await conversationService.fetchConversationById(userId, conversationId);
         setConversation(prev => {
           // Ne mettre à jour que si les messages ont changé
           if (prev && JSON.stringify(prev.messages) === JSON.stringify(data.messages)) {
@@ -168,7 +171,7 @@ const ConversationDetail: React.FC = () => {
 
     const intervalId = setInterval(refreshConversation, 5000);
     return () => clearInterval(intervalId);
-  }, [conversationId]);
+  }, [conversationId, userId]);
 
   // Mise à jour de l'état auto-pilot quand la conversation change
   useEffect(() => {
