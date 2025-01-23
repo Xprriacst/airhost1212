@@ -90,19 +90,18 @@ export const handler: Handler = async (event) => {
     console.log(' Parsed payload:', JSON.stringify(payload, null, 2));
 
     // Validation
-    if (!payload.message || !payload.guestPhone || !payload.propertyId || !payload.guestEmail) {
+    if (!payload.message || !payload.guestPhone || !payload.propertyId) {
       console.error(' Missing required fields in payload:', {
         hasMessage: Boolean(payload.message),
         hasGuestPhone: Boolean(payload.guestPhone),
-        hasPropertyId: Boolean(payload.propertyId),
-        hasGuestEmail: Boolean(payload.guestEmail)
+        hasPropertyId: Boolean(payload.propertyId)
       });
       return {
         statusCode: 400,
         headers: corsHeaders,
         body: JSON.stringify({
           error: 'Missing required fields',
-          requiredFields: ['message', 'guestPhone', 'propertyId', 'guestEmail']
+          requiredFields: ['message', 'guestPhone', 'propertyId']
         }),
       };
     }
