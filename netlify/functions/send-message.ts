@@ -151,107 +151,122 @@ export const handler: Handler = async (event) => {
       };
     }
 
-    // Ajouter le message à la conversation
-    const newMessage = {
-      id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      text: payload.message,
-      timestamp: new Date(),
-      sender: 'host',
-      type: 'text',
-      status: 'pending'
-    };
+    try {
+      if (!conversation || !conversation['Guest phone number']) {
+        throw new Error('Missing conversation data');
+      }
 
-    console.log(' Ajout du message à la conversation:', {
-      conversationId: conversation.id,
-      message: newMessage
-    });
+      // Message "temporaire"
+      const messageData = {
+        id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        text: payload.message,
+        timestamp: new Date(),
+        sender: 'host',
+        type: 'text',
+        status: 'pending'
+      };
 
-    // Utiliser le champ messages de la conversation
-    const currentMessages = conversation.messages || [];
-    const updatedMessages = [...currentMessages, newMessage];
-    await conversationService.updateConversationWithoutAuth(conversation.id, {
-      messages: JSON.stringify(updatedMessages)
-    });
+      console.log(' Ajout du message à la conversation:', {
+        conversationId: conversation.id,
+        message: messageData
+      });
 
-    // Formater le message
-    const formattedMessage = payload.message
-      .replace(/\n{2,}/g, ' ')
-      .replace(/\n/g, ' ');
+      const currentMessages = conversation.messages || [];
+      const updatedMessages = [...currentMessages, messageData];
+      await conversationService.updateConversationWithoutAuth(conversation.id, {
+        Messages: JSON.stringify(updatedMessages)
+      });
 
-    // Créer le payload pour Make exactement comme attendu
-    const makePayload = {
-      chatId: formatPhoneForWhatsApp(payload.guestPhone),
-      message: formattedMessage
-    };
+      // Formater le message
+      const formattedMessage = payload.message
+        .replace(/\n{2,}/g, ' ')
+        .replace(/\n/g, ' ');
 
-    console.log(' Envoi à Make.com:', {
-      url: MAKE_WEBHOOK_URL,
-      payload: makePayload
-    });
+      // Créer le payload pour Make exactement comme attendu
+      const makePayload = {
+        chatId: formatPhoneForWhatsApp(payload.guestPhone),
+        message: formattedMessage
+      };
 
-    // Tentatives d'envoi avec retry
-    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
-      try {
-        console.log(` Tentative ${attempt}/${MAX_RETRIES} pour envoyer le message à Make.com`);
-        console.log('Envoi à l\'URL:', MAKE_WEBHOOK_URL);
-        console.log('Payload d\'origine:', payload);
-        
-        const response = await axios.post(MAKE_WEBHOOK_URL, makePayload, {
-          headers: {
-            'Content-Type': 'application/json'
-          }
-        });
+      console.log(' Envoi à Make.com:', {
+        url: MAKE_WEBHOOK_URL,
+        payload: makePayload
+      });
 
-        console.log(' Message envoyé avec succès à Make.com:', {
-          status: response.status,
-          data: response.data
-        });
+      // Tentatives d'envoi avec retry
+      for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+        try {
+          console.log(` Tentative ${attempt}/${MAX_RETRIES} pour envoyer le message à Make.com`);
+          console.log('Envoi à l\'URL:', MAKE_WEBHOOK_URL);
+          console.log('Payload d\'origine:', payload);
+          
+          const response = await axios.post(MAKE_WEBHOOK_URL, makePayload, {
+            headers: {
+              'Content-Type': 'application/json'
+            }
+          });
 
-        // Marquer le message comme envoyé
-        const sentMessages = updatedMessages.map(msg => 
-          msg.id === newMessage.id 
-            ? { ...msg, status: 'sent' }
-            : msg
-        );
+          console.log(' Message envoyé avec succès à Make.com:', {
+            status: response.status,
+            data: response.data
+          });
 
-        await conversationService.updateConversationWithoutAuth(conversation.id, {
-          messages: JSON.stringify(sentMessages)
-        });
-
-        return {
-          statusCode: 200,
-          headers: corsHeaders,
-          body: JSON.stringify({ 
-            success: true,
-            message: 'Message envoyé avec succès',
-            messageId: newMessage.id
-          })
-        };
-      } catch (error) {
-        console.error(` Tentative ${attempt} échouée:`, error);
-        
-        if (attempt < MAX_RETRIES) {
-          const delay = RETRY_DELAY * Math.pow(2, attempt - 1);
-          console.log(` Attente de ${delay}ms avant la prochaine tentative...`);
-          await sleep(delay);
-        } else {
-          // Marquer le message comme échoué
-          const failedMessages = updatedMessages.map(msg => 
-            msg.id === newMessage.id 
-              ? { ...msg, status: 'failed' }
+          // Marquer le message comme envoyé
+          const sentMessages = updatedMessages.map(msg => 
+            msg.id === messageData.id 
+              ? { ...msg, status: 'sent' }
               : msg
           );
 
           await conversationService.updateConversationWithoutAuth(conversation.id, {
-            messages: JSON.stringify(failedMessages)
+            Messages: JSON.stringify(sentMessages)
           });
 
-          throw error;
+          return {
+            statusCode: 200,
+            headers: corsHeaders,
+            body: JSON.stringify({ 
+              success: true,
+              message: 'Message envoyé avec succès',
+              messageId: messageData.id
+            })
+          };
+        } catch (error) {
+          console.error(` Tentative ${attempt} échouée:`, error);
+          
+          if (attempt < MAX_RETRIES) {
+            const delay = RETRY_DELAY * Math.pow(2, attempt - 1);
+            console.log(` Attente de ${delay}ms avant la prochaine tentative...`);
+            await sleep(delay);
+          } else {
+            // Marquer le message comme échoué
+            const failedMessages = updatedMessages.map(msg => 
+              msg.id === messageData.id 
+                ? { ...msg, status: 'failed' }
+                : msg
+            );
+
+            await conversationService.updateConversationWithoutAuth(conversation.id, {
+              Messages: JSON.stringify(failedMessages)
+            });
+
+            throw error;
+          }
         }
       }
-    }
 
-    throw new Error('Échec de l\'envoi du message après toutes les tentatives');
+      throw new Error('Échec de l\'envoi du message après toutes les tentatives');
+    } catch (error) {
+      console.error(' Erreur dans la fonction send-message:', error);
+      return {
+        statusCode: 500,
+        headers: corsHeaders,
+        body: JSON.stringify({ 
+          error: 'Échec de l\'envoi du message',
+          details: error.message
+        })
+      };
+    }
   } catch (error) {
     console.error(' Erreur dans la fonction send-message:', error);
     return {
