@@ -78,72 +78,89 @@ const parseMessages = (rawMessages: any): Message[] => {
 
 // Mapping function for Airtable records
 const mapAirtableToConversation = (record: any): Conversation => {
-  if (!record || !record.fields) {
-    console.warn('Invalid record format:', record);
+  if (!record) {
+    console.warn('Record is null or undefined');
+    return getEmptyConversation();
+  }
+
+  if (!record.fields) {
+    console.warn('Record fields are missing:', record);
     return {
-      id: record?.id || '',
-      propertyId: '',
-      Properties: [],
-      'Guest Name': '',
-      'Guest Email': '',
-      'Guest phone number': '',
-      Messages: '[]',
-      messages: [],
-      'Check-in Date': '',
-      'Check-out Date': '',
-      'Auto Pilot': false,
-      UnreadCount: 0,
-      fields: record?.fields || {}
+      ...getEmptyConversation(),
+      id: record.id || ''
     };
   }
 
   try {
-    const properties = record.fields.Properties || [];
-    let messagesStr = record.fields.Messages;
+    const fields = record.fields;
+    const properties = fields.Properties || fields.Property || [];
+    let propertyId = '';
     
-    // Si Messages est un tableau, on le convertit en chaîne JSON
+    // Déterminer le propertyId
+    if (Array.isArray(properties) && properties.length > 0) {
+      propertyId = properties[0];
+    } else if (typeof properties === 'string') {
+      propertyId = properties;
+    }
+
+    // Gérer les messages
+    let messagesStr = fields.Messages;
     if (Array.isArray(messagesStr)) {
+      console.log('Messages is an array, converting to string:', messagesStr);
       messagesStr = JSON.stringify(messagesStr);
     } else if (!messagesStr || typeof messagesStr !== 'string') {
+      console.log('Invalid messages format, using empty array');
       messagesStr = '[]';
     }
     
-    const messages = parseMessages(messagesStr);
-    
+    // Parser les messages
+    let messages = [];
+    try {
+      messages = parseMessages(messagesStr);
+      console.log('Parsed messages:', messages.length);
+    } catch (error) {
+      console.error('Error parsing messages:', error);
+      messages = [];
+    }
+
+    // Construire l'objet conversation
     return {
       id: record.id,
-      propertyId: Array.isArray(properties) ? properties[0] : properties,
-      Properties: properties,
-      'Guest Name': record.fields['Guest Name'] || '',
-      'Guest Email': record.fields['Guest Email'] || '',
-      'Guest phone number': record.fields['Guest phone number'] || '',
+      propertyId,
+      Properties: Array.isArray(properties) ? properties : [propertyId],
+      'Guest Name': fields['Guest Name'] || fields['GuestName'] || '',
+      'Guest Email': fields['Guest Email'] || fields['GuestEmail'] || '',
+      'Guest phone number': fields['Guest phone number'] || fields['GuestPhoneNumber'] || '',
       Messages: messagesStr,
       messages,
-      'Check-in Date': record.fields['Check-in Date'] || '',
-      'Check-out Date': record.fields['Check-out Date'] || '',
-      'Auto Pilot': record.fields['Auto Pilot'] || false,
-      UnreadCount: record.fields.UnreadCount || 0,
-      fields: record.fields
+      'Check-in Date': fields['Check-in Date'] || fields['CheckInDate'] || '',
+      'Check-out Date': fields['Check-out Date'] || fields['CheckOutDate'] || '',
+      'Auto Pilot': fields['Auto Pilot'] || fields['AutoPilot'] || false,
+      UnreadCount: typeof fields.UnreadCount === 'number' ? fields.UnreadCount : 0,
+      fields
     };
   } catch (error) {
-    console.error('Error mapping conversation:', error);
-    return {
-      id: record.id,
-      propertyId: '',
-      Properties: [],
-      'Guest Name': '',
-      'Guest Email': '',
-      'Guest phone number': '',
-      Messages: '[]',
-      messages: [],
-      'Check-in Date': '',
-      'Check-out Date': '',
-      'Auto Pilot': false,
-      UnreadCount: 0,
-      fields: {}
-    };
+    console.error('Error mapping conversation:', error, record);
+    return getEmptyConversation(record.id);
   }
 };
+
+// Helper function to create an empty conversation
+const getEmptyConversation = (id: string = ''): Conversation => ({
+  id,
+  propertyId: '',
+  Properties: [],
+  'Guest Name': '',
+  'Guest Email': '',
+  'Guest phone number': '',
+  Messages: '[]',
+  messages: [],
+  'Check-in Date': '',
+  'Check-out Date': '',
+  'Auto Pilot': false,
+  UnreadCount: 0,
+  fields: {}
+});
 
 const sendNotification = async (title: string, body: string) => {
   try {
