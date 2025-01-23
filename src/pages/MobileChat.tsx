@@ -85,15 +85,28 @@ const MobileChat: React.FC = () => {
   };
 
   const handleSendMessage = async (text: string) => {
-    if (!text.trim()) return;
+    if (!text.trim() || !conversation || !conversation.propertyId || !conversation.guestPhone) {
+      console.warn('❌ Impossible d\'envoyer le message:', {
+        hasText: Boolean(text.trim()),
+        hasConversation: Boolean(conversation),
+        hasPropertyId: conversation?.propertyId,
+        hasGuestPhone: conversation?.guestPhone,
+        conversationDetails: conversation
+      });
+      throw new Error('Données de conversation manquantes');
+    }
 
     setShouldScrollToBottom(true);
     const newMessage: Message = {
-      id: Date.now().toString(),
+      id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       text,
-      isUser: true,
       timestamp: new Date(),
-      sender: 'host'
+      sender: 'host',
+      type: 'text',
+      status: 'pending',
+      metadata: {
+        platform: 'whatsapp'
+      }
     };
 
     setMessages(prev => [...prev, newMessage]);
@@ -136,11 +149,15 @@ const MobileChat: React.FC = () => {
           const response = await aiService.generateResponse(newMessage, property);
           setShouldScrollToBottom(true);
           const aiMessage: Message = {
-            id: Date.now().toString(),
+            id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
             text: response,
-            isUser: false,
             timestamp: new Date(),
-            sender: 'ai'
+            sender: 'ai',
+            type: 'text',
+            status: 'pending',
+            metadata: {
+              platform: 'whatsapp'
+            }
           };
           
           setMessages(prev => [...prev, aiMessage]);

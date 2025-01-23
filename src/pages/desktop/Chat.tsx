@@ -61,21 +61,27 @@ export default function Chat() {
       conversation
     });
 
-    if (!text.trim() || !conversation) {
-      console.warn('❌ Cannot send message:', {
+    if (!text.trim() || !conversation || !conversation.propertyId || !conversation.guestPhone) {
+      console.warn('❌ Impossible d\'envoyer le message:', {
         hasText: Boolean(text.trim()),
         hasConversation: Boolean(conversation),
+        hasPropertyId: conversation?.propertyId,
+        hasGuestPhone: conversation?.guestPhone,
         conversationDetails: conversation
       });
-      return;
+      throw new Error('Données de conversation manquantes');
     }
 
     const newMessage: Message = {
-      id: Date.now().toString(),
+      id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       text,
-      isUser: true,
       timestamp: new Date(),
-      sender: 'Host'
+      sender: 'host',
+      type: 'text',
+      status: 'pending',
+      metadata: {
+        platform: 'whatsapp'
+      }
     };
 
     try {
