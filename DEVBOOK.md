@@ -7,28 +7,60 @@
 - Affichage des conversations
 - Interface de chat présente
 
-### Problèmes identifiés et solutions
+### Problèmes critiques identifiés (23/01/2025)
 
-#### 1. Affichage des propriétés non fonctionnel
-**Cause :** 
-- La nouvelle gestion des autorisations utilisateur bloque l'accès aux propriétés
-- La fonction `getAllPropertiesWithoutFiltering()` n'est pas correctement utilisée
+#### Priorité 1 : Fonctionnalités critiques des chats
 
-**Solutions proposées :**
-- Vérifier que l'utilisateur est authentifié avant d'accéder aux propriétés
-- Utiliser `getAllPropertiesWithoutFiltering()` pour la liste initiale
-- Implémenter un système de cache pour les propriétés autorisées
+1. **Envoi de messages**
+   - **Problème :** Impossibilité d'envoyer des messages dans les chats
+   - **Référence :** Fonctionnel dans v1.5.4
+   - **Impact :** Critique - Bloque la communication avec les clients
 
-#### 2. Problèmes avec le chat
-**Causes :**
-- Propriété passée comme objet vide à `aiService.generateResponse()`
-- Service de messages modifié pour Airtable sans synchronisation avec l'authentification
-- Potentielle perte de contexte de la propriété dans les conversations
+2. **Fonctionnalités Auto Pilot**
+   - **Problèmes :**
+     - Non-persistance de l'activation/désactivation manuelle
+     - Perte de la génération automatique de messages
+     - Dysfonctionnement de l'analyse automatique des messages reçus
+   - **Référence :** Implémenté dans v1.5.4
+   - **Impact :** Majeur - Affecte l'automatisation des réponses
 
-**Solutions proposées :**
-- Passer la propriété correcte à `aiService.generateResponse()`
-- Synchroniser le service de messages avec le système d'authentification
-- Maintenir le contexte de la propriété dans les conversations
+3. **Liste des conversations**
+   - **Problèmes :**
+     - Absence d'affichage du dernier message
+     - Compteur de messages non lus non fonctionnel
+   - **Référence :** Fonctionnel dans v1.5.4
+   - **Impact :** Important - Affecte l'expérience utilisateur
+
+#### Priorité 2 : Fonctionnalités secondaires
+
+1. **Chat Sandbox**
+   - **Problèmes :**
+     - Impossible de récupérer les conversations
+     - Absence de génération de réponses par l'IA
+   - **Impact :** Modéré - Affecte les tests et le développement
+
+2. **Paramètres (Settings)**
+   - **Problèmes :**
+     - Scroll non fonctionnel sur la page des paramètres
+     - Formulaire de paramètres inutilisable
+   - **Impact :** Modéré - Limite la configuration des appartements
+
+### Plan d'action technique
+
+1. **Phase d'analyse**
+   - Examiner le code de la v1.5.4 pour chaque fonctionnalité
+   - Identifier les différences avec l'implémentation multi-compte
+   - Documenter les points de conflit
+
+2. **Phase de développement (TDD)**
+   - Écrire des tests pour chaque fonctionnalité
+   - Adapter le code v1.5.4 au modèle multi-compte
+   - Valider les corrections avec les tests
+
+3. **Phase de déploiement**
+   - Déployer les corrections par ordre de priorité
+   - Valider en environnement de production
+   - Documenter les changements
 
 ## Comparaison avec la version 1.5.4
 
