@@ -435,6 +435,38 @@ export const conversationService = {
     }
   },
 
+  async getConversationWithoutAuth(conversationId: string): Promise<Conversation> {
+    try {
+      if (!base) {
+        throw new Error('Airtable is not configured');
+      }
+
+      const record = await base('Conversations').find(conversationId);
+      return mapAirtableToConversation(record);
+    } catch (error) {
+      console.error('Error getting conversation:', error);
+      throw error;
+    }
+  },
+
+  async getPropertyConversationsWithoutAuth(propertyId: string): Promise<Conversation[]> {
+    try {
+      if (!base) {
+        throw new Error('Airtable is not configured');
+      }
+
+      const records = await base('Conversations').select({
+        filterByFormula: `FIND("${propertyId}", ARRAYJOIN(Properties, ",")) > 0`,
+        view: 'Grid view'
+      }).all();
+
+      return records.map(mapAirtableToConversation);
+    } catch (error) {
+      console.error('Error getting property conversations:', error);
+      throw error;
+    }
+  },
+
   async incrementUnreadCount(conversationId: string): Promise<void> {
     try {
       if (!base) throw new Error('Airtable is not configured');
