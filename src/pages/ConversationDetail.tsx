@@ -419,11 +419,17 @@ const ConversationDetail: React.FC = () => {
             </span>
           </div>
           <div>
-            <h2 className="font-medium">{conversation?.guestName || 'Conversation'}</h2>
+            <h2 className="font-medium">
+              {conversation?.guestName || conversation?.guestEmail?.split('@')[0] || 'Conversation'}
+            </h2>
             <p className="text-xs text-gray-500">
-              {conversation?.checkIn && new Date(conversation.checkIn).toLocaleDateString()}
-              {' - '}
-              {conversation?.checkOut && new Date(conversation.checkOut).toLocaleDateString()}
+              {conversation?.propertyName || conversation?.property?.name}
+              {conversation?.checkIn && (
+                <>
+                  <span className="mx-1">•</span>
+                  {new Date(conversation.checkIn).toLocaleDateString()} - {conversation?.checkOut && new Date(conversation.checkOut).toLocaleDateString()}
+                </>
+              )}
             </p>
           </div>
         </div>
