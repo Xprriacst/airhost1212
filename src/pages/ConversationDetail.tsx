@@ -370,14 +370,14 @@ const ConversationDetail: React.FC = () => {
           </div>
           <div>
             <h2 className="font-medium">
-              {conversation?.guestName || conversation?.guestEmail?.split('@')[0] || 'Discussion avec l\'invité'}
+              {conversation?.['Guest Name'] || conversation?.['Guest Email']?.split('@')[0] || 'Discussion avec l\'invité'}
             </h2>
             <p className="text-xs text-gray-500">
-              {conversation?.propertyName || conversation?.property?.name}
-              {conversation?.checkIn && (
+              {property?.name || 'Propriété'}
+              {conversation?.['Check-in Date'] && (
                 <>
                   <span className="mx-1">•</span>
-                  {new Date(conversation.checkIn).toLocaleDateString()} - {conversation?.checkOut && new Date(conversation.checkOut).toLocaleDateString()}
+                  {new Date(conversation['Check-in Date']).toLocaleDateString()} - {conversation?.['Check-out Date'] && new Date(conversation['Check-out Date']).toLocaleDateString()}
                 </>
               )}
             </p>
