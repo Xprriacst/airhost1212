@@ -370,7 +370,7 @@ const ConversationDetail: React.FC = () => {
           </div>
           <div>
             <h2 className="font-medium">
-              {conversation?.guestName || conversation?.guestEmail?.split('@')[0] || 'Conversation'}
+              {conversation?.guestName || conversation?.guestEmail?.split('@')[0] || 'Discussion avec l\'invité'}
             </h2>
             <p className="text-xs text-gray-500">
               {conversation?.propertyName || conversation?.property?.name}
