@@ -8,19 +8,20 @@ const parseMessages = (rawMessages: any): Message[] => {
   try {
     if (!rawMessages) return [];
     
-    // Si c'est déjà un tableau, on le convertit en chaîne JSON
+    // Si c'est déjà un tableau, on traite directement les messages
     if (Array.isArray(rawMessages)) {
-      return rawMessages.map(msg => ({
-        id: msg.id || `${Date.now()}`,
-        text: msg.text || '',
-        timestamp: new Date(msg.timestamp || new Date()),
-        sender: msg.sender === 'Host' || msg.sender === 'host' 
-          ? 'host' 
-          : 'guest',
-        type: msg.type || 'text',
-        status: msg.status || 'sent',
-        metadata: msg.metadata || {}
-      })).sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+      return rawMessages
+        .filter(msg => msg && typeof msg === 'object')
+        .map(msg => ({
+          id: msg.id || `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          text: msg.text || msg.content || '',
+          timestamp: msg.timestamp ? new Date(msg.timestamp) : new Date(),
+          sender: (msg.sender || '').toLowerCase() === 'host' ? 'host' : 'guest',
+          type: msg.type || 'text',
+          status: msg.status || 'sent',
+          metadata: msg.metadata || {}
+        }))
+        .sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
     }
     
     // Si c'est une chaîne, on essaie de la parser
@@ -30,26 +31,47 @@ const parseMessages = (rawMessages: any): Message[] => {
         const cleanedString = rawMessages.trim();
         if (!cleanedString) return [];
         
-        const parsed = JSON.parse(cleanedString);
-        if (!parsed) return [];
-        
-        // Si le résultat du parsing est un tableau, on le traite
-        if (Array.isArray(parsed)) {
-          return parseMessages(parsed);
+        // Si la chaîne commence par '[', c'est probablement un tableau JSON
+        if (cleanedString.startsWith('[')) {
+          const parsed = JSON.parse(cleanedString);
+          if (Array.isArray(parsed)) {
+            return parseMessages(parsed);
+          }
         }
         
-        console.warn('Parsed messages is not an array:', parsed);
-        return [];
+        // Si c'est une chaîne simple, on la traite comme un message unique
+        return [{
+          id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          text: cleanedString,
+          timestamp: new Date(),
+          sender: 'guest',
+          type: 'text',
+          status: 'sent',
+          metadata: {}
+        }];
       } catch (e) {
         console.warn('Failed to parse messages string:', e);
         return [];
       }
     }
     
+    // Si c'est un objet unique, on le traite comme un message unique
+    if (typeof rawMessages === 'object' && rawMessages !== null) {
+      return [{
+        id: rawMessages.id || `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        text: rawMessages.text || rawMessages.content || '',
+        timestamp: rawMessages.timestamp ? new Date(rawMessages.timestamp) : new Date(),
+        sender: (rawMessages.sender || '').toLowerCase() === 'host' ? 'host' : 'guest',
+        type: rawMessages.type || 'text',
+        status: rawMessages.status || 'sent',
+        metadata: rawMessages.metadata || {}
+      }];
+    }
+    
     console.warn('Unexpected messages format:', typeof rawMessages, rawMessages);
     return [];
   } catch (error) {
-    console.warn('Failed to parse messages:', error);
+    console.error('Error parsing messages:', error);
     return [];
   }
 };
