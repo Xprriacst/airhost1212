@@ -4,6 +4,17 @@ import type { Message } from '../../types';
 
 const NETLIFY_FUNCTION_URL = '/.netlify/functions/send-message';
 
+export class MessageError extends Error {
+  constructor(
+    message: string,
+    public code: string,
+    public details?: any
+  ) {
+    super(message);
+    this.name = 'MessageError';
+  }
+}
+
 export const messageService = {
   async addMessageToConversation(
     conversationId: string,
@@ -104,5 +115,102 @@ export const messageService = {
       console.error('❌ Erreur dans sendMessage:', error);
       throw error;
     }
+  },
+
+  async sendMessageWithValidation({ text, conversationId, propertyId, guestPhone }: any): Promise<void> {
+    try {
+      // 1. Validation des paramètres
+      const missingFields = [];
+      if (!text) missingFields.push('text');
+      if (!conversationId) missingFields.push('conversationId');
+      if (!propertyId) missingFields.push('propertyId');
+      if (!guestPhone) missingFields.push('guestPhone');
+
+      if (missingFields.length > 0) {
+        throw new MessageError(
+          'Paramètres manquants pour l\'envoi du message',
+          'MISSING_FIELDS',
+          { missingFields }
+        );
+      }
+
+      // 2. Validation du numéro de téléphone
+      if (!/^\+?[1-9]\d{1,14}$/.test(guestPhone.replace(/\D/g, ''))) {
+        throw new MessageError(
+          'Format du numéro de téléphone invalide',
+          'INVALID_PHONE_FORMAT',
+          { providedPhone: guestPhone }
+        );
+      }
+
+      // 3. Appel à la fonction Netlify
+      const response = await fetch('/.netlify/functions/send-message', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          text,
+          conversationId,
+          propertyId,
+          guestPhone
+        })
+      });
+
+      // 4. Gestion des erreurs de la fonction Netlify
+      if (!response.ok) {
+        const errorData = await response.json();
+        
+        throw new MessageError(
+          errorData.error || 'Erreur lors de l\'envoi du message',
+          errorData.code || 'SEND_MESSAGE_ERROR',
+          errorData.details
+        );
+      }
+
+      // 5. Succès
+      const data = await response.json();
+      return data;
+
+    } catch (error) {
+      console.error('❌ Erreur dans messageService.sendMessage:', error);
+      
+      if (error instanceof MessageError) {
+        throw error;
+      }
+
+      throw new MessageError(
+        'Erreur inattendue lors de l\'envoi du message',
+        'UNEXPECTED_ERROR',
+        error instanceof Error ? error.message : String(error)
+      );
+    }
+  },
+
+  validateMessage(message: any): boolean {
+    if (!message || typeof message !== 'object') {
+      console.warn('⚠️ Message invalide:', message);
+      return false;
+    }
+
+    // Vérifier les champs requis
+    const requiredFields = ['text', 'sender'];
+    const missingFields = requiredFields.filter(field => !message[field]);
+
+    if (missingFields.length > 0) {
+      console.warn('⚠️ Champs manquants dans le message:', {
+        message,
+        missingFields
+      });
+      return false;
+    }
+
+    // Vérifier le type de sender
+    if (!['host', 'guest', 'ai'].includes(message.sender.toLowerCase())) {
+      console.warn('⚠️ Type d\'expéditeur invalide:', message.sender);
+      return false;
+    }
+
+    return true;
   }
 };

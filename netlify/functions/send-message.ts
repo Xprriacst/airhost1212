@@ -7,20 +7,43 @@ const MAX_RETRIES = 3;
 const RETRY_DELAY = 1000;
 
 // Fonction de formatage du numéro de téléphone pour la comparaison
-const normalizePhoneNumber = (phone: string): string => {
-  const normalized = phone
-    .replace(/^\+/, '')     // Supprimer le + initial s'il existe
-    .replace(/\D/g, '')     // Supprimer tous les autres caractères non numériques
-    .replace(/^0/, '')      // Supprimer le 0 initial s'il existe
-    .replace(/^33/, '');    // Supprimer le 33 initial s'il existe
-  console.log(' Normalized phone:', normalized);
-  return normalized;
+const normalizePhoneNumber = (phone: string): string | null => {
+  try {
+    if (!phone) {
+      console.warn('❌ Numéro de téléphone vide');
+      return null;
+    }
+
+    // Supprimer tous les caractères non numériques
+    let cleaned = phone.replace(/\D/g, '');
+
+    // Si le numéro commence par un 0, le remplacer par +33
+    if (cleaned.startsWith('0')) {
+      cleaned = '33' + cleaned.substring(1);
+    }
+
+    // Si le numéro ne commence pas par un +, l'ajouter
+    if (!cleaned.startsWith('+')) {
+      cleaned = '+' + cleaned;
+    }
+
+    // Vérifier que le numéro a une longueur valide (E.164)
+    if (cleaned.length < 10 || cleaned.length > 15) {
+      console.warn('❌ Longueur du numéro invalide:', cleaned.length);
+      return null;
+    }
+
+    return cleaned;
+  } catch (error) {
+    console.error('❌ Erreur lors de la normalisation du numéro:', error);
+    return null;
+  }
 };
 
 // Fonction de formatage du numéro de téléphone pour WhatsApp
 const formatPhoneForWhatsApp = (phone: string): string => {
   const normalized = normalizePhoneNumber(phone);
-  const formatted = `33${normalized}@c.us`;
+  const formatted = `33${normalized.replace('+33', '')}@c.us`;
   console.log(' Formatted phone for WhatsApp:', {
     original: phone,
     normalized,
@@ -90,6 +113,20 @@ export const handler: Handler = async (event) => {
 
     // Normaliser le numéro de téléphone reçu
     const normalizedInputPhone = normalizePhoneNumber(payload.guestPhone);
+    if (!normalizedInputPhone) {
+      return {
+        statusCode: 400,
+        headers: corsHeaders,
+        body: JSON.stringify({
+          error: 'Numéro de téléphone invalide',
+          code: 'INVALID_PHONE',
+          details: {
+            providedPhone: payload.guestPhone
+          }
+        })
+      };
+    }
+
     console.log(' Numéro de téléphone normalisé:', {
       original: payload.guestPhone,
       normalized: normalizedInputPhone
