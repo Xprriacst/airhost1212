@@ -8,7 +8,7 @@ const parseMessages = (rawMessages: any): Message[] => {
   try {
     if (!rawMessages) return [];
     
-    // Si c'est déjà un tableau, on l'utilise directement
+    // Si c'est déjà un tableau, on le convertit en chaîne JSON
     if (Array.isArray(rawMessages)) {
       return rawMessages.map(msg => ({
         id: msg.id || `${Date.now()}`,
@@ -33,14 +33,20 @@ const parseMessages = (rawMessages: any): Message[] => {
         const parsed = JSON.parse(cleanedString);
         if (!parsed) return [];
         
-        return Array.isArray(parsed) ? parseMessages(parsed) : [];
+        // Si le résultat du parsing est un tableau, on le traite
+        if (Array.isArray(parsed)) {
+          return parseMessages(parsed);
+        }
+        
+        console.warn('Parsed messages is not an array:', parsed);
+        return [];
       } catch (e) {
         console.warn('Failed to parse messages string:', e);
         return [];
       }
     }
     
-    console.warn('Unexpected messages format:', typeof rawMessages);
+    console.warn('Unexpected messages format:', typeof rawMessages, rawMessages);
     return [];
   } catch (error) {
     console.warn('Failed to parse messages:', error);
@@ -69,25 +75,52 @@ const mapAirtableToConversation = (record: any): Conversation => {
     };
   }
 
-  const properties = record.fields.Properties || [];
-  const messagesStr = record.fields.Messages || '[]';
-  const messages = parseMessages(messagesStr);
-  
-  return {
-    id: record.id,
-    propertyId: Array.isArray(properties) ? properties[0] : properties,
-    Properties: properties,
-    'Guest Name': record.fields['Guest Name'] || '',
-    'Guest Email': record.fields['Guest Email'] || '',
-    'Guest phone number': record.fields['Guest phone number'] || '',
-    Messages: messagesStr,
-    messages: messages,
-    'Check-in Date': record.fields['Check-in Date'] || '',
-    'Check-out Date': record.fields['Check-out Date'] || '',
-    'Auto Pilot': record.fields['Auto Pilot'] || false,
-    UnreadCount: record.fields.UnreadCount || 0,
-    fields: record.fields
-  };
+  try {
+    const properties = record.fields.Properties || [];
+    let messagesStr = record.fields.Messages;
+    
+    // Si Messages est un tableau, on le convertit en chaîne JSON
+    if (Array.isArray(messagesStr)) {
+      messagesStr = JSON.stringify(messagesStr);
+    } else if (!messagesStr || typeof messagesStr !== 'string') {
+      messagesStr = '[]';
+    }
+    
+    const messages = parseMessages(messagesStr);
+    
+    return {
+      id: record.id,
+      propertyId: Array.isArray(properties) ? properties[0] : properties,
+      Properties: properties,
+      'Guest Name': record.fields['Guest Name'] || '',
+      'Guest Email': record.fields['Guest Email'] || '',
+      'Guest phone number': record.fields['Guest phone number'] || '',
+      Messages: messagesStr,
+      messages,
+      'Check-in Date': record.fields['Check-in Date'] || '',
+      'Check-out Date': record.fields['Check-out Date'] || '',
+      'Auto Pilot': record.fields['Auto Pilot'] || false,
+      UnreadCount: record.fields.UnreadCount || 0,
+      fields: record.fields
+    };
+  } catch (error) {
+    console.error('Error mapping conversation:', error);
+    return {
+      id: record.id,
+      propertyId: '',
+      Properties: [],
+      'Guest Name': '',
+      'Guest Email': '',
+      'Guest phone number': '',
+      Messages: '[]',
+      messages: [],
+      'Check-in Date': '',
+      'Check-out Date': '',
+      'Auto Pilot': false,
+      UnreadCount: 0,
+      fields: {}
+    };
+  }
 };
 
 const sendNotification = async (title: string, body: string) => {

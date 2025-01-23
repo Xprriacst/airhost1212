@@ -15,6 +15,7 @@ export default function Conversations() {
   
   // Référence pour stocker la dernière version des conversations
   const conversationsRef = useRef<Conversation[]>([]);
+  const fetchTimeoutRef = useRef<NodeJS.Timeout>();
 
   useEffect(() => {
     // Fonction pour mettre à jour les conversations de manière optimisée
@@ -38,29 +39,7 @@ export default function Conversations() {
         if (hasChanges) {
           // Mettre à jour la référence
           conversationsRef.current = newConversations;
-          
-          // Mettre à jour l'état React de manière optimisée
-          setConversations(prev => {
-            const updatedConversations = newConversations.map(newConv => {
-              // Trouver la conversation existante
-              const existingConv = prev.find(c => c.id === newConv.id);
-              if (!existingConv) return newConv;
-
-              // Ne mettre à jour que si nécessaire
-              if (
-                existingConv.messages.length !== newConv.messages.length ||
-                existingConv.unreadCount !== newConv.unreadCount ||
-                existingConv.autoPilot !== newConv.autoPilot
-              ) {
-                return newConv;
-              }
-              
-              // Sinon, garder l'instance existante pour éviter un re-render inutile
-              return existingConv;
-            });
-
-            return updatedConversations;
-          });
+          setConversations(newConversations);
         }
       } catch (error) {
         console.error('Error updating conversations:', error);
@@ -70,67 +49,29 @@ export default function Conversations() {
     // Fonction pour récupérer les conversations
     const fetchConversations = async () => {
       try {
-        let fetchedConversations;
-        
-        if (propertyId) {
-          fetchedConversations = await conversationService.fetchPropertyConversations(propertyId);
-        } else {
-          fetchedConversations = await conversationService.fetchAllConversations();
-        }
-        
-        // Trier les conversations
-        fetchedConversations.sort((a, b) => {
-          // D'abord par nombre de messages non lus
-          const unreadCountA = a.unreadCount || 0;
-          const unreadCountB = b.unreadCount || 0;
-          if (unreadCountB !== unreadCountA) {
-            return unreadCountB - unreadCountA;
-          }
-
-          // Ensuite par date du dernier message
-          try {
-            const messagesA = a.messages ? JSON.parse(a.messages) : [];
-            const messagesB = b.messages ? JSON.parse(b.messages) : [];
-            
-            const lastMessageA = messagesA[messagesA.length - 1];
-            const lastMessageB = messagesB[messagesB.length - 1];
-
-            if (!lastMessageA && !lastMessageB) return 0;
-            if (!lastMessageA) return 1;
-            if (!lastMessageB) return -1;
-
-            return new Date(lastMessageB.timestamp).getTime() - new Date(lastMessageA.timestamp).getTime();
-          } catch (error) {
-            console.warn('Error parsing messages during sort:', error);
-            return 0;
-          }
-        });
-
-        // Mise à jour optimisée
-        updateConversations(fetchedConversations);
-
-        // Initialiser les états auto-pilot au premier chargement
-        if (isInitialLoading) {
-          const initialStates = fetchedConversations.reduce((acc, conv) => ({
-            ...acc,
-            [conv.id]: conv.autoPilot || false
-          }), {});
-          setAutoPilotStates(initialStates);
-          setIsInitialLoading(false);
-        }
-      } catch (err) {
-        console.error('Error fetching conversations:', err);
-        setError(err instanceof Error ? err.message : 'Failed to load conversations');
+        setIsInitialLoading(false);
+        const data = await conversationService.fetchConversations(propertyId);
+        updateConversations(data);
+      } catch (error) {
+        console.error('Error fetching conversations:', error);
+        setError(error instanceof Error ? error.message : 'Failed to load conversations');
       }
     };
 
-    // Premier chargement
-    fetchConversations();
+    // Nettoyer le timeout précédent
+    if (fetchTimeoutRef.current) {
+      clearTimeout(fetchTimeoutRef.current);
+    }
 
-    // Mettre en place le polling
-    const intervalId = setInterval(fetchConversations, 3000);
+    // Définir un nouveau timeout pour le fetch
+    fetchTimeoutRef.current = setTimeout(fetchConversations, 1000);
 
-    return () => clearInterval(intervalId);
+    // Cleanup function
+    return () => {
+      if (fetchTimeoutRef.current) {
+        clearTimeout(fetchTimeoutRef.current);
+      }
+    };
   }, [propertyId]);
 
   const handleSelectConversation = (conversation: Conversation) => {
