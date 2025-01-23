@@ -6,12 +6,27 @@ import { authService, authorizationService } from '..';
 
 const parseMessages = (rawMessages: any): Message[] => {
   try {
-    if (!rawMessages) return [];
+    console.log('🔍 Analyse des messages bruts:', {
+      type: typeof rawMessages,
+      value: rawMessages
+    });
+
+    if (!rawMessages) {
+      console.log('ℹ️ Aucun message trouvé, retour tableau vide');
+      return [];
+    }
     
     // Si c'est déjà un tableau, on traite directement les messages
     if (Array.isArray(rawMessages)) {
+      console.log(`📦 Traitement d'un tableau de ${rawMessages.length} messages`);
       return rawMessages
-        .filter(msg => msg && typeof msg === 'object')
+        .filter(msg => {
+          const isValid = msg && typeof msg === 'object';
+          if (!isValid) {
+            console.warn('⚠️ Message invalide ignoré:', msg);
+          }
+          return isValid;
+        })
         .map(msg => ({
           id: msg.id || `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
           text: msg.text || msg.content || '',
@@ -29,17 +44,21 @@ const parseMessages = (rawMessages: any): Message[] => {
       try {
         // Nettoyage de la chaîne avant parsing
         const cleanedString = rawMessages.trim();
-        if (!cleanedString) return [];
+        if (!cleanedString) {
+          console.log('ℹ️ Chaîne vide, retour tableau vide');
+          return [];
+        }
         
         // Si la chaîne commence par '[', c'est probablement un tableau JSON
         if (cleanedString.startsWith('[')) {
+          console.log('📝 Tentative de parsing JSON tableau');
           const parsed = JSON.parse(cleanedString);
           if (Array.isArray(parsed)) {
             return parseMessages(parsed);
           }
         }
         
-        // Si c'est une chaîne simple, on la traite comme un message unique
+        console.log('📝 Traitement comme message unique');
         return [{
           id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
           text: cleanedString,
@@ -49,29 +68,16 @@ const parseMessages = (rawMessages: any): Message[] => {
           status: 'sent',
           metadata: {}
         }];
-      } catch (e) {
-        console.warn('Failed to parse messages string:', e);
+      } catch (error) {
+        console.error('❌ Erreur de parsing JSON:', error);
         return [];
       }
     }
-    
-    // Si c'est un objet unique, on le traite comme un message unique
-    if (typeof rawMessages === 'object' && rawMessages !== null) {
-      return [{
-        id: rawMessages.id || `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-        text: rawMessages.text || rawMessages.content || '',
-        timestamp: rawMessages.timestamp ? new Date(rawMessages.timestamp) : new Date(),
-        sender: (rawMessages.sender || '').toLowerCase() === 'host' ? 'host' : 'guest',
-        type: rawMessages.type || 'text',
-        status: rawMessages.status || 'sent',
-        metadata: rawMessages.metadata || {}
-      }];
-    }
-    
-    console.warn('Unexpected messages format:', typeof rawMessages, rawMessages);
+
+    console.warn('⚠️ Format de messages non reconnu:', typeof rawMessages);
     return [];
   } catch (error) {
-    console.error('Error parsing messages:', error);
+    console.error('❌ Erreur dans parseMessages:', error);
     return [];
   }
 };
@@ -79,12 +85,12 @@ const parseMessages = (rawMessages: any): Message[] => {
 // Mapping function for Airtable records
 const mapAirtableToConversation = (record: any): Conversation => {
   if (!record) {
-    console.warn('Record is null or undefined');
+    console.warn('⚠️ Record est null ou undefined');
     return getEmptyConversation();
   }
 
   if (!record.fields) {
-    console.warn('Record fields are missing:', record);
+    console.warn('⚠️ Champs du record manquants:', record);
     return {
       ...getEmptyConversation(),
       id: record.id || ''
@@ -93,6 +99,16 @@ const mapAirtableToConversation = (record: any): Conversation => {
 
   try {
     const fields = record.fields;
+    
+    // Validation des champs requis
+    if (!fields['Guest phone number']) {
+      console.warn('⚠️ Numéro de téléphone manquant pour la conversation:', record.id);
+    }
+    
+    if (!fields.Properties && !fields.Property) {
+      console.warn('⚠️ Propriété manquante pour la conversation:', record.id);
+    }
+
     const properties = fields.Properties || fields.Property || [];
     let propertyId = '';
     
@@ -106,10 +122,10 @@ const mapAirtableToConversation = (record: any): Conversation => {
     // Gérer les messages
     let messagesStr = fields.Messages;
     if (Array.isArray(messagesStr)) {
-      console.log('Messages is an array, converting to string:', messagesStr);
+      console.log('📦 Messages est un tableau, conversion en chaîne:', messagesStr);
       messagesStr = JSON.stringify(messagesStr);
     } else if (!messagesStr || typeof messagesStr !== 'string') {
-      console.log('Invalid messages format, using empty array');
+      console.log('ℹ️ Format de messages invalide, utilisation tableau vide');
       messagesStr = '[]';
     }
     
@@ -117,50 +133,32 @@ const mapAirtableToConversation = (record: any): Conversation => {
     let messages = [];
     try {
       messages = parseMessages(messagesStr);
-      console.log('Parsed messages:', messages.length);
+      console.log(`✅ Messages parsés: ${messages.length}`);
     } catch (error) {
-      console.error('Error parsing messages:', error);
+      console.error('❌ Erreur lors du parsing des messages:', error);
       messages = [];
     }
 
-    // Construire l'objet conversation
     return {
-      id: record.id,
-      propertyId,
-      Properties: Array.isArray(properties) ? properties : [propertyId],
-      'Guest Name': fields['Guest Name'] || fields['GuestName'] || '',
-      'Guest Email': fields['Guest Email'] || fields['GuestEmail'] || '',
-      'Guest phone number': fields['Guest phone number'] || fields['GuestPhoneNumber'] || '',
-      Messages: messagesStr,
+      id: record.id || '',
+      guestName: fields['Guest name'] || '',
+      guestEmail: fields['Guest email'] || '',
+      guestPhone: fields['Guest phone number'] || '',
       messages,
-      'Check-in Date': fields['Check-in Date'] || fields['CheckInDate'] || '',
-      'Check-out Date': fields['Check-out Date'] || fields['CheckOutDate'] || '',
-      'Auto Pilot': fields['Auto Pilot'] || fields['AutoPilot'] || false,
-      UnreadCount: typeof fields.UnreadCount === 'number' ? fields.UnreadCount : 0,
-      fields
+      properties: Array.isArray(properties) ? properties : [propertyId],
+      propertyId,
+      propertyName: fields['Property name'] || '',
+      autoPilot: fields['Auto Pilot'] || false,
+      unreadCount: fields['Unread count'] || 0
     };
   } catch (error) {
-    console.error('Error mapping conversation:', error, record);
-    return getEmptyConversation(record.id);
+    console.error('❌ Erreur dans mapAirtableToConversation:', error);
+    return {
+      ...getEmptyConversation(),
+      id: record.id || ''
+    };
   }
 };
-
-// Helper function to create an empty conversation
-const getEmptyConversation = (id: string = ''): Conversation => ({
-  id,
-  propertyId: '',
-  Properties: [],
-  'Guest Name': '',
-  'Guest Email': '',
-  'Guest phone number': '',
-  Messages: '[]',
-  messages: [],
-  'Check-in Date': '',
-  'Check-out Date': '',
-  'Auto Pilot': false,
-  UnreadCount: 0,
-  fields: {}
-});
 
 const sendNotification = async (title: string, body: string) => {
   try {
@@ -513,3 +511,16 @@ export const conversationService = {
     }
   }
 };
+
+const getEmptyConversation = (id: string = ''): Conversation => ({
+  id,
+  guestName: '',
+  guestEmail: '',
+  guestPhone: '',
+  messages: [],
+  properties: [],
+  propertyId: '',
+  propertyName: '',
+  autoPilot: false,
+  unreadCount: 0
+});

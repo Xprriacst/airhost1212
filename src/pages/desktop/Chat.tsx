@@ -139,11 +139,36 @@ export default function Chat() {
   // Interface simplifiée pour le debugging
   return (
     <div className="p-4">
+      {error && (
+        <div className="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded">
+          <h3 className="font-bold">Erreur</h3>
+          <p>{error}</p>
+        </div>
+      )}
+
       <div className="mb-4">
         <h2 className="text-xl font-bold">Interface de Chat</h2>
-        <p>ID de conversation : {conversationId}</p>
-        <p>Téléphone du client : {conversation?.guestPhone}</p>
-        <p>ID de la propriété : {conversation?.propertyId}</p>
+        <div className="text-sm text-gray-600">
+          <p>ID de conversation : {conversationId}</p>
+          <p>Téléphone du client : {conversation?.guestPhone || <span className="text-red-500">Non renseigné</span>}</p>
+          <p>ID de la propriété : {conversation?.propertyId || <span className="text-red-500">Non renseigné</span>}</p>
+        </div>
+      </div>
+
+      <div className="mb-4">
+        {!conversation?.guestPhone && (
+          <div className="p-3 bg-yellow-100 border border-yellow-400 text-yellow-700 rounded mb-2">
+            ⚠️ Cette conversation n'a pas de numéro de téléphone associé. 
+            L'envoi de messages ne sera pas possible.
+          </div>
+        )}
+        
+        {!conversation?.propertyId && (
+          <div className="p-3 bg-yellow-100 border border-yellow-400 text-yellow-700 rounded mb-2">
+            ⚠️ Cette conversation n'est pas associée à une propriété. 
+            L'envoi de messages ne sera pas possible.
+          </div>
+        )}
       </div>
 
       <div className="mb-4">
