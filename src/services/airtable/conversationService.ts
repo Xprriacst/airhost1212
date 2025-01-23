@@ -139,15 +139,18 @@ const mapAirtableToConversation = (record: any): Conversation => {
       messages = [];
     }
 
+    // Récupérer le nom du guest (plusieurs champs possibles)
+    const guestName = fields['Guest name'] || fields['GuestName'] || fields['guestName'] || fields['Name'] || '';
+
     return {
       id: record.id || '',
-      guestName: fields['Guest name'] || '',
-      guestEmail: fields['Guest email'] || '',
-      guestPhone: fields['Guest phone number'] || '',
+      guestName,
+      guestEmail: fields['Guest email'] || fields['GuestEmail'] || fields['guestEmail'] || '',
+      guestPhone: fields['Guest phone number'] || fields['GuestPhone'] || fields['guestPhone'] || '',
       messages,
       properties: Array.isArray(properties) ? properties : [propertyId],
       propertyId,
-      propertyName: fields['Property name'] || '',
+      propertyName: fields['Property name'] || fields['PropertyName'] || fields['propertyName'] || '',
       autoPilot: fields['Auto Pilot'] || false,
       unreadCount: fields['Unread count'] || 0
     };
