@@ -148,20 +148,21 @@ const mapAirtableToConversation = (record: any): Conversation => {
       'guestName': fields['guestName'],
       'Name': fields['Name']
     });
-    const guestName = fields['Guest Name'] || fields['Guest name'] || fields['GuestName'] || fields['guestName'] || fields['Name'] || 'Invité';
-    console.log('👤 Nom de l\'invité choisi:', guestName);
 
+    // Retourner l'objet conversation avec les champs originaux d'Airtable
     return {
       id: record.id || '',
-      guestName,
-      guestEmail: fields['Guest email'] || fields['GuestEmail'] || fields['guestEmail'] || '',
-      guestPhone,
-      messages,
-      properties: Array.isArray(properties) ? properties : [propertyId],
       propertyId,
-      propertyName: fields['Property name'] || fields['PropertyName'] || fields['propertyName'] || '',
-      autoPilot: fields['Auto Pilot'] || false,
-      unreadCount: fields['Unread count'] || 0
+      Properties: Array.isArray(properties) ? properties : [propertyId],
+      'Guest Name': fields['Guest Name'] || fields['GuestName'] || '',
+      'Guest Email': fields['Guest Email'] || fields['GuestEmail'] || '',
+      'Guest phone number': fields['Guest phone number'] || fields['GuestPhoneNumber'] || '',
+      Messages: messagesStr,
+      messages,
+      'Check-in Date': fields['Check-in Date'] || fields['CheckInDate'] || '',
+      'Check-out Date': fields['Check-out Date'] || fields['CheckOutDate'] || '',
+      'Auto Pilot': fields['Auto Pilot'] || false,
+      UnreadCount: fields['UnreadCount'] || 0
     };
   } catch (error) {
     console.error('❌ Erreur dans mapAirtableToConversation:', error);
@@ -597,13 +598,15 @@ export const conversationService = {
 
 const getEmptyConversation = (id: string = ''): Conversation => ({
   id,
-  guestName: '',
-  guestEmail: '',
-  guestPhone: '',
-  messages: [],
-  properties: [],
   propertyId: '',
-  propertyName: '',
-  autoPilot: false,
-  unreadCount: 0
+  Properties: [],
+  'Guest Name': '',
+  'Guest Email': '',
+  'Guest phone number': '',
+  Messages: '[]',
+  messages: [],
+  'Check-in Date': '',
+  'Check-out Date': '',
+  'Auto Pilot': false,
+  UnreadCount: 0
 });
