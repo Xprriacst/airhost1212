@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { Message, Property } from '../../types';
 import { messageService } from '../../services/airtable/messageService';
-import { conversationService } from '../../services/conversationService';
+import { conversationService } from '../../services/airtable/conversationService';
 import { aiService } from '../../services/aiService';
+import { authService } from '../../services/airtable/authService';
 
 export default function Chat() {
   const { conversationId } = useParams<{ conversationId: string }>();
@@ -15,24 +16,40 @@ export default function Chat() {
   const [customResponse, setCustomResponse] = useState('');
   const [isEditing, setIsEditing] = useState(false);
   const [isAutoPilot, setIsAutoPilot] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (conversationId) {
-      fetchConversation(conversationId);
-    }
+    const fetchData = async () => {
+      if (conversationId) {
+        try {
+          const userId = await authService.getCurrentUserId();
+          if (!userId) {
+            setError('User not authenticated');
+            return;
+          }
+          await fetchConversation(conversationId, userId);
+        } catch (error) {
+          console.error('Error in fetchData:', error);
+          setError(error instanceof Error ? error.message : 'An error occurred');
+        }
+      }
+    };
+    fetchData();
   }, [conversationId]);
 
-  const fetchConversation = async (id: string) => {
+  const fetchConversation = async (id: string, userId: string) => {
     console.log('Fetching conversation:', id);
     try {
-      const conv = await conversationService.getConversation(id);
+      const conv = await conversationService.fetchConversationById(userId, id);
       console.log('Fetched conversation:', conv);
       setConversation(conv);
       if (conv.messages) {
         setMessages(conv.messages);
       }
+      setError(null);
     } catch (error) {
       console.error('Error fetching conversation:', error);
+      setError(error instanceof Error ? error.message : 'Failed to fetch conversation');
     }
   };
 
