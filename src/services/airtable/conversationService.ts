@@ -265,7 +265,7 @@ export const conversationService = {
     }
   },
 
-  async fetchPropertyConversations(propertyId: string): Promise<Conversation[]> {
+  async fetchPropertyConversations(propertyId: string, guestEmail?: string): Promise<Conversation[]> {
     try {
       if (!base) throw new Error('Airtable is not configured');
       if (!propertyId) throw new Error('Property ID is required');
@@ -274,9 +274,13 @@ export const conversationService = {
       if (!user) throw new Error('User not authenticated');
 
       console.log('Fetching conversations for property:', propertyId);
+      const formula = guestEmail 
+        ? `AND({PropertyId} = '${propertyId}', {GuestEmail} = '${guestEmail}')`
+        : `{PropertyId} = '${propertyId}'`;
+
       const records = await base('Conversations')
         .select({
-          filterByFormula: `SEARCH("${propertyId}", {Properties})`,
+          filterByFormula: formula,
           fields: [
             'Properties',
             'Guest Name',
@@ -495,7 +499,8 @@ export const conversationService = {
         Properties: Array.isArray(data.Properties) ? data.Properties : [data.Properties],
         Messages: data.Messages || '[]',
         'Auto Pilot': false, // Désactivé par défaut
-        'UnreadCount': 0
+        'UnreadCount': 0,
+        'GuestEmail': data.GuestEmail || ''
       };
 
       console.log('Formatted data for Airtable:', formattedData);

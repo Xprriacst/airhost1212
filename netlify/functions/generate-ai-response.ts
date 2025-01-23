@@ -21,13 +21,16 @@ const handler: Handler = async (event) => {
     const body = JSON.parse(event.body || '{}');
     console.log('Request body:', body);
     
-    const { conversationId, propertyId } = body;
+    const { conversationId, propertyId, guestEmail } = body;
 
-    if (!conversationId || !propertyId) {
-      console.log('Missing required fields:', { conversationId, propertyId });
+    if (!conversationId || !propertyId || !guestEmail) {
+      console.log('Missing required fields:', { conversationId, propertyId, guestEmail });
       return {
         statusCode: 400,
-        body: JSON.stringify({ error: 'Missing conversationId or propertyId' }),
+        body: JSON.stringify({ 
+          error: 'Missing required fields',
+          requiredFields: ['conversationId', 'propertyId', 'guestEmail']
+        }),
       };
     }
 
@@ -55,26 +58,32 @@ const handler: Handler = async (event) => {
     }
     console.log('Property found:', property.get('name'));
 
-    // Récupérer l'historique de la conversation
+    // Récupérer la conversation
     console.log('Fetching conversation:', conversationId);
-    const conversation = await new Promise((resolve, reject) => {
-      base('Conversations').find(conversationId, (err, record) => {
-        if (err) {
-          console.error('Error fetching conversation:', err);
-          reject(err);
-          return;
-        }
-        resolve(record);
-      });
+    const conversations = await new Promise((resolve, reject) => {
+      base('Conversations')
+        .select({
+          filterByFormula: `AND({PropertyId} = '${propertyId}', {GuestEmail} = '${guestEmail}', RECORD_ID() = '${conversationId}')`
+        })
+        .firstPage((err, records) => {
+          if (err) {
+            console.error('Error fetching conversation:', err);
+            reject(err);
+            return;
+          }
+          resolve(records);
+        });
     });
 
-    if (!conversation) {
+    if (!conversations || conversations.length === 0) {
       console.log('Conversation not found:', conversationId);
       return {
         statusCode: 404,
         body: JSON.stringify({ error: 'Conversation not found' }),
       };
     }
+
+    const conversation = conversations[0];
 
     // Récupérer les messages
     const rawMessages = conversation.get('Messages'); 

@@ -90,49 +90,32 @@ export const handler: Handler = async (event) => {
     console.log(' Parsed payload:', JSON.stringify(payload, null, 2));
 
     // Validation
-    if (!payload.message || !payload.guestPhone || !payload.propertyId) {
-      console.error(' Champs requis manquants:', {
+    if (!payload.message || !payload.guestPhone || !payload.propertyId || !payload.guestEmail) {
+      console.error(' Missing required fields in payload:', {
         hasMessage: Boolean(payload.message),
         hasGuestPhone: Boolean(payload.guestPhone),
         hasPropertyId: Boolean(payload.propertyId),
-        guestPhone: payload.guestPhone
+        hasGuestEmail: Boolean(payload.guestEmail)
       });
       return {
         statusCode: 400,
         headers: corsHeaders,
-        body: JSON.stringify({ 
-          error: 'Champs requis manquants',
-          details: {
-            message: !payload.message ? 'Message requis' : undefined,
-            guestPhone: !payload.guestPhone ? 'Numéro de téléphone requis' : undefined,
-            propertyId: !payload.propertyId ? 'ID de propriété requis' : undefined
-          }
+        body: JSON.stringify({
+          error: 'Missing required fields',
+          requiredFields: ['message', 'guestPhone', 'propertyId', 'guestEmail']
         }),
       };
     }
 
-    // Normaliser le numéro de téléphone reçu
-    const normalizedInputPhone = normalizePhoneNumber(payload.guestPhone);
-    if (!normalizedInputPhone) {
-      return {
-        statusCode: 400,
-        headers: corsHeaders,
-        body: JSON.stringify({
-          error: 'Numéro de téléphone invalide',
-          code: 'INVALID_PHONE',
-          details: {
-            providedPhone: payload.guestPhone
-          }
-        })
-      };
-    }
-
-    console.log(' Numéro de téléphone normalisé:', {
-      original: payload.guestPhone,
-      normalized: normalizedInputPhone
-    });
-
-    // Récupérer la conversation
+    // Rechercher une conversation existante
+    console.log(' Looking for existing conversation...');
+    let conversations = await conversationService.fetchPropertyConversations(
+      payload.propertyId,
+      payload.guestEmail
+    );
+    console.log(` Found ${conversations.length} conversations`);
+    
+    // Si un conversationId est fourni, l'utiliser directement
     let conversation;
     if (payload.conversationId) {
       try {
@@ -153,7 +136,7 @@ export const handler: Handler = async (event) => {
           return false;
         }
         const conversationPhone = normalizePhoneNumber(c['Guest phone number']);
-        const phoneMatch = conversationPhone === normalizedInputPhone;
+        const phoneMatch = conversationPhone === normalizePhoneNumber(payload.guestPhone);
         if (phoneMatch) {
           console.log(' Correspondance trouvée:', {
             conversationId: c.id,
