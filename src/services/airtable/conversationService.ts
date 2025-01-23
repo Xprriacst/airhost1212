@@ -141,7 +141,7 @@ const mapAirtableToConversation = (record: any): Conversation => {
     }
 
     // Récupérer le nom du guest (plusieurs champs possibles)
-    const guestName = fields['Guest name'] || fields['GuestName'] || fields['guestName'] || fields['Name'] || '';
+    const guestName = fields['Guest Name'] || fields['Guest name'] || fields['GuestName'] || fields['guestName'] || fields['Name'] || fields['Guest Name'] || 'Invité';
 
     return {
       id: record.id || '',
