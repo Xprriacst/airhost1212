@@ -25,13 +25,13 @@ const ConversationDetail: React.FC = () => {
   const [isAutoPilot, setIsAutoPilot] = useState(false);
   const [textareaLines, setTextareaLines] = useState(1);
   const [dismissedAlerts, setDismissedAlerts] = useState<Set<string>>(new Set());
-  const userId = useAuthStore(state => state.userId);
+  const user = useAuthStore(state => state.user);
 
   // Récupérer la conversation
   useEffect(() => {
     const fetchConversation = async () => {
-      if (!conversationId || !userId) {
-        console.error('Missing conversationId or userId:', { conversationId, userId });
+      if (!conversationId || !user?.id) {
+        console.error('Missing conversationId or userId:', { conversationId, userId: user?.id });
         setError('Conversation introuvable');
         setLoading(false);
         return;
@@ -39,7 +39,7 @@ const ConversationDetail: React.FC = () => {
       
       try {
         console.log('Fetching conversation:', conversationId);
-        const data = await conversationService.fetchConversationById(userId, conversationId);
+        const data = await conversationService.fetchConversationById(user.id, conversationId);
         console.log('Conversation loaded:', data);
         setConversation(data);
         setIsAutoPilot(data.autoPilot || false);
@@ -51,7 +51,7 @@ const ConversationDetail: React.FC = () => {
       }
     };
     fetchConversation();
-  }, [conversationId, userId]);
+  }, [conversationId, user?.id]);
 
   // Récupérer la propriété
   useEffect(() => {
@@ -98,12 +98,12 @@ const ConversationDetail: React.FC = () => {
   // Rafraîchir la conversation toutes les 5 secondes
   useEffect(() => {
     const refreshConversation = async () => {
-      if (!conversationId || !userId) {
+      if (!conversationId || !user?.id) {
         console.error('Missing conversationId or userId for refresh');
         return;
       }
       try {
-        const data = await conversationService.fetchConversationById(userId, conversationId);
+        const data = await conversationService.fetchConversationById(user.id, conversationId);
         setConversation(prev => {
           // Ne mettre à jour que si les messages ont changé
           if (prev && JSON.stringify(prev.messages) === JSON.stringify(data.messages)) {
@@ -118,7 +118,7 @@ const ConversationDetail: React.FC = () => {
 
     const intervalId = setInterval(refreshConversation, 5000);
     return () => clearInterval(intervalId);
-  }, [conversationId, userId]);
+  }, [conversationId, user?.id]);
 
   // Mise à jour de l'état auto-pilot quand la conversation change
   useEffect(() => {
