@@ -89,12 +89,12 @@ export default function Chat() {
       try {
         await messageService.sendMessage(
           newMessage,
-          conversation.guestPhone,
+          conversation.guestPhone,  // Utiliser guestPhone au lieu de guestEmail
           conversation.propertyId
         );
-        console.log('✅ Message sent to Make.com successfully');
+        console.log('✅ Message envoyé à Make.com avec succès');
       } catch (makeError) {
-        console.error('❌ Failed to send message to Make.com:', makeError);
+        console.error('❌ Échec de l\'envoi du message à Make.com:', makeError);
         throw makeError;
       }
 
@@ -134,10 +134,10 @@ export default function Chat() {
   return (
     <div className="p-4">
       <div className="mb-4">
-        <h2 className="text-xl font-bold">Debug Chat Interface</h2>
-        <p>Conversation ID: {conversationId}</p>
-        <p>Guest Phone: {conversation?.guestPhone}</p>
-        <p>Property ID: {conversation?.propertyId}</p>
+        <h2 className="text-xl font-bold">Interface de Chat</h2>
+        <p>ID de conversation : {conversationId}</p>
+        <p>Téléphone du client : {conversation?.guestPhone}</p>
+        <p>ID de la propriété : {conversation?.propertyId}</p>
       </div>
 
       <div className="mb-4">

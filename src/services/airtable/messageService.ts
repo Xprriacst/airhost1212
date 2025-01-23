@@ -65,12 +65,13 @@ export const messageService = {
 
   async sendMessage(message: Message, guestPhone: string, propertyId: string): Promise<boolean> {
     try {
-      console.log('📤 Sending message to Netlify function:', {
+      console.log('📤 Préparation de l\'envoi du message:', {
         message: message.text,
         guestPhone,
         propertyId,
       });
 
+      // 1. Envoyer le message via la fonction Netlify
       const response = await fetch(NETLIFY_FUNCTION_URL, {
         method: 'POST',
         headers: {
@@ -85,15 +86,22 @@ export const messageService = {
 
       if (!response.ok) {
         const error = await response.json();
-        console.error('❌ Error sending message:', error);
-        throw new Error(`Failed to send message: ${error.message || 'Unknown error'}`);
+        console.error('❌ Erreur d\'envoi du message:', error);
+        throw new Error(`Échec de l'envoi: ${error.message || 'Erreur inconnue'}`);
       }
 
       const result = await response.json();
-      console.log('✅ Message sent successfully:', result);
+      
+      if (!result.success) {
+        console.error('❌ Échec de l\'envoi:', result);
+        throw new Error(result.error || 'Échec de l\'envoi du message');
+      }
+
+      console.log('✅ Message envoyé avec succès:', result);
       return true;
+
     } catch (error) {
-      console.error('❌ Error in sendMessage:', error);
+      console.error('❌ Erreur dans sendMessage:', error);
       throw error;
     }
   }

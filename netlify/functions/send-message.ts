@@ -68,45 +68,72 @@ export const handler: Handler = async (event) => {
 
     // Validation
     if (!payload.message || !payload.guestPhone || !payload.propertyId) {
-      console.error(' Missing required fields in payload:', {
+      console.error(' Champs requis manquants:', {
         hasMessage: Boolean(payload.message),
         hasGuestPhone: Boolean(payload.guestPhone),
-        hasPropertyId: Boolean(payload.propertyId)
+        hasPropertyId: Boolean(payload.propertyId),
+        guestPhone: payload.guestPhone
       });
       return {
         statusCode: 400,
         headers: corsHeaders,
         body: JSON.stringify({ 
-          error: 'Missing required fields',
+          error: 'Champs requis manquants',
           details: {
-            message: !payload.message ? 'Message is required' : undefined,
-            guestPhone: !payload.guestPhone ? 'Guest phone is required' : undefined,
-            propertyId: !payload.propertyId ? 'Property ID is required' : undefined
+            message: !payload.message ? 'Message requis' : undefined,
+            guestPhone: !payload.guestPhone ? 'Numéro de téléphone requis' : undefined,
+            propertyId: !payload.propertyId ? 'ID de propriété requis' : undefined
           }
         }),
       };
     }
 
+    // Normaliser le numéro de téléphone reçu
+    const normalizedInputPhone = normalizePhoneNumber(payload.guestPhone);
+    console.log(' Numéro de téléphone normalisé:', {
+      original: payload.guestPhone,
+      normalized: normalizedInputPhone
+    });
+
     // Récupérer la conversation
-    console.log(' Fetching all conversations...');
-    const conversations = await conversationService.getAllConversationsWithoutAuth();
-    console.log(` Found ${conversations.length} conversations`);
-    
-    // Si un conversationId est fourni, l'utiliser directement
     let conversation;
     if (payload.conversationId) {
-      conversation = conversations.find(c => c.id === payload.conversationId);
-    } else {
-      // Sinon chercher par numéro de téléphone
-      conversation = conversations.find(c => normalizePhoneNumber(c['Guest phone number']) === normalizePhoneNumber(payload.guestPhone));
+      try {
+        conversation = await conversationService.getConversationWithoutAuth(payload.conversationId);
+      } catch (error) {
+        console.error(' Erreur lors de la récupération de la conversation par ID:', error);
+      }
     }
 
     if (!conversation) {
-      console.error(' Conversation not found');
+      // Récupérer uniquement les conversations de la propriété
+      const conversations = await conversationService.getPropertyConversationsWithoutAuth(payload.propertyId);
+      console.log(` Trouvé ${conversations.length} conversations pour la propriété`);
+      
+      conversation = conversations.find(c => {
+        if (!c['Guest phone number']) {
+          console.warn(' Numéro de téléphone manquant pour la conversation:', c.id);
+          return false;
+        }
+        const conversationPhone = normalizePhoneNumber(c['Guest phone number']);
+        const phoneMatch = conversationPhone === normalizedInputPhone;
+        if (phoneMatch) {
+          console.log(' Correspondance trouvée:', {
+            conversationId: c.id,
+            originalPhone: c['Guest phone number'],
+            normalizedPhone: conversationPhone
+          });
+        }
+        return phoneMatch;
+      });
+    }
+
+    if (!conversation) {
+      console.error(' Conversation non trouvée');
       return {
         statusCode: 404,
         headers: corsHeaders,
-        body: JSON.stringify({ error: 'Conversation not found' })
+        body: JSON.stringify({ error: 'Conversation non trouvée' })
       };
     }
 
@@ -120,7 +147,7 @@ export const handler: Handler = async (event) => {
       status: 'pending'
     };
 
-    console.log(' Adding message to conversation:', {
+    console.log(' Ajout du message à la conversation:', {
       conversationId: conversation.id,
       message: newMessage
     });
@@ -142,7 +169,7 @@ export const handler: Handler = async (event) => {
       message: formattedMessage
     };
 
-    console.log(' Sending to Make.com:', {
+    console.log(' Envoi à Make.com:', {
       url: MAKE_WEBHOOK_URL,
       payload: makePayload
     });
@@ -150,9 +177,9 @@ export const handler: Handler = async (event) => {
     // Tentatives d'envoi avec retry
     for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
       try {
-        console.log(` Attempt ${attempt}/${MAX_RETRIES} to send message to Make.com`);
-        console.log('Sending to URL:', MAKE_WEBHOOK_URL);
-        console.log('Original payload:', payload);
+        console.log(` Tentative ${attempt}/${MAX_RETRIES} pour envoyer le message à Make.com`);
+        console.log('Envoi à l\'URL:', MAKE_WEBHOOK_URL);
+        console.log('Payload d\'origine:', payload);
         
         const response = await axios.post(MAKE_WEBHOOK_URL, makePayload, {
           headers: {
@@ -160,7 +187,7 @@ export const handler: Handler = async (event) => {
           }
         });
 
-        console.log(' Message sent successfully to Make.com:', {
+        console.log(' Message envoyé avec succès à Make.com:', {
           status: response.status,
           data: response.data
         });
@@ -181,16 +208,16 @@ export const handler: Handler = async (event) => {
           headers: corsHeaders,
           body: JSON.stringify({ 
             success: true,
-            message: 'Message sent successfully',
+            message: 'Message envoyé avec succès',
             messageId: newMessage.id
           })
         };
       } catch (error) {
-        console.error(` Attempt ${attempt} failed:`, error);
+        console.error(` Tentative ${attempt} échouée:`, error);
         
         if (attempt < MAX_RETRIES) {
           const delay = RETRY_DELAY * Math.pow(2, attempt - 1);
-          console.log(` Waiting ${delay}ms before next attempt...`);
+          console.log(` Attente de ${delay}ms avant la prochaine tentative...`);
           await sleep(delay);
         } else {
           // Marquer le message comme échoué
@@ -209,14 +236,14 @@ export const handler: Handler = async (event) => {
       }
     }
 
-    throw new Error('Failed to send message after all retries');
+    throw new Error('Échec de l\'envoi du message après toutes les tentatives');
   } catch (error) {
-    console.error(' Error in send-message function:', error);
+    console.error(' Erreur dans la fonction send-message:', error);
     return {
       statusCode: 500,
       headers: corsHeaders,
       body: JSON.stringify({ 
-        error: 'Failed to send message',
+        error: 'Échec de l\'envoi du message',
         details: error.message
       })
     };

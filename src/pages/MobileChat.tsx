@@ -122,8 +122,12 @@ const MobileChat: React.FC = () => {
       }
 
       console.log('📤 Sending message to WhatsApp...');
-      await messageService.sendMessage(newMessage, conversation.guestPhone, conversation.propertyId);
-      console.log('✅ Message sent to WhatsApp');
+      await messageService.sendMessage(
+        newMessage,
+        conversation.guestPhone,  // Utiliser guestPhone au lieu de guestEmail
+        conversation.propertyId
+      );
+      console.log('✅ Message envoyé avec succès');
 
       if (isAutoPilot) {
         setIsGenerating(true);
@@ -148,7 +152,8 @@ const MobileChat: React.FC = () => {
         }
       }
     } catch (error) {
-      console.error('❌ Error:', error);
+      console.error('❌ Erreur lors de l\'envoi du message:', error);
+      throw error;
     }
   };
 
@@ -267,6 +272,14 @@ const MobileChat: React.FC = () => {
             </button>
           </div>
         )}
+      </div>
+      <div className="p-4 bg-white shadow-sm">
+        <h1 className="text-xl font-semibold mb-2">Chat Mobile</h1>
+        <div className="text-sm text-gray-600">
+          <p>Client : {conversation?.guestName}</p>
+          <p>Téléphone : {conversation?.guestPhone}</p>
+          <p>Propriété : {conversation?.propertyName}</p>
+        </div>
       </div>
     </div>
   );
