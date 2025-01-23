@@ -171,7 +171,7 @@ const ConversationDetail: React.FC = () => {
     const tempId = `temp-${Date.now()}`;
 
     try {
-      if (!conversation || !conversation.guestPhone) {
+      if (!conversation || !conversation['Guest phone number']) {
         throw new Error('Missing conversation data');
       }
 
@@ -212,7 +212,7 @@ const ConversationDetail: React.FC = () => {
         body: JSON.stringify({
           propertyId,
           message: messageData.text,
-          guestPhone: conversation.guestPhone,
+          guestPhone: conversation['Guest phone number'],
           isHost: true,
           conversationId,
         }),
