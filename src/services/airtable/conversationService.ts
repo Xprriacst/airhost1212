@@ -500,7 +500,8 @@ export const conversationService = {
         Messages: data.Messages || '[]',
         'Auto Pilot': false, // Désactivé par défaut
         'UnreadCount': 0,
-        'GuestEmail': data.GuestEmail || ''
+        'GuestEmail': data.GuestEmail || '',
+        'GuestName': data.GuestName || 'Invité'
       };
 
       console.log('Formatted data for Airtable:', formattedData);
