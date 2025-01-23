@@ -108,14 +108,9 @@ export const handler: Handler = async (event) => {
 
     // Rechercher une conversation existante
     console.log(' Looking for existing conversation...');
-    let conversations = await conversationService.fetchPropertyConversations(
-      payload.propertyId,
-      payload.guestEmail
-    );
-    console.log(` Found ${conversations.length} conversations`);
+    let conversation;
     
     // Si un conversationId est fourni, l'utiliser directement
-    let conversation;
     if (payload.conversationId) {
       try {
         conversation = await conversationService.getConversationWithoutAuth(payload.conversationId);
