@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { Message, Property } from '../../types';
-import { messageService } from '../../services/messageService';
+import { messageService } from '../../services/airtable/messageService';
 import { conversationService } from '../../services/conversationService';
 import { aiService } from '../../services/aiService';
 
@@ -65,14 +65,14 @@ export default function Chat() {
       // 1. Envoyer à Make.com
       console.log('📤 Sending message to Make.com:', {
         message: newMessage,
-        guestEmail: conversation.guestEmail,
+        guestPhone: conversation.guestPhone,
         propertyId: conversation.propertyId
       });
 
       try {
         await messageService.sendMessage(
           newMessage,
-          conversation.guestEmail,
+          conversation.guestPhone,
           conversation.propertyId
         );
         console.log('✅ Message sent to Make.com successfully');
@@ -119,7 +119,7 @@ export default function Chat() {
       <div className="mb-4">
         <h2 className="text-xl font-bold">Debug Chat Interface</h2>
         <p>Conversation ID: {conversationId}</p>
-        <p>Guest Email: {conversation?.guestEmail}</p>
+        <p>Guest Phone: {conversation?.guestPhone}</p>
         <p>Property ID: {conversation?.propertyId}</p>
       </div>
 
