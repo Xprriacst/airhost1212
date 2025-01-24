@@ -72,6 +72,33 @@
 - [ ] Envoi de fichiers (images/vidéos)
 - [ ] Catégorie Question/Réponse dans AI knowledge
 
+## 📊 État du Projet (24/01/2025)
+
+### ✅ Fonctionnalités opérationnelles
+- Gestion des comptes utilisateurs
+- Affichage des conversations
+- Interface de chat
+- Routage conversations avec téléphone
+- Copier-coller dans la barre de texte mobile
+- Comportement normal du clavier lors de l'envoi d'un message
+- Actualisation automatique des conversations
+- Logique d'emergency cases
+
+### ❗ Problèmes Critiques Identifiés
+
+#### Priorité 1 : Chat et Communication
+- Impossibilité d'envoyer des messages dans certains cas
+- Non-persistance de l'activation/désactivation de l'Auto Pilot
+- Perte de la génération automatique de messages
+- Dysfonctionnement de l'analyse automatique des messages reçus
+- Absence d'affichage du dernier message
+- Compteur de messages non lus non fonctionnel
+
+#### Priorité 2 : Interface et Configuration
+- Chat Sandbox non fonctionnel
+- Scroll non fonctionnel sur la page des paramètres
+- Formulaire de paramètres inutilisable
+
 ## 🔧 Informations de Déploiement
 
 ### Netlify
@@ -90,10 +117,32 @@ curl -H "Authorization: Bearer $NETLIFY_TOKEN" \
   https://api.netlify.com/api/v1/sites/ffb49ecb-76d4-46a2-bbe2-d7622e8dfeef/deploys
 ```
 
-Note : La clé d'API Netlify expire dans 7 jours (le 27/01/2025). Pensez à la renouveler avant cette date.
-
 ## 🔍 Cas d'Urgence Identifiés
 - Client mécontent
 - Problème technique
 - Manque de quelque chose
 - IA ne sait pas répondre
+
+## 📝 Notes techniques
+- La gestion des comptes utilisateurs a été intégrée récemment
+- Les services ont été modifiés pour utiliser Airtable
+- L'authentification impacte l'accès aux propriétés et aux messages
+- La version 1.5.4 est la dernière version stable connue
+
+## 🔧 Informations Techniques
+
+### Plan d'action technique
+1. **Phase d'analyse**
+   - Examiner le code de la v1.5.4 pour chaque fonctionnalité
+   - Identifier les différences avec l'implémentation multi-compte
+   - Documenter les points de conflit
+
+2. **Phase de développement**
+   - Écrire des tests pour chaque fonctionnalité
+   - Adapter le code v1.5.4 au modèle multi-compte
+   - Valider les corrections avec les tests
+
+3. **Phase de déploiement**
+   - Déployer les corrections par ordre de priorité
+   - Valider en environnement de production
+   - Documenter les changements
