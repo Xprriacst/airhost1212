@@ -5,7 +5,6 @@ export interface BookingContext {
   checkIn?: string;
   checkOut?: string;
   guestCount?: number;
-  specialRequests?: string[];
 }
 
 export interface TimeContext {
@@ -31,8 +30,7 @@ export interface AIResponseContext {
 }
 
 export interface AIConfig {
-  maxResponseLength?: number;
   language?: 'fr' | 'en';
-  tone?: 'formal' | 'casual' | 'friendly';
+  tone?: 'friendly' | 'formal';
   shouldIncludeEmoji?: boolean;
 }

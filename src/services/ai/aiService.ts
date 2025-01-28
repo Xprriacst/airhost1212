@@ -1,66 +1,35 @@
 import OpenAI from 'openai';
-import { ContextBuilder } from './contextBuilder';
-import { PromptBuilder } from './promptBuilder';
 import type { Message, Property } from '../../types';
-import type { AIResponseContext, BookingContext, AIConfig } from './types';
-import { env } from '../../config/env';
+import type { BookingContext, AIConfig } from './types';
+import { buildPrompt } from './promptBuilder';
 
 const openai = new OpenAI({
-  apiKey: env.openai.apiKey,
+  apiKey: process.env.REACT_APP_OPENAI_API_KEY,
   dangerouslyAllowBrowser: true
 });
 
 export const aiService = {
   async generateResponse(
-    message: Message,
+    lastMessage: Message,
     property: Property,
-    bookingContext: BookingContext = { hasBooking: false },
+    bookingContext: BookingContext,
     previousMessages: Message[] = [],
     config: AIConfig = {}
   ): Promise<string> {
     try {
-      console.log('AI Service - Starting response generation:', {
-        property: property.name,
-        messageCount: previousMessages.length + 1,
-        hasBooking: bookingContext.hasBooking
-      });
+      const prompt = buildPrompt(lastMessage, property, bookingContext, previousMessages, config);
 
-      // Construction du contexte complet
-      const context = ContextBuilder.buildContext(
-        property,
-        bookingContext,
-        [...previousMessages, message]
-      );
-
-      // Génération des prompts
-      const systemPrompt = PromptBuilder.buildSystemPrompt(context, config);
-      const userPrompt = PromptBuilder.buildUserPrompt(message);
-
-      console.log('AI Service - Prompts generated:', {
-        systemPromptLength: systemPrompt.length,
-        userPromptLength: userPrompt.length
-      });
-
-      const completion = await openai.chat.completions.create({
-        model: "gpt-4",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt }
-        ],
+      const response = await openai.chat.completions.create({
+        model: 'gpt-4',
+        messages: [{ role: 'user', content: prompt }],
         temperature: 0.7,
         max_tokens: 500
       });
 
-      const response = completion.choices[0]?.message?.content;
-      if (!response) {
-        throw new Error('No response generated');
-      }
-
-      console.log('AI Service - Response generated successfully');
-      return response;
+      return response.choices[0]?.message?.content || '';
     } catch (error) {
-      console.error('AI Service - Error generating response:', error);
-      throw new Error('Failed to generate AI response');
+      console.error('Erreur lors de la génération de la réponse:', error);
+      throw error;
     }
   }
 };
