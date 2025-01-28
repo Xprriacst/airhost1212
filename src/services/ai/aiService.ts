@@ -3,8 +3,15 @@ import type { Message, Property } from '../../types';
 import type { BookingContext, AIConfig } from './types';
 import { buildPrompt } from './promptBuilder';
 
+// Récupérer la clé API depuis les variables d'environnement Vite
+const apiKey = import.meta.env.VITE_OPENAI_API_KEY;
+
+if (!apiKey) {
+  throw new Error('La clé API OpenAI est manquante dans les variables d\'environnement');
+}
+
 const openai = new OpenAI({
-  apiKey: process.env.REACT_APP_OPENAI_API_KEY,
+  apiKey: apiKey,
   dangerouslyAllowBrowser: true
 });
 
