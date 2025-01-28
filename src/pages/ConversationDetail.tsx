@@ -30,7 +30,9 @@ export default function ConversationDetail() {
     
     try {
       const data = await conversationService.fetchConversationById(user.id, conversationId);
-      setConversation(data);
+      if (data.messages) {
+        setConversation(data);
+      }
     } catch (error) {
       console.error('Erreur lors du chargement de la conversation:', error);
     }
@@ -98,27 +100,33 @@ export default function ConversationDetail() {
       id: Date.now().toString(),
       text: newMessage.trim(),
       sender: 'host',
-      timestamp: new Date()
+      timestamp: new Date(),
+      type: 'text',
+      status: 'sent'
     };
 
     try {
-      // Ajouter le message localement d'abord
+      const updatedMessages = [...conversation.messages, message];
+      
+      // Mise à jour locale
       setConversation(prev => prev ? {
         ...prev,
-        messages: [...prev.messages, message]
+        messages: updatedMessages
       } : prev);
       
       setNewMessage('');
       
-      // Envoyer au backend
+      // Mise à jour sur Airtable
       await conversationService.updateConversation(conversation.id, {
-        Messages: JSON.stringify([...conversation.messages, message])
+        Messages: JSON.stringify(updatedMessages.map(msg => ({
+          ...msg,
+          timestamp: msg.timestamp.toISOString()
+        })))
       });
-      
-      // Recharger pour confirmer
-      loadConversation();
     } catch (error) {
       console.error('Erreur lors de l\'envoi du message:', error);
+      // Recharger en cas d'erreur pour synchroniser
+      loadConversation();
     }
   };
 
