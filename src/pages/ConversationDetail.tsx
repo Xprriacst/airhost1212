@@ -136,75 +136,68 @@ export default function ConversationDetail() {
 
   return (
     <div className="flex flex-col h-screen">
-      <header className="flex items-center p-4 border-b">
-        <button onClick={() => navigate(-1)} className="mr-4">
-          <ArrowLeft size={24} />
+      {/* Header */}
+      <div className="flex items-center p-4 border-b">
+        <button onClick={() => navigate('/')} className="mr-4" aria-label="retour">
+          <ArrowLeft />
         </button>
         <div>
-          <h1 className="text-lg font-semibold">
-            {conversation.guestName || conversation.guestEmail?.split('@')[0] || 'Discussion avec l\'invité'}
-          </h1>
-          <div className="text-sm text-gray-500">
-            {conversation.checkIn && (
-              <div className="flex items-center gap-2">
-                <span>
-                  {new Date(conversation.checkIn).toLocaleDateString()} - {new Date(conversation.checkOut).toLocaleDateString()}
-                </span>
-              </div>
-            )}
-          </div>
+          <h1 className="text-lg font-semibold">{conversation.guestName}</h1>
+          <p className="text-sm text-gray-500">{property.name}</p>
         </div>
-      </header>
+      </div>
 
+      {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {conversation.messages.map(message => (
+        {conversation.messages.map((message) => (
           <div
             key={message.id}
             className={`flex ${message.sender === 'host' ? 'justify-end' : 'justify-start'}`}
           >
             <div
-              className={`max-w-[70%] rounded-lg p-3 ${
+              className={`max-w-[70%] p-3 rounded-lg ${
                 message.sender === 'host'
                   ? 'bg-blue-500 text-white'
-                  : 'bg-gray-100'
+                  : 'bg-gray-200 text-gray-800'
               }`}
             >
-              <p>{message.text}</p>
-              <div className="text-xs mt-1 opacity-70">
-                {new Date(message.timestamp).toLocaleTimeString()}
-              </div>
+              {message.text}
             </div>
           </div>
         ))}
       </div>
 
+      {/* Input */}
       <div className="border-t p-4">
-        <div className="flex gap-2">
-          <textarea
+        <div className="flex items-center space-x-2">
+          <button
+            onClick={handleGenerateResponse}
+            disabled={isGenerating}
+            className={`p-2 rounded-full ${
+              isGenerating ? 'bg-gray-200' : 'bg-blue-100 hover:bg-blue-200'
+            }`}
+            aria-label="générer une réponse"
+          >
+            <Sparkles className="w-5 h-5" />
+          </button>
+          <input
+            type="text"
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
+            onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
             placeholder="Votre message..."
-            className="flex-1 p-2 border rounded-lg resize-none"
-            rows={3}
+            className="flex-1 p-2 border rounded-lg"
           />
-          <div className="flex flex-col gap-2">
-            <button
-              onClick={handleGenerateResponse}
-              disabled={isGenerating}
-              aria-label="Générer une réponse"
-              className="p-2 bg-purple-100 text-purple-600 rounded-lg hover:bg-purple-200 disabled:opacity-50"
-            >
-              <Sparkles size={20} />
-            </button>
-            <button
-              onClick={handleSendMessage}
-              disabled={!newMessage.trim()}
-              aria-label="Envoyer"
-              className="p-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50"
-            >
-              <Send size={20} />
-            </button>
-          </div>
+          <button
+            onClick={handleSendMessage}
+            disabled={!newMessage.trim()}
+            className={`p-2 rounded-full ${
+              !newMessage.trim() ? 'bg-gray-200' : 'bg-blue-500 hover:bg-blue-600'
+            }`}
+            aria-label="envoyer"
+          >
+            <Send className={`w-5 h-5 ${!newMessage.trim() ? 'text-gray-400' : 'text-white'}`} />
+          </button>
         </div>
       </div>
     </div>
