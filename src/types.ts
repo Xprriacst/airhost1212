@@ -3,6 +3,9 @@ export interface Message {
   text: string;
   sender: 'host' | 'guest' | 'system';
   timestamp: Date;
+  type?: 'text' | 'image' | 'file';
+  status?: 'sent' | 'delivered' | 'read';
+  metadata?: Record<string, any>;
   emergencyTags?: string[];
 }
 
