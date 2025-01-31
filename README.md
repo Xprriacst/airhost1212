@@ -10,7 +10,7 @@
 - [x] Affichage de la liste de conversation par utiliateur
 - [REG] Affichage du nombre de messages non lus - regression depuis implementation de la gestion multi-comptes
 - [REG] Les messages d'un même guest créent de nouvelles conversations au lieu d'être ajoutés aux conversations existantes
-- [REG] À l'ouverture d'une conversation, la vue ne défile plus automatiquement vers le dernier message
+- [REG] À l'ouverture d'une conversation, la vue ne s'affiche plus tout en bas de la conversation, au niveau du dernier message (comme dans WhatsApp par exemple)
 - [ ] Affichage des "..." pour les messages trop longs
 - [ ] Menu principal : liste des conversations par défaut
 - [ ] Design style WhatsApp avec statut client (actuel/ancien/futur)
@@ -156,3 +156,22 @@ curl -H "Authorization: Bearer $NETLIFY_TOKEN" \
    - Déployer les corrections par ordre de priorité
    - Valider en environnement de production
    - Documenter les changements
+
+## Version v1.5.7-int7
+
+### Corrections
+- Fix du problème de duplication des conversations : les messages d'un même guest sont maintenant correctement regroupés dans la même conversation
+- Normalisation des numéros de téléphone pour assurer la cohérence entre différents formats (+33, 06, etc.)
+- Suppression des références obsolètes à la variable MODE
+- Correction de la gestion des clés API dans les fonctions Netlify
+
+### Régressions connues
+- L'en-tête des messages n'affiche plus le nom du Guest
+- Les dates d'arrivée et de départ ne sont plus visibles dans l'en-tête
+
+### Fonctionnalités à implémenter
+- Configuration des numéros de téléphone par utilisateur :
+  * Ajouter une section dans les paramètres utilisateur pour définir le numéro de téléphone
+  * Permettre à chaque utilisateur de l'application de configurer son numéro pour l'envoi de messages
+  * Valider le format du numéro lors de la configuration
+  * Utiliser ce numéro configuré lors de l'envoi de messages via l'interface
