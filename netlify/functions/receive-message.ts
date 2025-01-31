@@ -13,6 +13,9 @@ if (!OPENAI_API_KEY) {
 // French mobile phone number validation regex
 const WHATSAPP_PHONE_REGEX = /^(\+33|33)[67]\d{8}$/;
 
+// Message deduplication TTL (5 minutes)
+const MESSAGE_DEDUP_TTL = 5 * 60 * 1000;
+
 // Phone number formatting helper
 const formatPhoneNumber = (phone: string): string => {
   const cleaned = phone.replace(/\D/g, '');
