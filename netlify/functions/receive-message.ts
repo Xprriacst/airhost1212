@@ -4,8 +4,11 @@ import { propertyService } from '../../src/services/airtable/propertyService';
 import { conversationService } from '../../src/services/airtable/conversationService';
 import axios from 'axios';
 
-// Shorter deduplication window for better handling
-const MESSAGE_DEDUP_TTL = 30000; // 30 seconds
+// Configuration de l'API OpenAI
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+if (!OPENAI_API_KEY) {
+  throw new Error('OPENAI_API_KEY is not set in environment variables');
+}
 
 // French mobile phone number validation regex
 const WHATSAPP_PHONE_REGEX = /^(\+33|33)[67]\d{8}$/;
