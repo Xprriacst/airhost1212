@@ -38,7 +38,7 @@ export const aiService = {
           }
         ],
         temperature: 0.7,
-        max_tokens: 150
+        max_tokens: 400
       });
 
       return completion.choices[0]?.message?.content || "Je m'excuse, je n'ai pas pu générer une réponse pour le moment. Veuillez réessayer.";
