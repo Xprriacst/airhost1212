@@ -31,7 +31,16 @@ export const aiService = {
     config: AIConfig = {}
   ): Promise<string> {
     try {
+      console.log('Début de la génération de réponse avec:', {
+        lastMessage,
+        property: property.name,
+        bookingContext,
+        messagesCount: previousMessages.length,
+        config
+      });
+
       const prompt = buildPrompt(lastMessage, property, bookingContext, previousMessages, config);
+      console.log('Prompt généré:', prompt);
 
       const response = await openai.chat.completions.create({
         model: 'gpt-4',
@@ -40,9 +49,11 @@ export const aiService = {
         max_tokens: 500
       });
 
+      console.log('Réponse reçue de OpenAI:', response.choices[0]?.message?.content);
+
       return response.choices[0]?.message?.content || '';
     } catch (error) {
-      console.error('Erreur lors de la génération de la réponse:', error);
+      console.error('Erreur détaillée lors de la génération de la réponse:', error);
       throw error;
     }
   }

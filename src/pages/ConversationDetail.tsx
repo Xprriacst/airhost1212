@@ -50,15 +50,25 @@ export default function ConversationDetail() {
   };
 
   const handleGenerateResponse = async () => {
+    console.log('Début handleGenerateResponse');
+    
     if (!conversation?.messages?.length || !property) {
+      console.log('Arrêt: pas de messages ou de propriété', {
+        hasMessages: !!conversation?.messages?.length,
+        hasProperty: !!property
+      });
       return;
     }
 
     const lastMessage = conversation.messages[conversation.messages.length - 1];
     if (lastMessage.sender !== 'guest') {
+      console.log('Arrêt: dernier message non envoyé par guest', {
+        sender: lastMessage.sender
+      });
       return;
     }
 
+    console.log('Génération de réponse en cours...');
     setIsGenerating(true);
 
     try {
@@ -75,6 +85,11 @@ export default function ConversationDetail() {
         guestCount: conversation.guestCount
       };
 
+      console.log('Appel du service AI avec:', {
+        config: aiConfig,
+        booking: bookingContext
+      });
+
       const response = await aiService.generateResponse(
         lastMessage,
         property,
@@ -83,6 +98,7 @@ export default function ConversationDetail() {
         aiConfig
       );
 
+      console.log('Réponse reçue:', response);
       setNewMessage(response);
     } catch (error) {
       console.error('Erreur lors de la génération de la réponse:', error);
