@@ -173,12 +173,15 @@ export const handler: Handler = async (event) => {
     console.log(`✅ Found ${conversations.length} conversations`);
     console.log('🔍 Looking for conversation with phone:', data.guestPhone);
     let conversation = conversations.find(conv => {
+      const storedPhone = conv['Guest phone number'] ? formatPhoneNumber(conv['Guest phone number']) : '';
+      const incomingPhone = data.guestPhone;  // déjà formaté par le schema Zod
       console.log('Checking conversation:', {
         id: conv.id,
-        phone: conv['Guest phone number'],
-        match: conv['Guest phone number'] === data.guestPhone
+        storedPhone,
+        incomingPhone,
+        match: storedPhone === incomingPhone
       });
-      return conv['Guest phone number'] === data.guestPhone;
+      return storedPhone === incomingPhone;
     });
     console.log('🔍 Conversation found:', conversation ? 'yes' : 'no');
 
