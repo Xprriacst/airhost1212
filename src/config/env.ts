@@ -38,7 +38,7 @@ export const env = {
     baseId: getEnvVar('AIRTABLE_BASE_ID') || getEnvVar('VITE_AIRTABLE_BASE_ID'),
   },
   openai: {
-    apiKey: getEnvVar('OPENAI_API_KEY'),
+    apiKey: getEnvVar('VITE_OPENAI_API_KEY'),
     model: 'gpt-4',
   },
 };

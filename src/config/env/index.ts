@@ -6,17 +6,17 @@ import type { EnvConfig } from './schema';
 // Get environment variables with validation
 const env: EnvConfig = {
   airtable: {
-    apiKey: getEnvVar('AIRTABLE_API_KEY') || defaultConfig.airtable.apiKey,
-    baseId: getEnvVar('AIRTABLE_BASE_ID') || defaultConfig.airtable.baseId,
+    apiKey: getEnvVar('VITE_AIRTABLE_API_KEY') || defaultConfig.airtable.apiKey,
+    baseId: getEnvVar('VITE_AIRTABLE_BASE_ID') || defaultConfig.airtable.baseId,
   },
   openai: {
-    apiKey: getEnvVar('OPENAI_API_KEY') || defaultConfig.openai.apiKey,
+    apiKey: getEnvVar('VITE_OPENAI_API_KEY') || defaultConfig.openai.apiKey,
     model: 'gpt-4',
   },
 };
 
 // Validate required environment variables
-['AIRTABLE_API_KEY', 'AIRTABLE_BASE_ID', 'OPENAI_API_KEY'].forEach(key => 
+['VITE_AIRTABLE_API_KEY', 'VITE_AIRTABLE_BASE_ID', 'VITE_OPENAI_API_KEY'].forEach(key => 
   validateEnvVar(key, getEnvVar(key))
 );
 
