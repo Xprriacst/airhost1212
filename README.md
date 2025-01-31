@@ -9,6 +9,8 @@
 - [x] Bulle notification au niveau de la conversation
 - [x] Affichage de la liste de conversation par utiliateur
 - [REG] Affichage du nombre de messages non lus - regression depuis implementation de la gestion multi-comptes
+- [REG] Les messages d'un même guest créent de nouvelles conversations au lieu d'être ajoutés aux conversations existantes
+- [REG] À l'ouverture d'une conversation, la vue ne défile plus automatiquement vers le dernier message
 - [ ] Affichage des "..." pour les messages trop longs
 - [ ] Menu principal : liste des conversations par défaut
 - [ ] Design style WhatsApp avec statut client (actuel/ancien/futur)
@@ -18,6 +20,8 @@
 - [ ] Retour à la ligne sans envoi de message
 
 ### 🤖 Auto Pilot et IA
+- [x] Génération de réponse IA partiellement implémentée
+- [x] Gestion des instructions AI au format string et JSON
 - [REG] Logique d'emergency cases implémentée - regression de puis implementation de la gestion multi-comptes
 - [REG] Mode Auto Pilot fonctionnel avec réponses automatiques - regression de puis implementation de la gestion multi-comptes
 - [REG] Message de désactivation de l'auto pilot - regression de puis implementation de la gestion multi-comptes
