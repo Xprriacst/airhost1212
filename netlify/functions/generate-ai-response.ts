@@ -7,7 +7,8 @@ const airtable = new Airtable({ apiKey: process.env.VITE_AIRTABLE_API_KEY });
 const base = airtable.base(process.env.VITE_AIRTABLE_BASE_ID || '');
 
 const openai = new OpenAI({
-  apiKey: process.env.VITE_OPENAI_API_KEY,
+  apiKey: process.env.OPENAI_API_KEY,
+  dangerouslyAllowBrowser: true
 });
 
 const handler: Handler = async (event) => {

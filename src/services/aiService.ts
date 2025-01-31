@@ -3,7 +3,7 @@ import type { Message, Property } from '../types';
 import { handleServiceError } from '../utils/error';
 
 const openai = new OpenAI({
-  apiKey: import.meta.env.VITE_OPENAI_API_KEY,
+  apiKey: import.meta.env.OPENAI_API_KEY,
   dangerouslyAllowBrowser: true
 });
 

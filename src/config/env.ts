@@ -8,6 +8,7 @@ const envSchema = z.object({
   }),
   openai: z.object({
     apiKey: z.string().min(1, 'OpenAI API key is required'),
+    model: z.string().optional(),
   }),
 });
 
@@ -37,7 +38,8 @@ export const env = {
     baseId: getEnvVar('AIRTABLE_BASE_ID') || getEnvVar('VITE_AIRTABLE_BASE_ID'),
   },
   openai: {
-    apiKey: getEnvVar('OPENAI_API_KEY') || getEnvVar('VITE_OPENAI_API_KEY'),
+    apiKey: getEnvVar('OPENAI_API_KEY'),
+    model: 'gpt-4',
   },
 };
 
