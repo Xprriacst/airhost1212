@@ -188,11 +188,20 @@ export default function ConversationDetail() {
         <div className="flex items-center space-x-2">
           <button
             onClick={handleGenerateResponse}
-            disabled={isGenerating}
-            className={`p-2 rounded-full ${
-              isGenerating ? 'bg-gray-200' : 'bg-blue-100 hover:bg-blue-200'
+            disabled={isGenerating || !conversation.messages.length || conversation.messages[conversation.messages.length - 1].sender !== 'guest'}
+            className={`p-2 rounded-full relative ${
+              isGenerating || !conversation.messages.length || conversation.messages[conversation.messages.length - 1].sender !== 'guest'
+                ? 'bg-gray-200 cursor-not-allowed'
+                : 'bg-blue-100 hover:bg-blue-200'
             }`}
             aria-label="générer une réponse"
+            title={
+              !conversation.messages.length
+                ? "Pas de messages dans la conversation"
+                : conversation.messages[conversation.messages.length - 1].sender !== 'guest'
+                ? "Impossible de générer une réponse : le dernier message n'est pas de l'invité"
+                : "Générer une réponse"
+            }
           >
             <Sparkles className="w-5 h-5" />
           </button>
