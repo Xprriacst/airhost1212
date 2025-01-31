@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Send, Sparkles } from 'lucide-react';
 import { conversationService } from '../services';
@@ -8,6 +8,8 @@ import type { Conversation, Property, Message } from '../types';
 import { useAuthStore } from '../stores/authStore';
 
 export default function ConversationDetail() {
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
   const { conversationId, propertyId } = useParams<{ conversationId: string; propertyId: string }>();
   const navigate = useNavigate();
   const { user } = useAuthStore();
@@ -15,6 +17,13 @@ export default function ConversationDetail() {
   const [property, setProperty] = useState<Property | null>(null);
   const [newMessage, setNewMessage] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
+
+  // Scroll au chargement initial et à chaque nouveau message
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'auto' });
+    }
+  }, [conversation?.messages]);
 
   useEffect(() => {
     if (!conversationId || !propertyId || !user) {
@@ -181,6 +190,7 @@ export default function ConversationDetail() {
             </div>
           </div>
         ))}
+        <div ref={messagesEndRef} />
       </div>
 
       {/* Input */}
