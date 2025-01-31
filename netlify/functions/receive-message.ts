@@ -10,6 +10,9 @@ if (!OPENAI_API_KEY) {
   throw new Error('OPENAI_API_KEY is not set in environment variables');
 }
 
+// Configuration du mode (dev/prod)
+const MODE = process.env.MODE || 'prod';
+
 // French mobile phone number validation regex
 const WHATSAPP_PHONE_REGEX = /^(\+33|33)[67]\d{8}$/;
 
