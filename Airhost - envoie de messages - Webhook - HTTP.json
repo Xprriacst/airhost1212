@@ -323,6 +323,7 @@
         "designer": {
             "orphans": []
         },
-        "zone": "eu1.make.com"
+        "zone": "eu1.make.com",
+        "notes": []
     }
 }
