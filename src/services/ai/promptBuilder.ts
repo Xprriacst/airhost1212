@@ -24,14 +24,25 @@ export function buildPrompt(
   }
 
   // Instructions spécifiques à la propriété
-  if (property.aiInstructions?.length > 0) {
+  if (property.aiInstructions) {
     prompt += '\n\nInstructions spécifiques :';
-    property.aiInstructions
-      .filter(instr => instr.isActive)
-      .sort((a, b) => b.priority - a.priority)
-      .forEach(instr => {
-        prompt += `\n- ${instr.content}`;
-      });
+    try {
+      const instructions = JSON.parse(property.aiInstructions);
+      if (Array.isArray(instructions)) {
+        instructions
+          .filter(instr => instr.isActive)
+          .sort((a, b) => b.priority - a.priority)
+          .forEach(instr => {
+            prompt += `\n- ${instr.content}`;
+          });
+      } else {
+        // Si ce n'est pas un tableau, on ajoute directement le contenu
+        prompt += `\n- ${property.aiInstructions}`;
+      }
+    } catch (e) {
+      // Si le parsing échoue, on ajoute directement le contenu
+      prompt += `\n- ${property.aiInstructions}`;
+    }
   }
 
   // Messages précédents pour le contexte
