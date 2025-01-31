@@ -26,7 +26,7 @@ export const aiService = {
   ): Promise<string> {
     try {
       const completion = await openai.chat.completions.create({
-        model: "gpt-4-0125-preview",
+        model: "gpt-4o-mini",
         messages: [
           { 
             role: "system", 
