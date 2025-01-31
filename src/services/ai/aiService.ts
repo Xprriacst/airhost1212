@@ -9,8 +9,7 @@ let apiKey: string;
 if (typeof process !== 'undefined' && process.env.NODE_ENV === 'test') {
   apiKey = 'test-key';
 } else {
-  // @ts-ignore
-  apiKey = import.meta.env.VITE_OPENAI_API_KEY;
+  apiKey = process.env.OPENAI_API_KEY || '';
 }
 
 if (!apiKey) {
