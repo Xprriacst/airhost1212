@@ -1,5 +1,6 @@
 import { MessageContent, MessageStatus, WhatsAppConfig } from '../../types/whatsapp';
 import { IWhatsAppService, WebhookPayload } from './types';
+import { whatsappConfig } from '../../config/whatsapp';
 
 export class OfficialWhatsAppService implements IWhatsAppService {
   private config: WhatsAppConfig;
@@ -11,10 +12,10 @@ export class OfficialWhatsAppService implements IWhatsAppService {
   async sendMessage(to: string, content: MessageContent): Promise<string> {
     try {
       // Exemple d'implémentation avec l'API officielle
-      const response = await fetch(`https://graph.facebook.com/v18.0/${this.config.waba_id}/messages`, {
+      const response = await fetch(`${whatsappConfig.apiUrl}/${whatsappConfig.appId}/messages`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${this.config.api_key}`,
+          'Authorization': `Bearer ${whatsappConfig.accessToken}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
@@ -40,9 +41,9 @@ export class OfficialWhatsAppService implements IWhatsAppService {
 
   async getMessageStatus(messageId: string): Promise<MessageStatus> {
     try {
-      const response = await fetch(`https://graph.facebook.com/v18.0/${messageId}`, {
+      const response = await fetch(`${whatsappConfig.apiUrl}/${messageId}`, {
         headers: {
-          'Authorization': `Bearer ${this.config.api_key}`,
+          'Authorization': `Bearer ${whatsappConfig.accessToken}`,
         },
       });
 
@@ -60,10 +61,10 @@ export class OfficialWhatsAppService implements IWhatsAppService {
 
   async markMessageAsRead(messageId: string): Promise<void> {
     try {
-      await fetch(`https://graph.facebook.com/v18.0/${messageId}/mark_as_read`, {
+      await fetch(`${whatsappConfig.apiUrl}/${messageId}/mark_as_read`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${this.config.api_key}`,
+          'Authorization': `Bearer ${whatsappConfig.accessToken}`,
         },
       });
     } catch (error) {

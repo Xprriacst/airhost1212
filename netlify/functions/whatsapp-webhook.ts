@@ -1,5 +1,6 @@
 import { Handler } from '@netlify/functions';
 import { whatsappBusinessAccountService } from '../../src/services/whatsapp/businessAccountService';
+import { whatsappConfig } from '../../src/config/whatsapp';
 import crypto from 'crypto';
 
 interface WhatsAppWebhookPayload {
@@ -67,7 +68,7 @@ export const handler: Handler = async (event, context) => {
       const challenge = event.queryStringParameters?.['hub.challenge'];
 
       // Vérifier que le token correspond à celui configuré
-      if (mode === 'subscribe' && token === process.env.WHATSAPP_VERIFY_TOKEN) {
+      if (mode === 'subscribe' && token === whatsappConfig.verifyToken) {
         return {
           statusCode: 200,
           body: challenge || '',
