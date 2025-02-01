@@ -1,6 +1,5 @@
 import { MessageContent, MessageStatus, WhatsAppConfig } from '../../types/whatsapp';
 import { IWhatsAppService, WebhookPayload } from './types';
-import { whatsappConfig } from '../../config/whatsapp';
 
 export class OfficialWhatsAppService implements IWhatsAppService {
   private config: WhatsAppConfig;
@@ -11,11 +10,10 @@ export class OfficialWhatsAppService implements IWhatsAppService {
 
   async sendMessage(to: string, content: MessageContent): Promise<string> {
     try {
-      // Exemple d'implémentation avec l'API officielle
-      const response = await fetch(`${whatsappConfig.apiUrl}/${whatsappConfig.phoneNumberId}/messages`, {
+      const response = await fetch(`${this.config.apiUrl}/${this.config.phoneNumberId}/messages`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${whatsappConfig.accessToken}`,
+          'Authorization': `Bearer ${this.config.accessToken}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
@@ -41,9 +39,9 @@ export class OfficialWhatsAppService implements IWhatsAppService {
 
   async getMessageStatus(messageId: string): Promise<MessageStatus> {
     try {
-      const response = await fetch(`${whatsappConfig.apiUrl}/${messageId}`, {
+      const response = await fetch(`${this.config.apiUrl}/${messageId}`, {
         headers: {
-          'Authorization': `Bearer ${whatsappConfig.accessToken}`,
+          'Authorization': `Bearer ${this.config.accessToken}`,
         },
       });
 
@@ -61,10 +59,10 @@ export class OfficialWhatsAppService implements IWhatsAppService {
 
   async markMessageAsRead(messageId: string): Promise<void> {
     try {
-      await fetch(`${whatsappConfig.apiUrl}/${messageId}/mark_as_read`, {
+      await fetch(`${this.config.apiUrl}/${messageId}/mark_as_read`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${whatsappConfig.accessToken}`,
+          'Authorization': `Bearer ${this.config.accessToken}`,
         },
       });
     } catch (error) {

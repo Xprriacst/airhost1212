@@ -19,6 +19,7 @@ export interface WhatsAppConfig {
   id: string;
   user_id: string;
   phone_number: string;
+  phoneNumberId: string;
   waba_id: string;
   webhook_url: string;
   api_key: string;

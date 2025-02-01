@@ -3,24 +3,32 @@ import { getWhatsAppService } from '../whatsapp';
 import { WhatsAppServiceConfig } from '../whatsapp/types';
 
 class ConversationService {
-  private getWhatsAppConfig(userId: string): WhatsAppServiceConfig {
-    // TODO: Récupérer la config depuis les settings utilisateur
-    return {
-      provider: 'make', // Par défaut, utiliser Make
-      id: '',
-      user_id: userId,
-      phone_number: '',
-      waba_id: '',
-      webhook_url: '',
-      api_key: '',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      status: 'active',
-      settings: {
-        notification_email: '',
-        auto_reply: false,
-        business_hours: []
+  private usersTable: any; // Déclaration de la table des utilisateurs
+
+  private async getWhatsAppConfig(userId: string): Promise<WhatsAppServiceConfig> {
+    const user = await this.usersTable.find(userId);
+    
+    if (!user) {
+      return {
+        provider: 'make' // Provider par défaut
+      };
+    }
+
+    const provider = user.get('whatsapp_provider') as WhatsAppProvider || 'make';
+    
+    if (provider === 'official') {
+      const config = await whatsappBusinessAccountService.getAccountConfig(userId);
+      if (!config) {
+        throw new Error('Configuration WhatsApp non trouvée pour l\'utilisateur');
       }
+      return {
+        provider,
+        ...config
+      };
+    }
+
+    return {
+      provider
     };
   }
 
@@ -37,7 +45,7 @@ class ConversationService {
   async sendMessage(userId: string, conversation: Conversation, message: Message): Promise<void> {
     try {
       // 1. Obtenir la configuration WhatsApp de l'utilisateur
-      const whatsappConfig = this.getWhatsAppConfig(userId);
+      const whatsappConfig = await this.getWhatsAppConfig(userId);
       
       // 2. Obtenir le service WhatsApp approprié
       const whatsappService = getWhatsAppService(whatsappConfig);
