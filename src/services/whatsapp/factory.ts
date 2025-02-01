@@ -5,8 +5,7 @@ import { IWhatsAppService, WhatsAppProvider, WhatsAppServiceConfig } from './typ
 
 export class WhatsAppServiceFactory {
   private static instance: WhatsAppServiceFactory;
-  private currentService?: IWhatsAppService;
-  private currentProvider?: WhatsAppProvider;
+  private services: Map<string, IWhatsAppService> = new Map();
 
   private constructor() {}
 
@@ -18,25 +17,34 @@ export class WhatsAppServiceFactory {
   }
 
   getService(config: WhatsAppServiceConfig): IWhatsAppService {
-    // Si le service existe déjà et que le provider n'a pas changé, retourner l'instance existante
-    if (this.currentService && this.currentProvider === config.provider) {
-      return this.currentService;
+    const key = `${config.provider}_${config.phoneNumberId || 'default'}`;
+    
+    // Vérifier si un service existe déjà pour cette configuration
+    const existingService = this.services.get(key);
+    if (existingService) {
+      return existingService;
     }
 
     // Créer une nouvelle instance du service selon le provider
+    let service: IWhatsAppService;
+    
     switch (config.provider) {
       case 'make':
-        this.currentService = new MakeWhatsAppService();
+        service = new MakeWhatsAppService();
         break;
       case 'official':
-        this.currentService = new OfficialWhatsAppService(config);
+        if (!config.phoneNumberId) {
+          throw new Error('Phone Number ID requis pour le provider officiel');
+        }
+        service = new OfficialWhatsAppService(config as WhatsAppConfig);
         break;
       default:
         throw new Error(`Provider WhatsApp non supporté: ${config.provider}`);
     }
 
-    this.currentProvider = config.provider;
-    return this.currentService;
+    // Stocker le service dans la Map
+    this.services.set(key, service);
+    return service;
   }
 }
 
