@@ -17,12 +17,17 @@ class ConversationService {
     const provider = user.get('whatsapp_provider') as WhatsAppProvider || 'make';
     
     if (provider === 'official') {
+      const phoneNumberId = user.get('whatsapp_phone_number_id');
+      if (!phoneNumberId) {
+        throw new Error('Phone Number ID manquant pour l\'utilisateur');
+      }
+
       return {
         provider,
-        appId: process.env.WHATSAPP_APP_ID || '',
-        accessToken: process.env.WHATSAPP_ACCESS_TOKEN || '',
+        appId: process.env.WHATSAPP_APP_ID,
+        accessToken: process.env.WHATSAPP_ACCESS_TOKEN,
         apiVersion: process.env.WHATSAPP_API_VERSION || 'v18.0',
-        phoneNumberId: user.get('whatsapp_phone_number_id') as string,
+        phoneNumberId,
         apiUrl: `https://graph.facebook.com/${process.env.WHATSAPP_API_VERSION || 'v18.0'}`
       };
     }
