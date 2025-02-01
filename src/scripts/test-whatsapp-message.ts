@@ -1,32 +1,51 @@
-const { OfficialWhatsAppService } = require('../services/whatsapp/officialService');
-const { whatsappConfig } = require('../config/whatsapp');
+import { base } from '../services/airtable/airtableClient';
+import { ConversationService } from '../services/conversation/conversationService';
 
-async function testWhatsAppMessage() {
+const testWhatsAppMessage = async () => {
   try {
-    const whatsappService = new OfficialWhatsAppService(whatsappConfig);
+    // ID de l'utilisateur à tester
+    const userId = 'recUyjZp3LTyFwM5X';
     
-    // Numéro de test (à remplacer par un vrai numéro)
-    const testPhoneNumber = '+33617370484';
-    
-    // Message de test
+    // Récupérer la conversation d'Andreea
+    const conversationsTable = base('Conversations');
+    const [conversation] = await conversationsTable.select({
+      maxRecords: 1,
+      filterByFormula: `AND(
+        {Status} = 'active',
+        {Phone Number} = '+33617374784'
+      )`
+    }).firstPage();
+
+    if (!conversation) {
+      throw new Error('Conversation d\'Andreea non trouvée');
+    }
+
+    // Créer un message de test
     const message = {
+      id: `test_${Date.now()}`,
+      text: 'Test de message WhatsApp via API officielle 🚀',
       type: 'text',
-      text: 'Test de l\'API WhatsApp officielle 👋',
+      timestamp: new Date(),
+      sender: 'host',
+      status: 'pending',
+      metadata: {}
     };
 
-    console.log('Envoi du message de test...');
-    const messageId = await whatsappService.sendMessage(testPhoneNumber, message);
-    console.log('Message envoyé avec succès ! ID:', messageId);
+    // Envoyer le message
+    const conversationService = new ConversationService();
+    await conversationService.sendMessage(userId, {
+      id: conversation.id,
+      phone_number: conversation.get('Phone Number'),
+      status: 'active'
+    }, message);
 
-    // Attendre quelques secondes puis vérifier le statut
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    console.log('✅ Message envoyé avec succès !');
+    console.log('ID de la conversation:', conversation.id);
+    console.log('Numéro de téléphone:', conversation.get('Phone Number'));
     
-    const status = await whatsappService.getMessageStatus(messageId);
-    console.log('Statut du message:', status);
-
   } catch (error) {
-    console.error('Erreur lors du test:', error);
+    console.error('❌ Erreur lors du test:', error);
   }
-}
+};
 
-testWhatsAppMessage();
+testWhatsAppMessage().catch(console.error);
