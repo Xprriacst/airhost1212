@@ -12,7 +12,7 @@ export class OfficialWhatsAppService implements IWhatsAppService {
   async sendMessage(to: string, content: MessageContent): Promise<string> {
     try {
       // Exemple d'implémentation avec l'API officielle
-      const response = await fetch(`${whatsappConfig.apiUrl}/${whatsappConfig.appId}/messages`, {
+      const response = await fetch(`${whatsappConfig.apiUrl}/${whatsappConfig.phoneNumberId}/messages`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${whatsappConfig.accessToken}`,
