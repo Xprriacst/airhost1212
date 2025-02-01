@@ -35,7 +35,8 @@ const testWhatsAppMessage = async () => {
     const conversationService = new ConversationService();
     await conversationService.sendMessage(userId, {
       id: conversation.id,
-      phone_number: conversation.get('Phone Number'),
+      guestPhone: conversation.get('Phone Number'),
+      propertyId: conversation.get('Property')[0], // Ajout de propertyId qui est requis
       status: 'active'
     }, message);
 
