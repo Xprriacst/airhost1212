@@ -15,18 +15,23 @@ export interface WhatsAppSettings {
   business_hours: BusinessHour[];
 }
 
-export interface WhatsAppConfig {
-  id: string;
-  user_id: string;
-  phone_number: string;
+export type WhatsAppProvider = 'make' | 'official';
+
+export interface WhatsAppServiceConfig {
+  provider: WhatsAppProvider;
+  appId?: string;
+  accessToken?: string;
+  apiVersion?: string;
+  phoneNumberId?: string;
+  apiUrl?: string;
+}
+
+export interface WhatsAppConfig extends WhatsAppServiceConfig {
+  appId: string;
+  accessToken: string;
+  apiVersion: string;
   phoneNumberId: string;
-  waba_id: string;
-  webhook_url: string;
-  api_key: string;
-  created_at: string;
-  updated_at: string;
-  status: WhatsAppStatus;
-  settings: WhatsAppSettings;
+  apiUrl: string;
 }
 
 export interface MessageContent {
