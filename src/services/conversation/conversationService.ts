@@ -62,33 +62,25 @@ class ConversationService {
     try {
       // 1. Obtenir la configuration WhatsApp de l'utilisateur
       const whatsappConfig = await this.getWhatsAppConfig(userId);
-      console.log('✅ Configuration WhatsApp récupérée');
+      console.log('✅ Configuration WhatsApp récupérée:', whatsappConfig);
 
       // 2. Obtenir le service WhatsApp
       const whatsappService = getWhatsAppService(whatsappConfig);
       console.log('✅ Service WhatsApp initialisé');
 
-      if (!conversation.guestPhone) {
+      // Vérifier et utiliser le bon numéro de téléphone
+      const phoneNumber = conversation.guestPhone || conversation.phone_number;
+      if (!phoneNumber) {
         throw new Error('Numéro de téléphone du destinataire manquant');
       }
+      console.log('📱 Envoi au numéro:', phoneNumber);
 
       // 3. Envoyer le message
-      await whatsappService.sendMessage(conversation.guestPhone, {
+      const messageId = await whatsappService.sendMessage(phoneNumber, {
         type: 'text',
         text: message.text
       });
-
-      console.log('✅ Message envoyé avec succès');
-    } catch (error) {
-      console.error('❌ Erreur lors de l\'envoi du message:', error);
-      throw error;
-    }
-      
-      // 3. Envoyer le message
-      const messageId = await whatsappService.sendMessage(conversation.phone_number, {
-        type: 'text',
-        text: message.text
-      });
+      console.log('✅ Message envoyé avec succès, ID:', messageId);
 
       // 4. Mettre à jour le statut du message
       if (messageId) {
@@ -99,6 +91,9 @@ class ConversationService {
             messageId,
             provider: whatsappConfig.provider
           }
+        };
+        console.log('✅ Statut du message mis à jour');
+      }
         };
       }
     } catch (error) {

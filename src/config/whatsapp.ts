@@ -1,5 +1,5 @@
 export const whatsappConfig = {
-  phoneNumberId: '477925252079395',
+  phoneNumberId: '461158110424411', // ID du numéro de téléphone configuré dans Airtable
   appId: process.env.WHATSAPP_APP_ID || '',
   accessToken: process.env.WHATSAPP_ACCESS_TOKEN || '',
   verifyToken: process.env.WHATSAPP_VERIFY_TOKEN || 'airhost_whatsapp_webhook_123',
