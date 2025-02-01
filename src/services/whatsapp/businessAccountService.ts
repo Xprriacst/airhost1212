@@ -1,4 +1,4 @@
-import { base } from '../airtable/airtableClient';
+import { base } from '../airtable/config';
 import { WhatsAppConfig, WhatsAppStatus, BusinessHour } from '../../types/whatsapp';
 
 interface BusinessProfile {
