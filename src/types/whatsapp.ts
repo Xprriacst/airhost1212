@@ -52,10 +52,12 @@ export interface WhatsAppMessage {
 declare module './auth' {
   interface User {
     whatsapp_config?: {
+      provider: WhatsAppProvider;
       phone_number: string;
       waba_id: string;
       api_key: string;
     };
     status?: WhatsAppStatus;
+    whatsapp_provider?: WhatsAppProvider; // Champ pour le choix du provider
   }
 }
