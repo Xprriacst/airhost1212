@@ -17,20 +17,27 @@ const envSchema = z.object({
   }),
 });
 
+// Fonction pour récupérer les variables d'environnement avec gestion des préfixes
+const getEnvVar = (key: string, useVitePrefix = true): string => {
+  const viteKey = useVitePrefix ? `VITE_${key}` : key;
+  return import.meta.env[viteKey] || import.meta.env[key] || '';
+};
+
 export const env = {
   airtable: {
-    apiKey: import.meta.env.VITE_AIRTABLE_API_KEY || '',
-    baseId: import.meta.env.VITE_AIRTABLE_BASE_ID || '',
+    apiKey: getEnvVar('AIRTABLE_API_KEY'),
+    baseId: getEnvVar('AIRTABLE_BASE_ID'),
   },
   openai: {
-    apiKey: import.meta.env.VITE_OPENAI_API_KEY || '',
+    apiKey: getEnvVar('OPENAI_API_KEY'),
     model: 'gpt-4',
   },
   whatsapp: {
-    appId: import.meta.env.WHATSAPP_APP_ID || '',
-    accessToken: import.meta.env.WHATSAPP_ACCESS_TOKEN || '',
-    verifyToken: import.meta.env.WHATSAPP_VERIFY_TOKEN || '',
-    apiVersion: import.meta.env.WHATSAPP_API_VERSION || '',
+    // Pas de préfixe VITE_ pour les variables WhatsApp
+    appId: getEnvVar('WHATSAPP_APP_ID', false),
+    accessToken: getEnvVar('WHATSAPP_ACCESS_TOKEN', false),
+    verifyToken: getEnvVar('WHATSAPP_VERIFY_TOKEN', false),
+    apiVersion: getEnvVar('WHATSAPP_API_VERSION', false),
   },
 };
 
