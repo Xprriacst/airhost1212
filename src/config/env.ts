@@ -18,12 +18,16 @@ const envSchema = z.object({
   }),
 });
 
+// Type pour l'environnement
+type Env = z.infer<typeof envSchema>;
+
 // Fonction pour récupérer les variables d'environnement
 const getEnvVar = (key: string): string => {
+  const viteKey = `VITE_${key}`;
   try {
     // Contexte Vite
     if (typeof import.meta !== 'undefined' && import.meta.env) {
-      return import.meta.env[key] || '';
+      return import.meta.env[viteKey] || import.meta.env[key] || '';
     }
   } catch {
     // Ignorer si import.meta.env n'est pas disponible
@@ -31,20 +35,20 @@ const getEnvVar = (key: string): string => {
 
   // Contexte Node.js (Netlify Functions)
   if (typeof process !== 'undefined' && process.env) {
-    return process.env[key] || '';
+    return process.env[viteKey] || process.env[key] || '';
   }
 
   return '';
 };
 
-// Variables d'environnement
-export const env = {
+// Configuration de l'environnement
+const config: Env = {
   airtable: {
-    apiKey: getEnvVar('VITE_AIRTABLE_API_KEY'),
-    baseId: getEnvVar('VITE_AIRTABLE_BASE_ID'),
+    apiKey: getEnvVar('AIRTABLE_API_KEY'),
+    baseId: getEnvVar('AIRTABLE_BASE_ID'),
   },
   openai: {
-    apiKey: getEnvVar('VITE_OPENAI_API_KEY'),
+    apiKey: getEnvVar('OPENAI_API_KEY'),
     model: 'gpt-4',
   },
   whatsapp: {
@@ -55,16 +59,17 @@ export const env = {
   },
 };
 
-// Validation des variables d'environnement
-const validateEnv = () => {
+// Validation de la configuration
+const validateConfig = (config: Env): boolean => {
   try {
-    envSchema.parse(env);
-    console.log('Environment variables are valid.');
+    envSchema.parse(config);
     return true;
   } catch (error) {
-    console.error('Environment validation failed:', error);
+    console.error('Configuration invalide:', error);
     return false;
   }
 };
 
-export const isConfigValid = validateEnv();
+// Export des valeurs validées
+export const isConfigValid = validateConfig(config);
+export const env = isConfigValid ? config : null;
