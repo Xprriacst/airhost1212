@@ -29,6 +29,9 @@ export class OfficialWhatsAppService implements IWhatsAppService {
       };
       console.log('📦 Payload:', JSON.stringify(payload, null, 2));
 
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 secondes de timeout
+
       const response = await fetch(`${this.config.apiUrl}/${this.config.phoneNumberId}/messages`, {
         method: 'POST',
         headers: {
@@ -36,7 +39,10 @@ export class OfficialWhatsAppService implements IWhatsAppService {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(payload),
+        signal: controller.signal
       });
+
+      clearTimeout(timeoutId);
 
       const responseText = await response.text();
       console.log('📥 Réponse brute:', responseText);

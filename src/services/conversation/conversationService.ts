@@ -1,7 +1,7 @@
 import { Message, Conversation } from '../../types';
 import { getWhatsAppService } from '../whatsapp';
 import { WhatsAppServiceConfig, WhatsAppProvider } from '../whatsapp/types';
-import { base } from '../airtable';
+import { base } from '../airtable/config';
 
 class ConversationService {
   private usersTable = base('Users');

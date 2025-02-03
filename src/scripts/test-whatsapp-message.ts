@@ -1,48 +1,35 @@
-import { base } from '../services/airtable/airtableClient';
-import { ConversationService } from '../services/conversation/conversationService';
+import { getWhatsAppService } from '../services/whatsapp';
+import { WhatsAppConfig } from '../types/whatsapp';
+
+// Configuration WhatsApp
+const whatsappConfig: WhatsAppConfig = {
+  provider: 'official',
+  appId: '1676211843267502',
+  accessToken: 'EAAX0gXt8e64BO1NJ52lLQaAFb6TQ3cYOBqKVaCX9VF5ZCDiq5fVH2vO6M69gD7ZCUeu6KENhYTYjF6f3tyBfumwC9NZAOpzgrPtke9BM0WKZBhVZADIshqhCZAFt6TZCFBusHekVVrcXiZBZAdhxZBF4QI8T7FZBvL1ZAu2ougSq98Vler5yOTQdMRZC0cTsJiGlxqxG3ZAU1V3YZBWHSOZBCFIJJ8XRi8uG',
+  apiVersion: 'v18.0',
+  phoneNumberId: '477925252079395',
+  apiUrl: 'https://graph.facebook.com/v18.0'
+};
 
 const testWhatsAppMessage = async () => {
   try {
-    // ID de l'utilisateur à tester
-    const userId = 'recUyjZp3LTyFwM5X';
+    // Obtenir le service WhatsApp
+    const whatsappService = getWhatsAppService(whatsappConfig);
     
-    // Récupérer la conversation d'Andreea
-    const conversationsTable = base('Conversations');
-    const [conversation] = await conversationsTable.select({
-      maxRecords: 1,
-      filterByFormula: `AND(
-        {Status} = 'active',
-        {Phone Number} = '+33617374784'
-      )`
-    }).firstPage();
-
-    if (!conversation) {
-      throw new Error('Conversation d\'Andreea non trouvée');
-    }
-
-    // Créer un message de test
-    const message = {
-      id: `test_${Date.now()}`,
-      text: 'Test de message WhatsApp via API officielle 🚀',
-      type: 'text',
-      timestamp: new Date(),
-      sender: 'host',
-      status: 'pending',
-      metadata: {}
+    // Envoyer un message de test
+    const phoneNumber = '+33617370484';
+    const content = {
+      type: 'text' as const,
+      text: 'Test de message WhatsApp via API officielle 🚀'
     };
 
-    // Envoyer le message
-    const conversationService = new ConversationService();
-    await conversationService.sendMessage(userId, {
-      id: conversation.id,
-      guestPhone: conversation.get('Phone Number'),
-      propertyId: conversation.get('Property')[0], // Ajout de propertyId qui est requis
-      status: 'active'
-    }, message);
+    console.log('📱 Envoi au numéro:', phoneNumber);
+    console.log('📝 Contenu:', content);
+
+    const messageId = await whatsappService.sendMessage(phoneNumber, content);
 
     console.log('✅ Message envoyé avec succès !');
-    console.log('ID de la conversation:', conversation.id);
-    console.log('Numéro de téléphone:', conversation.get('Phone Number'));
+    console.log('ID du message:', messageId);
     
   } catch (error) {
     console.error('❌ Erreur lors du test:', error);
