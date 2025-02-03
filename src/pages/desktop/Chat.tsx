@@ -98,7 +98,18 @@ export default function Chat() {
           throw new Error('Utilisateur non authentifié');
         }
 
-        await conversationService.sendMessage(userId, conversation, newMessage);
+        const messageObject: Message = {
+          id: `${Date.now()}`,
+          text: newMessage,
+          timestamp: new Date().toISOString(),
+          sender: 'host',
+          type: 'text',
+          status: 'pending',
+          metadata: {
+            platform: 'whatsapp'
+          }
+        };
+        await conversationService.sendMessage(userId, conversation, messageObject);
         console.log('✅ Message envoyé via WhatsApp avec succès');
       } catch (whatsappError) {
         console.error('❌ Échec de l\'envoi du message via WhatsApp:', whatsappError);
