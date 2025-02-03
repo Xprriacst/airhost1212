@@ -8,6 +8,13 @@ export class OfficialWhatsAppService implements IWhatsAppService {
     this.config = config;
   }
 
+  private isWithin24Hours(lastMessageTimestamp: Date | null): boolean {
+    if (!lastMessageTimestamp) return false;
+    const now = new Date();
+    const diff = now.getTime() - lastMessageTimestamp.getTime();
+    return diff <= 24 * 60 * 60 * 1000; // 24 heures en millisecondes
+  }
+
   async sendMessage(to: string, content: MessageContent): Promise<string> {
     try {
       console.log('📤 Envoi de message WhatsApp (API officielle):', {
@@ -17,16 +24,49 @@ export class OfficialWhatsAppService implements IWhatsAppService {
         apiUrl: this.config.apiUrl
       });
 
-      const payload = {
-        messaging_product: 'whatsapp',
-        recipient_type: 'individual',
-        to,
-        type: 'text',
-        text: { 
-          preview_url: false,
-          body: content.text
-        }
-      };
+      // Si nous n'avons pas de timestamp du dernier message ou si nous sommes hors de la fenêtre de 24h,
+      // nous devons utiliser un template
+      const useTemplate = !this.isWithin24Hours(content.metadata?.lastMessageTimestamp || null);
+
+      let payload;
+      if (useTemplate) {
+        payload = {
+          messaging_product: 'whatsapp',
+          recipient_type: 'individual',
+          to,
+          type: 'template',
+          template: {
+            name: 'airhost_welcome',
+            language: {
+              code: 'fr'
+            },
+            components: [
+              {
+                type: 'body',
+                parameters: [
+                  {
+                    type: 'text',
+                    text: content.text
+                  }
+                ]
+              }
+            ]
+          }
+        };
+        console.log('📤 Utilisation d\'un template car hors fenêtre de 24h');
+      } else {
+        payload = {
+          messaging_product: 'whatsapp',
+          recipient_type: 'individual',
+          to,
+          type: 'text',
+          text: { 
+            preview_url: false,
+            body: content.text
+          }
+        };
+        console.log('📤 Message standard dans la fenêtre de 24h');
+      }
       console.log('📦 Payload:', JSON.stringify(payload, null, 2));
 
       const controller = new AbortController();

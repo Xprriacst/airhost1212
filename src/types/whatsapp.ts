@@ -38,7 +38,10 @@ export interface MessageContent {
   type: MessageType;
   text?: string;
   media_url?: string;
-  metadata?: Record<string, unknown>;
+  metadata?: {
+    lastMessageTimestamp?: Date;
+    [key: string]: unknown;
+  };
 }
 
 export interface WhatsAppMessage {
