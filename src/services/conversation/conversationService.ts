@@ -48,13 +48,42 @@ class ConversationService {
   }
 
   async fetchConversationById(userId: string, conversationId: string): Promise<Conversation> {
-    // À implémenter selon vos besoins
-    throw new Error('Not implemented');
+    try {
+      const conversationsTable = base('Conversations');
+      const record = await conversationsTable.find(conversationId);
+      
+      if (!record) {
+        throw new Error('Conversation non trouvée');
+      }
+
+      const messages = record.get('Messages');
+      const parsedMessages = messages ? JSON.parse(messages) : [];
+
+      return {
+        id: record.id,
+        propertyId: record.get('Property') as string,
+        guestPhone: record.get('GuestPhone') as string,
+        phone_number: record.get('GuestPhone') as string,
+        messages: parsedMessages,
+        guestName: record.get('GuestName') as string,
+        status: record.get('Status') as string,
+        createdTime: record.get('CreatedTime') as string
+      };
+    } catch (error) {
+      console.error('❌ Erreur lors de la récupération de la conversation:', error);
+      throw error;
+    }
   }
 
   async updateConversation(conversationId: string, updates: any): Promise<void> {
-    // À implémenter selon vos besoins
-    throw new Error('Not implemented');
+    try {
+      const conversationsTable = base('Conversations');
+      await conversationsTable.update(conversationId, updates);
+      console.log('✅ Conversation mise à jour avec succès');
+    } catch (error) {
+      console.error('❌ Erreur lors de la mise à jour de la conversation:', error);
+      throw error;
+    }
   }
 
   async sendMessage(userId: string, conversation: Conversation, message: Message): Promise<void> {
@@ -68,12 +97,21 @@ class ConversationService {
       const whatsappService = getWhatsAppService(whatsappConfig);
       console.log('✅ Service WhatsApp initialisé');
 
-      // Vérifier et utiliser le bon numéro de téléphone
-      const phoneNumber = conversation.guestPhone || conversation.phone_number;
+      // Vérifier et formater le numéro de téléphone
+      let phoneNumber = conversation.guestPhone || conversation.phone_number;
       if (!phoneNumber) {
         throw new Error('Numéro de téléphone du destinataire manquant');
       }
-      console.log('📱 Envoi au numéro:', phoneNumber);
+
+      // Nettoyer le numéro de téléphone
+      phoneNumber = phoneNumber.replace(/[^0-9+]/g, '');
+      
+      // S'assurer que le numéro commence par +
+      if (!phoneNumber.startsWith('+')) {
+        phoneNumber = '+' + phoneNumber;
+      }
+      
+      console.log('📱 Envoi au numéro formaté:', phoneNumber);
 
       // 3. Envoyer le message
       const messageId = await whatsappService.sendMessage(phoneNumber, {

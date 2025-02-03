@@ -19,9 +19,13 @@ export class OfficialWhatsAppService implements IWhatsAppService {
 
       const payload = {
         messaging_product: 'whatsapp',
+        recipient_type: 'individual',
         to,
-        type: content.type,
-        text: content.type === 'text' ? { body: content.text } : undefined,
+        type: 'text',
+        text: { 
+          preview_url: false,
+          body: content.text
+        }
       };
       console.log('📦 Payload:', JSON.stringify(payload, null, 2));
 
