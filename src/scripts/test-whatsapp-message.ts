@@ -1,31 +1,18 @@
 import dotenv from 'dotenv';
-import Airtable from 'airtable';
 import { getWhatsAppService } from '../services/whatsapp';
 
 // Charger les variables d'environnement avant tout
 dotenv.config();
 
-// Configurer Airtable directement
-const airtable = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY });
-const base = airtable.base(process.env.AIRTABLE_BASE_ID || '');
-
 const testWhatsAppMessage = async () => {
   try {
-    // Récupérer la configuration WhatsApp de l'utilisateur
-    const usersTable = base('Users');
-    const user = await usersTable.find('recUyjZp3LTyFwM5X');
-    
-    if (!user) {
-      throw new Error('Utilisateur non trouvé');
-    }
-
     // Créer la configuration WhatsApp
     const whatsappConfig = {
       provider: 'official' as const,
       appId: process.env.WHATSAPP_APP_ID,
       accessToken: process.env.WHATSAPP_ACCESS_TOKEN,
       apiVersion: process.env.WHATSAPP_API_VERSION || 'v18.0',
-      phoneNumberId: user.get('whatsapp_phone_number_id'),
+      phoneNumberId: '477925252079395',
       apiUrl: `https://graph.facebook.com/${process.env.WHATSAPP_API_VERSION || 'v18.0'}`
     };
 
