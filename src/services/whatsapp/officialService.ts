@@ -36,21 +36,10 @@ export class OfficialWhatsAppService implements IWhatsAppService {
           to,
           type: 'template',
           template: {
-            name: 'airhost_welcome',
+            name: 'hello_world',
             language: {
-              code: 'fr'
-            },
-            components: [
-              {
-                type: 'body',
-                parameters: [
-                  {
-                    type: 'text',
-                    text: content.text
-                  }
-                ]
-              }
-            ]
+              code: 'en_US'
+            }
           }
         };
         console.log('📤 Utilisation d\'un template car hors fenêtre de 24h');
