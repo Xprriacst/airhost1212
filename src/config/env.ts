@@ -40,8 +40,8 @@ const getEnvVar = (key: string): string => {
 // Variables d'environnement
 export const env = {
   airtable: {
-    apiKey: getEnvVar('AIRTABLE_API_KEY'),
-    baseId: getEnvVar('AIRTABLE_BASE_ID'),
+    apiKey: getEnvVar('VITE_AIRTABLE_API_KEY'),
+    baseId: getEnvVar('VITE_AIRTABLE_BASE_ID'),
   },
   openai: {
     apiKey: getEnvVar('VITE_OPENAI_API_KEY'),
