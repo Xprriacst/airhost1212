@@ -94,8 +94,6 @@ class ConversationService {
         };
         console.log('✅ Statut du message mis à jour');
       }
-        };
-      }
     } catch (error) {
       console.error('Erreur lors de l\'envoi du message:', error);
       throw error;
