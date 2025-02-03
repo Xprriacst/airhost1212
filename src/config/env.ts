@@ -10,6 +10,12 @@ const envSchema = z.object({
     apiKey: z.string().min(1, 'OpenAI API key is required'),
     model: z.string().optional(),
   }),
+  whatsapp: z.object({
+    appId: z.string().min(1, 'WhatsApp App ID is required'),
+    accessToken: z.string().min(1, 'WhatsApp Access Token is required'),
+    verifyToken: z.string().min(1, 'WhatsApp Verify Token is required'),
+    apiVersion: z.string().min(1, 'WhatsApp API Version is required'),
+  }),
 });
 
 // Fonction pour récupérer les variables d'environnement
@@ -34,12 +40,18 @@ const getEnvVar = (key: string): string => {
 // Variables d'environnement
 export const env = {
   airtable: {
-    apiKey: getEnvVar('AIRTABLE_API_KEY') || getEnvVar('VITE_AIRTABLE_API_KEY'),
-    baseId: getEnvVar('AIRTABLE_BASE_ID') || getEnvVar('VITE_AIRTABLE_BASE_ID'),
+    apiKey: getEnvVar('AIRTABLE_API_KEY'),
+    baseId: getEnvVar('AIRTABLE_BASE_ID'),
   },
   openai: {
     apiKey: getEnvVar('VITE_OPENAI_API_KEY'),
     model: 'gpt-4',
+  },
+  whatsapp: {
+    appId: getEnvVar('WHATSAPP_APP_ID'),
+    accessToken: getEnvVar('WHATSAPP_ACCESS_TOKEN'),
+    verifyToken: getEnvVar('WHATSAPP_VERIFY_TOKEN'),
+    apiVersion: getEnvVar('WHATSAPP_API_VERSION'),
   },
 };
 

@@ -2,6 +2,7 @@ import { Message, Conversation } from '../../types';
 import { getWhatsAppService } from '../whatsapp';
 import { WhatsAppServiceConfig, WhatsAppProvider } from '../whatsapp/types';
 import { base } from '../airtable/config';
+import { env } from '../../config/env';
 
 class ConversationService {
   private usersTable = base('Users');
@@ -28,11 +29,11 @@ class ConversationService {
 
         const config = {
           provider,
-          appId: process.env.WHATSAPP_APP_ID,
-          accessToken: process.env.WHATSAPP_ACCESS_TOKEN,
-          apiVersion: process.env.WHATSAPP_API_VERSION || 'v18.0',
+          appId: env.whatsapp.appId,
+          accessToken: env.whatsapp.accessToken,
+          apiVersion: env.whatsapp.apiVersion,
           phoneNumberId,
-          apiUrl: `https://graph.facebook.com/${process.env.WHATSAPP_API_VERSION || 'v18.0'}`
+          apiUrl: `https://graph.facebook.com/${env.whatsapp.apiVersion}`
         };
 
         console.log('✅ Configuration WhatsApp officielle chargée');

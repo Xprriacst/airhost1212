@@ -11,6 +11,7 @@
 - [REG] Affichage du nombre de messages non lus - regression depuis implementation de la gestion multi-comptes
 - [REG] Les messages d'un même guest créent de nouvelles conversations au lieu d'être ajoutés aux conversations existantes
 - [REG] À l'ouverture d'une conversation, la vue ne s'affiche plus tout en bas de la conversation, au niveau du dernier message (comme dans WhatsApp par exemple)
+- [ ] Quand je me connecte sur mon compte, au début ça n'affiche pas les conversations, ça affiche une page "aucune conversation disponible", puis au bout d'un petit délai ça affiche les conversations. Il faudrait améliorer ça, soir en affichant direct les conversations, soit en mettant une betit image de chargement avant que les conversations se chargent
 - [ ] Affichage des "..." pour les messages trop longs
 - [ ] Menu principal : liste des conversations par défaut
 - [ ] Design style WhatsApp avec statut client (actuel/ancien/futur)

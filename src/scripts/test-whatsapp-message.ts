@@ -1,41 +1,62 @@
 import dotenv from 'dotenv';
-import { getWhatsAppService } from '../services/whatsapp';
+import Airtable from 'airtable';
+import { conversationService } from '../services/conversation/conversationService';
 
 // Charger les variables d'environnement avant tout
 dotenv.config();
 
+// Configurer Airtable directement
+const airtable = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY });
+const base = airtable.base(process.env.AIRTABLE_BASE_ID || '');
+
 const testWhatsAppMessage = async () => {
   try {
-    // Créer la configuration WhatsApp
-    const whatsappConfig = {
-      provider: 'official' as const,
-      appId: process.env.WHATSAPP_APP_ID,
-      accessToken: process.env.WHATSAPP_ACCESS_TOKEN,
-      apiVersion: process.env.WHATSAPP_API_VERSION || 'v18.0',
-      phoneNumberId: '477925252079395',
-      apiUrl: `https://graph.facebook.com/${process.env.WHATSAPP_API_VERSION || 'v18.0'}`
-    };
+    // ID de l'utilisateur admin
+    const userId = 'recUyjZp3LTyFwM5X';
 
-    // Obtenir le service WhatsApp
-    const whatsappService = getWhatsAppService(whatsappConfig);
+    // Récupérer l'utilisateur pour vérifier la configuration
+    const usersTable = base('Users');
+    const user = await usersTable.find(userId);
     
-    // Envoyer un message de test
-    const phoneNumber = '+33617370484';
-    const content = {
+    if (!user) {
+      throw new Error('Utilisateur non trouvé');
+    }
+
+    console.log('📱 Configuration utilisateur:', {
+      whatsapp_provider: user.get('whatsapp_provider'),
+      whatsapp_phone_number_id: user.get('whatsapp_phone_number_id')
+    });
+
+    // Message de test
+    const message = {
+      id: `test_${Date.now()}`,
+      text: 'Test de message WhatsApp via le service de conversation 🎯',
       type: 'text' as const,
-      text: 'Test de message WhatsApp via API officielle 🚀'
+      timestamp: new Date(),
+      sender: 'host',
+      status: 'pending',
+      metadata: {}
     };
 
-    console.log('📱 Configuration WhatsApp:', {
-      provider: whatsappConfig.provider,
-      phoneNumberId: whatsappConfig.phoneNumberId
-    });
-    console.log('📱 Envoi au numéro:', phoneNumber);
+    // Conversation de test
+    const conversation = {
+      id: 'recDqZBbgPgBbXDRk',
+      guestPhone: '+33617370484',
+      propertyId: 'recXbZCZAYZCrNZAYZC',
+      status: 'active'
+    };
 
-    const messageId = await whatsappService.sendMessage(phoneNumber, content);
+    console.log('📱 Envoi via conversation:', {
+      userId,
+      conversationId: conversation.id,
+      phoneNumber: conversation.guestPhone
+    });
+
+    // Envoyer le message via le service de conversation
+    await conversationService.sendMessage(userId, conversation, message);
 
     console.log('✅ Message envoyé avec succès !');
-    console.log('ID du message:', messageId);
+    console.log('ID de la conversation:', conversation.id);
     
   } catch (error) {
     console.error('❌ Erreur lors du test:', error);

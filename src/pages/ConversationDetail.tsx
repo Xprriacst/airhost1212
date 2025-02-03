@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Send, Sparkles } from 'lucide-react';
+import { WhatsAppTemplateSelector } from '../components/WhatsAppTemplateSelector';
 import { conversationService } from '../services';
 import { propertyService } from '../services/airtable/propertyService';
 import { aiService } from '../services/ai/aiService';
@@ -44,6 +45,36 @@ export default function ConversationDetail() {
       }
     } catch (error) {
       console.error('Erreur lors du chargement de la conversation:', error);
+    }
+  };
+
+  const handleSendTemplate = async (templateName: string) => {
+    if (!conversation || !user) return;
+
+    const messageToSend = {
+      id: Date.now().toString(),
+      text: `[Template: ${templateName}]`,
+      sender: 'host' as const,
+      timestamp: new Date().toISOString(),
+      type: 'template',
+      templateName,
+    };
+
+    try {
+      const updatedMessages = [...conversation.messages, messageToSend];
+      
+      await conversationService.updateConversation(user.id, conversation.id, {
+        ...conversation,
+        messages: updatedMessages,
+      });
+
+      setConversation((prev) => {
+        if (!prev) return null;
+        return { ...prev, messages: updatedMessages };
+      });
+    } catch (error) {
+      console.error('Erreur lors de l\'envoi du template:', error);
+      loadConversation();
     }
   };
 
@@ -198,6 +229,7 @@ export default function ConversationDetail() {
       {/* Input */}
       <div className="border-t p-4">
         <div className="flex items-center space-x-2">
+          <WhatsAppTemplateSelector onSelectTemplate={handleSendTemplate} />
           <button
             onClick={handleGenerateResponse}
             disabled={isGenerating || !conversation.messages.length || conversation.messages[conversation.messages.length - 1].sender !== 'guest'}
