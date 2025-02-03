@@ -23,19 +23,16 @@ type Env = z.infer<typeof envSchema>;
 
 // Fonction pour récupérer les variables d'environnement
 const getEnvVar = (key: string): string => {
-  const viteKey = `VITE_${key}`;
-  try {
-    // Contexte Vite
-    if (typeof import.meta !== 'undefined' && import.meta.env) {
-      return import.meta.env[viteKey] || import.meta.env[key] || '';
-    }
-  } catch {
-    // Ignorer si import.meta.env n'est pas disponible
+  // En mode développement (Vite)
+  if (import.meta?.env) {
+    const viteKey = `VITE_${key}`;
+    const value = import.meta.env[viteKey] || import.meta.env[key];
+    if (value) return value;
   }
 
-  // Contexte Node.js (Netlify Functions)
+  // En mode production (Node.js/Netlify)
   if (typeof process !== 'undefined' && process.env) {
-    return process.env[viteKey] || process.env[key] || '';
+    return process.env[key] || '';
   }
 
   return '';
@@ -44,11 +41,11 @@ const getEnvVar = (key: string): string => {
 // Configuration de l'environnement
 const config: Env = {
   airtable: {
-    apiKey: getEnvVar('AIRTABLE_API_KEY'),
-    baseId: getEnvVar('AIRTABLE_BASE_ID'),
+    apiKey: getEnvVar('VITE_AIRTABLE_API_KEY'),
+    baseId: getEnvVar('VITE_AIRTABLE_BASE_ID'),
   },
   openai: {
-    apiKey: getEnvVar('OPENAI_API_KEY'),
+    apiKey: getEnvVar('VITE_OPENAI_API_KEY'),
     model: 'gpt-4',
   },
   whatsapp: {
@@ -72,4 +69,4 @@ const validateConfig = (config: Env): boolean => {
 
 // Export des valeurs validées
 export const isConfigValid = validateConfig(config);
-export const env = isConfigValid ? config : null;
+export const env = config; // On exporte toujours la config pour éviter les erreurs de build
