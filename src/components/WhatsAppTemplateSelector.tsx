@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { MessageTemplate } from 'lucide-react';
+import { MessageSquare } from 'lucide-react';
 
 interface WhatsAppTemplateSelectorProps {
   onSelectTemplate: (templateName: string) => void;
@@ -21,7 +21,7 @@ export function WhatsAppTemplateSelector({ onSelectTemplate }: WhatsAppTemplateS
         aria-label="templates WhatsApp"
         title="Envoyer un template WhatsApp"
       >
-        <MessageTemplate className="w-5 h-5 text-green-600" />
+        <MessageSquare className="w-5 h-5 text-green-600" />
       </button>
 
       {isOpen && (
