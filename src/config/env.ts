@@ -23,29 +23,23 @@ type Env = z.infer<typeof envSchema>;
 
 // Fonction pour récupérer les variables d'environnement
 const getEnvVar = (key: string): string => {
-  // En mode développement (Vite)
-  if (import.meta?.env) {
-    const viteKey = `VITE_${key}`;
-    const value = import.meta.env[viteKey] || import.meta.env[key];
-    if (value) return value;
-  }
-
-  // En mode production (Node.js/Netlify)
-  if (typeof process !== 'undefined' && process.env) {
+  if (typeof window !== 'undefined') {
+    // Côté client (Vite)
+    return (import.meta?.env?.[`VITE_${key}`] as string) || '';
+  } else {
+    // Côté serveur (Node.js/Netlify Functions)
     return process.env[key] || '';
   }
-
-  return '';
 };
 
 // Configuration de l'environnement
 const config: Env = {
   airtable: {
-    apiKey: getEnvVar('VITE_AIRTABLE_API_KEY'),
-    baseId: getEnvVar('VITE_AIRTABLE_BASE_ID'),
+    apiKey: getEnvVar('AIRTABLE_API_KEY'),
+    baseId: getEnvVar('AIRTABLE_BASE_ID'),
   },
   openai: {
-    apiKey: getEnvVar('VITE_OPENAI_API_KEY'),
+    apiKey: getEnvVar('OPENAI_API_KEY'),
     model: 'gpt-4',
   },
   whatsapp: {
@@ -70,3 +64,21 @@ const validateConfig = (config: Env): boolean => {
 // Export des valeurs validées
 export const isConfigValid = validateConfig(config);
 export const env = config; // On exporte toujours la config pour éviter les erreurs de build
+
+// Mock data pour le développement local
+export const mockEnv: Env = {
+  airtable: {
+    apiKey: 'mock_airtable_api_key',
+    baseId: 'mock_airtable_base_id',
+  },
+  openai: {
+    apiKey: 'mock_openai_api_key',
+    model: 'gpt-4',
+  },
+  whatsapp: {
+    appId: 'mock_whatsapp_app_id',
+    accessToken: 'mock_whatsapp_access_token',
+    verifyToken: 'mock_whatsapp_verify_token',
+    apiVersion: 'v18.0',
+  },
+};
