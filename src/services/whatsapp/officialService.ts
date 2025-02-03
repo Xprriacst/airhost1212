@@ -10,27 +10,49 @@ export class OfficialWhatsAppService implements IWhatsAppService {
 
   async sendMessage(to: string, content: MessageContent): Promise<string> {
     try {
+      console.log('📤 Envoi de message WhatsApp (API officielle):', {
+        to,
+        content,
+        phoneNumberId: this.config.phoneNumberId,
+        apiUrl: this.config.apiUrl
+      });
+
+      const payload = {
+        messaging_product: 'whatsapp',
+        to,
+        type: content.type,
+        text: content.type === 'text' ? { body: content.text } : undefined,
+      };
+      console.log('📦 Payload:', JSON.stringify(payload, null, 2));
+
       const response = await fetch(`${this.config.apiUrl}/${this.config.phoneNumberId}/messages`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${this.config.accessToken}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          messaging_product: 'whatsapp',
-          to,
-          type: content.type,
-          text: content.type === 'text' ? { body: content.text } : undefined,
-          // Ajoutez la gestion des médias selon les besoins
-        }),
+        body: JSON.stringify(payload),
       });
 
+      const responseText = await response.text();
+      console.log('📥 Réponse brute:', responseText);
+
       if (!response.ok) {
-        throw new Error(`Erreur API WhatsApp: ${response.statusText}`);
+        console.error('❌ Erreur API WhatsApp:', {
+          status: response.status,
+          statusText: response.statusText,
+          response: responseText
+        });
+        throw new Error(`Erreur API WhatsApp: ${response.status} ${response.statusText} - ${responseText}`);
       }
 
-      const data = await response.json();
-      return data.messages?.[0]?.id || '';
+      const data = JSON.parse(responseText);
+      console.log('✅ Réponse parsée:', data);
+      
+      const messageId = data.messages?.[0]?.id;
+      console.log('📱 Message ID:', messageId);
+      
+      return messageId || '';
     } catch (error) {
       console.error('Erreur lors de l\'envoi via l\'API WhatsApp:', error);
       throw error;
