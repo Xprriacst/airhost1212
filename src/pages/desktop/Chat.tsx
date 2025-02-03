@@ -53,7 +53,7 @@ export default function Chat() {
     }
   };
 
-  // Fonction simplifiée pour le debugging
+  // Fonction d'envoi de message via WhatsApp
   const handleSendMessage = async (text: string) => {
     console.log('🎯 handleSendMessage called with:', {
       text,
@@ -85,23 +85,24 @@ export default function Chat() {
     };
 
     try {
-      // 1. Envoyer à Make.com
-      console.log('📤 Sending message to Make.com:', {
+      // 1. Envoyer via le service de conversation (WhatsApp)
+      console.log('📤 Envoi du message via WhatsApp:', {
         message: newMessage,
         guestPhone: conversation.guestPhone,
         propertyId: conversation.propertyId
       });
 
       try {
-        await messageService.sendMessage(
-          newMessage,
-          conversation.guestPhone,  // Utiliser guestPhone au lieu de guestEmail
-          conversation.propertyId
-        );
-        console.log('✅ Message envoyé à Make.com avec succès');
-      } catch (makeError) {
-        console.error('❌ Échec de l\'envoi du message à Make.com:', makeError);
-        throw makeError;
+        const userId = await authService.getCurrentUserId();
+        if (!userId) {
+          throw new Error('Utilisateur non authentifié');
+        }
+
+        await conversationService.sendMessage(userId, conversation, newMessage);
+        console.log('✅ Message envoyé via WhatsApp avec succès');
+      } catch (whatsappError) {
+        console.error('❌ Échec de l\'envoi du message via WhatsApp:', whatsappError);
+        throw whatsappError;
       }
 
       // 2. Mettre à jour l'état local
