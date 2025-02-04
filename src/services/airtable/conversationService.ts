@@ -208,6 +208,18 @@ const detectEmergencyTags = (message: string): EmergencyTag[] => {
 
 const sendMessage = async (userId: string, conversation: Conversation, message: Message): Promise<void> => {
   try {
+    // Validation du numéro de téléphone
+    if (!conversation.guestPhone) {
+      console.error('❌ Numéro de téléphone manquant pour la conversation:', conversation.id);
+      throw new Error('Numéro de téléphone du destinataire manquant');
+    }
+
+    // Validation de la propriété
+    if (!conversation.propertyId) {
+      console.error('❌ ID de propriété manquant pour la conversation:', conversation.id);
+      throw new Error('ID de propriété manquant');
+    }
+
     const updatedMessages = [...conversation.messages, message];
     await conversationService.updateConversation(conversation.id, { 
       Messages: JSON.stringify(updatedMessages)

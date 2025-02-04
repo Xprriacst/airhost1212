@@ -104,10 +104,18 @@ export default function Chat() {
       throw new Error('Données de conversation manquantes');
     }
 
+    // Validation du contenu
+    if (!text && !selectedTemplate) {
+      console.error('❌ Message vide et pas de template sélectionné');
+      throw new Error('Le message ne peut pas être vide');
+    }
+
     // Construction du message à envoyer
     const messageToSend = {
       id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       content: text || '',
+      type: selectedTemplate ? 'template' : 'text',
+      status: 'pending',
       metadata: {
         template: selectedTemplate,
         language: selectedTemplate === 'hello_world' ? 'en_US' : 'fr',
@@ -121,7 +129,7 @@ export default function Chat() {
       text: messageToSend.content,
       timestamp: new Date(),
       sender: 'host',
-      type: 'template',
+      type: messageToSend.type,
       status: 'pending',
       metadata: messageToSend.metadata
     };
