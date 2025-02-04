@@ -106,7 +106,9 @@ export default function Chat() {
           type: 'text',
           status: 'pending',
           metadata: {
-            platform: 'whatsapp'
+            platform: 'whatsapp',
+            template: 'bienvenue',
+            lastMessageTimestamp: conversation.lastMessageTimestamp || null
           }
         };
         await conversationService.sendMessage(userId, conversation, messageObject);

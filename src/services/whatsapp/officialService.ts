@@ -30,19 +30,23 @@ export class OfficialWhatsAppService implements IWhatsAppService {
 
       let payload;
       if (useTemplate) {
+        // Choix du template en fonction du contenu ou du contexte
+        const templateName = content.metadata?.template || 'bienvenue';
+        const templateLanguage = templateName === 'hello_world' ? 'en_US' : 'fr';
+        
         payload = {
           messaging_product: 'whatsapp',
           recipient_type: 'individual',
           to,
           type: 'template',
           template: {
-            name: 'hello_world',
+            name: templateName,
             language: {
-              code: 'en_US'
+              code: templateLanguage
             }
           }
         };
-        console.log('📤 Utilisation d\'un template car hors fenêtre de 24h');
+        console.log(`📤 Utilisation du template '${templateName}' car hors fenêtre de 24h`);
       } else {
         payload = {
           messaging_product: 'whatsapp',
@@ -61,7 +65,9 @@ export class OfficialWhatsAppService implements IWhatsAppService {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 secondes de timeout
 
-      const response = await fetch(`${this.config.apiUrl}/${this.config.phoneNumberId}/messages`, {
+      const apiVersion = 'v21.0'; // Version fixe de l'API
+      const baseUrl = 'https://graph.facebook.com';
+      const response = await fetch(`${baseUrl}/${apiVersion}/${this.config.phoneNumberId}/messages`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${this.config.accessToken}`,
