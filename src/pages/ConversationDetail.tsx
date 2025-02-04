@@ -50,15 +50,10 @@ export default function ConversationDetail() {
 
   const handleSendTemplate = async (templateName: string) => {
     if (!conversation || !user) return;
-
-    const messageToSend = {
-      id: Date.now().toString(),
-      text: `[Template: ${templateName}]`,
-      sender: 'host' as const,
-      timestamp: new Date().toISOString(),
-      type: 'template',
-      templateName,
-    };
+    
+    setSelectedTemplate(templateName);
+    await handleSendMessage();
+    setSelectedTemplate(null);
 
     try {
       const updatedMessages = [...conversation.messages, messageToSend];
@@ -147,18 +142,26 @@ export default function ConversationDetail() {
     }
   };
 
+  const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
+
   const handleSendMessage = async () => {
-    if (!newMessage.trim() || !conversation || !user) {
+    if ((!newMessage.trim() && !selectedTemplate) || !conversation || !user) {
       return;
     }
 
     const message: Message = {
       id: Date.now().toString(),
-      text: newMessage.trim(),
+      text: selectedTemplate ? '' : newMessage.trim(),
       sender: 'host',
       timestamp: new Date(),
-      type: 'text',
-      status: 'sending'
+      type: selectedTemplate ? 'template' : 'text',
+      status: 'sending',
+      metadata: selectedTemplate ? {
+        template: selectedTemplate,
+        lastMessageTimestamp: conversation.messages.length > 0 
+          ? new Date(conversation.messages[conversation.messages.length - 1].timestamp)
+          : null
+      } : undefined
     };
 
     try {
@@ -169,6 +172,7 @@ export default function ConversationDetail() {
       } : prev);
       
       setNewMessage('');
+      setSelectedTemplate(null);
       
       // Envoi du message via le service de conversation
       await conversationService.sendMessage(user.id, conversation, message);
