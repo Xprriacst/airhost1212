@@ -4,7 +4,7 @@ export interface Message {
   sender: 'host' | 'guest' | 'system';
   timestamp: Date;
   type?: 'text' | 'image' | 'file';
-  status?: 'sent' | 'delivered' | 'read';
+  status?: 'sending' | 'sent' | 'delivered' | 'read';
   metadata?: Record<string, any>;
   emergencyTags?: string[];
 }
@@ -25,7 +25,7 @@ export interface Conversation {
 export interface Property {
   id: string;
   name: string;
-  aiInstructions: AIInstruction[];
+  aiInstructions: string;
 }
 
 export interface AIInstruction {

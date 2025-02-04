@@ -1,4 +1,4 @@
-import { describe, expect, it, jest } from '@jest/globals';
+import { describe, expect, it, vi } from 'vitest';
 import { conversationService } from '../conversationService';
 import { base } from '../config';
 import type { User } from '../../../types';
@@ -29,7 +29,7 @@ describe('conversationService', () => {
   };
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('mapRecordToConversation', () => {
