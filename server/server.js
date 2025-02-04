@@ -9,7 +9,11 @@ const port = process.env.PORT || 8080;
 // CORS Configuration
 const corsOptions = {
   origin: process.env.NODE_ENV === 'production' 
-    ? ['https://whimsical-beignet-91329f.netlify.app', 'https://airhost1212.netlify.app']
+    ? [
+      'https://whimsical-beignet-91329f.netlify.app', 
+      'https://airhost1212.netlify.app',
+      'https://deploy-preview-6--whimsical-beignet-91329f.netlify.app'
+    ]
     : ['http://localhost:3000', 'http://localhost:5173'],
   methods: ['GET', 'POST', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
