@@ -10,8 +10,6 @@ const envSchema = z.object({
     model: z.string().optional(),
   }),
   whatsapp: z.object({
-    appId: z.string().min(1, 'WhatsApp App ID is required'),
-    accessToken: z.string().min(1, 'WhatsApp Access Token is required'),
     verifyToken: z.string().min(1, 'WhatsApp Verify Token is required'),
     apiVersion: z.string().min(1, 'WhatsApp API Version is required'),
   }),
@@ -34,8 +32,6 @@ export const env = {
   },
   whatsapp: {
     // Pas de préfixe VITE_ pour les variables WhatsApp
-    appId: getEnvVar('WHATSAPP_APP_ID', false),
-    accessToken: getEnvVar('WHATSAPP_ACCESS_TOKEN', false),
     verifyToken: getEnvVar('WHATSAPP_VERIFY_TOKEN', false),
     apiVersion: getEnvVar('WHATSAPP_API_VERSION', false),
   },
