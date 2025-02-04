@@ -91,9 +91,11 @@ export default function Chat() {
       throw error;
     }
 
-    if (!text.trim() || !conversation || !conversation.propertyId || !conversation.guestPhone) {
+    // On permet un texte vide si on a un template sélectionné
+    if ((!text.trim() && !selectedTemplate) || !conversation || !conversation.propertyId || !conversation.guestPhone) {
       console.warn('❌ Impossible d\'envoyer le message:', {
         hasText: Boolean(text.trim()),
+        hasTemplate: Boolean(selectedTemplate),
         hasConversation: Boolean(conversation),
         hasPropertyId: conversation?.propertyId,
         hasGuestPhone: conversation?.guestPhone,
