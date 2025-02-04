@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
+import { WhatsAppTemplateSelector } from '../../components/WhatsAppTemplateSelector';
 import { Message, Property } from '../../types';
 import { messageService } from '../../services/airtable/messageService';
 import { conversationService } from '../../services/airtable/conversationService';
@@ -10,6 +11,7 @@ export default function Chat() {
   const { conversationId } = useParams<{ conversationId: string }>();
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
+  const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
   const [conversation, setConversation] = useState<any>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [suggestedResponse, setSuggestedResponse] = useState('');
@@ -80,7 +82,9 @@ export default function Chat() {
       type: 'text',
       status: 'pending',
       metadata: {
-        platform: 'whatsapp'
+        platform: 'whatsapp',
+        template: selectedTemplate,
+        lastMessageTimestamp: messages.length > 0 ? messages[messages.length - 1].timestamp : null
       }
     };
 
@@ -188,45 +192,65 @@ export default function Chat() {
       <div className="mb-4">
         <h3 className="font-bold">Messages:</h3>
         {messages.map((msg, index) => (
-          <div key={index} className="mb-2 p-2 border rounded">
-            <p>Text: {msg.text}</p>
-            <p>Sender: {msg.sender}</p>
-            <p>Time: {msg.timestamp?.toString()}</p>
+          <div 
+            key={index} 
+            className={`mb-2 p-3 rounded-lg ${msg.sender === 'host' ? 'bg-blue-50 ml-auto' : 'bg-gray-50'} max-w-[80%]`}
+          >
+            <div className="flex items-start gap-2">
+              {msg.metadata?.template && (
+                <span className="inline-flex items-center px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded">
+                  Template: {msg.metadata.template}
+                </span>
+              )}
+              <p className="flex-1">{msg.text || 'Message template'}</p>
+            </div>
+            <div className="mt-1 flex items-center justify-between text-xs text-gray-500">
+              <span>{new Date(msg.timestamp).toLocaleTimeString()}</span>
+              <span>{msg.status}</span>
+            </div>
           </div>
         ))}
       </div>
 
-      <div className="flex items-center p-4 border-t">
-        <input
-          type="text"
+      <div className="flex items-center p-4 border-t gap-2">
+        <WhatsAppTemplateSelector
+          onSelectTemplate={(templateName) => {
+            setSelectedTemplate(templateName);
+            // Pour les templates, on envoie un message vide car le texte sera géré par le template
+            handleSendMessage('');
+            setSelectedTemplate(null);
+          }}
+        />
+        <textarea
           value={newMessage}
           onChange={(e) => {
-            console.log('💬 Input changed:', e.target.value);
             setNewMessage(e.target.value);
           }}
-          onKeyPress={(e) => {
-            console.log('⌨️ Key pressed:', e.key);
-            if (e.key === 'Enter') {
-              console.log('↩️ Enter key pressed, sending message...');
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault();
               handleSendMessage(newMessage);
+              setNewMessage('');
+              setSelectedTemplate(null);
             }
           }}
-          placeholder="Type a message..."
-          className="flex-1 p-2 border rounded-l"
+          placeholder="Tapez votre message..."
+          className="flex-1 p-2 border rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+          rows={1}
         />
         <button
           onClick={() => {
-            console.log('🔘 Send button clicked');
-            console.log('Message to send:', newMessage);
-            console.log('Conversation:', conversation);
             handleSendMessage(newMessage);
+            setNewMessage('');
+            setSelectedTemplate(null);
           }}
-          className="bg-blue-500 text-white p-2 rounded-r"
+          className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 flex items-center"
+          disabled={!newMessage.trim() && !selectedTemplate}
         >
-          <span className="flex items-center">
-            Send
-            <svg
-              className="w-4 h-4 ml-2"
+          <span>Envoyer</span>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="w-4 h-4 ml-2"
               fill="none"
               strokeLinecap="round"
               strokeLinejoin="round"
