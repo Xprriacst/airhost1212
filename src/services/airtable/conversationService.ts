@@ -209,7 +209,7 @@ const detectEmergencyTags = (message: string): EmergencyTag[] => {
 const sendMessage = async (userId: string, conversation: Conversation, message: Message): Promise<void> => {
   try {
     const updatedMessages = [...conversation.messages, message];
-    await updateConversation(conversation.id, { 
+    await conversationService.updateConversation(conversation.id, { 
       Messages: JSON.stringify(updatedMessages)
     });
   } catch (error) {
