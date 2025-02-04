@@ -209,8 +209,8 @@ export default function Chat() {
         <WhatsAppTemplateSelector
           onSelectTemplate={(templateName) => {
             setSelectedTemplate(templateName);
-            // Pour les templates, on envoie un message vide car le texte sera géré par le template
-            handleSendMessage('');
+            // Pour les templates, on envoie un message avec le nom du template
+            handleSendMessage(`Template: ${templateName}`);
             setSelectedTemplate(null);
           }}
         />
