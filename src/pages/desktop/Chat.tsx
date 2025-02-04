@@ -115,6 +115,17 @@ export default function Chat() {
       }
     };
 
+    // Création du message pour l'affichage local
+    const newMessage: Message = {
+      id: messageToSend.id,
+      text: messageToSend.content,
+      timestamp: new Date(),
+      sender: 'host',
+      type: 'template',
+      status: 'pending',
+      metadata: messageToSend.metadata
+    };
+
     try {
       // 1. Envoyer via le service de conversation (WhatsApp)
       console.log('📤 Envoi du message via WhatsApp:', {
@@ -139,9 +150,9 @@ export default function Chat() {
 
       // 2. Mettre à jour l'état local
       console.log('🔄 Updating local state...');
-      const updatedMessages = [...messages, newMessage];
-      setMessages(updatedMessages);
+      setMessages(prev => [...prev, newMessage]);
       setNewMessage('');
+      setSelectedTemplate(null); // Réinitialiser le template sélectionné
 
       // 3. Sauvegarder dans Airtable
       console.log('💾 Saving to Airtable...', {
