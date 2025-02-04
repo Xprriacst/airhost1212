@@ -104,16 +104,13 @@ export default function Chat() {
       throw new Error('Données de conversation manquantes');
     }
 
-    const newMessage: Message = {
+    // Construction du message à envoyer
+    const messageToSend = {
       id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      text,
-      timestamp: new Date(),
-      sender: 'host',
-      type: 'text',
-      status: 'pending',
+      content: text || '',
       metadata: {
-        platform: 'whatsapp',
         template: selectedTemplate,
+        language: selectedTemplate === 'hello_world' ? 'en_US' : 'fr',
         lastMessageTimestamp: messages.length > 0 ? messages[messages.length - 1].timestamp : null
       }
     };
@@ -132,17 +129,8 @@ export default function Chat() {
           throw new Error('Utilisateur non authentifié');
         }
 
-        // Construction du payload pour le template
-        const messagePayload = {
-          content: "", // Vide pour les templates
-          metadata: {
-            template: selectedTemplate,
-            language: "fr", // Par défaut en français
-            lastMessageTimestamp: Date.now()
-          }
-        };
-        console.log('📦 Payload template:', messagePayload);
-        await conversationService.sendMessage(userId, conversation, messagePayload);
+        console.log('📦 Message à envoyer:', messageToSend);
+        await conversationService.sendMessage(userId, conversation, messageToSend);
         console.log('✅ Message envoyé via WhatsApp avec succès');
       } catch (whatsappError) {
         console.error('❌ Échec de l\'envoi du message via WhatsApp:', whatsappError);
