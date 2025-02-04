@@ -70,7 +70,7 @@ export class OfficialWhatsAppService implements IWhatsAppService {
           to,
           type: 'text',
           text: { 
-            body: content.text
+            body: content.content
           }
         };
         console.log('📤 Message standard dans la fenêtre de 24h');

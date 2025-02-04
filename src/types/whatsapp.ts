@@ -42,6 +42,7 @@ export interface MessageMetadata {
 
 export interface MessageContent {
   type: MessageType;
+  content: string;
   text?: string;
   media_url?: string;
   metadata?: MessageMetadata;
