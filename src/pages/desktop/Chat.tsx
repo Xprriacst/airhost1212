@@ -132,13 +132,18 @@ export default function Chat() {
           throw new Error('Utilisateur non authentifié');
         }
 
-        // Utiliser le message déjà créé
-        const messageObject = {
+        // Utiliser le message déjà créé avec son template
+        const messageToSend = {
           ...newMessage,
-          id: newMessage.id,  // Garder l'ID unique déjà généré
-          timestamp: new Date().toISOString(),  // Format ISO pour Airtable
+          id: newMessage.id,
+          timestamp: new Date().toISOString(),
+          text: text || `Template: ${selectedTemplate}`,  // Utiliser le texte ou indiquer qu'il s'agit d'un template
+          metadata: {
+            ...newMessage.metadata,
+            template: selectedTemplate
+          }
         };
-        await conversationService.sendMessage(userId, conversation, messageObject);
+        await conversationService.sendMessage(userId, conversation, messageToSend);
         console.log('✅ Message envoyé via WhatsApp avec succès');
       } catch (whatsappError) {
         console.error('❌ Échec de l\'envoi du message via WhatsApp:', whatsappError);
