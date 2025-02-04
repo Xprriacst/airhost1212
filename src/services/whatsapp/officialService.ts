@@ -69,7 +69,13 @@ export class OfficialWhatsAppService implements IWhatsAppService {
         };
         console.log('📤 Message standard dans la fenêtre de 24h');
       }
-      console.log('📦 Payload:', JSON.stringify(payload, null, 2));
+      console.log('[DEBUG] Payload complet :', JSON.stringify(payload, null, 2));
+      
+      const headers = {
+        Authorization: `Bearer ${this.config.accessToken}`,
+        'Content-Type': 'application/json'
+      };
+      console.log('[DEBUG] En-têtes d\'autorisation :', headers);
 
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 secondes de timeout
@@ -78,10 +84,7 @@ export class OfficialWhatsAppService implements IWhatsAppService {
       const baseUrl = 'https://graph.facebook.com';
       const response = await fetch(`${baseUrl}/${apiVersion}/${this.config.phoneNumberId}/messages`, {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${this.config.accessToken}`,
-          'Content-Type': 'application/json',
-        },
+        headers,
         body: JSON.stringify(payload),
         signal: controller.signal
       });
