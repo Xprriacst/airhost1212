@@ -142,16 +142,8 @@ export class WebhookHandler {
     });
   }
 
-  async verifyWebhook(data: WebhookVerification, phoneNumberId?: string): Promise<{ isValid: boolean; challenge: string | null }> {
-    // Si phoneNumberId est fourni, utiliser la configuration spécifique de l'utilisateur
-    let verifyToken = whatsappConfig.defaultVerifyToken;
-    
-    if (phoneNumberId) {
-      const userConfig = await this.getUserConfig(phoneNumberId);
-      if (userConfig) {
-        verifyToken = userConfig.verifyToken;
-      }
-    }
+  async verifyWebhook(data: WebhookVerification): Promise<{ isValid: boolean; challenge: string | null }> {
+    const verifyToken = whatsappConfig.verifyToken;
     if (
       data.mode === 'subscribe' &&
       data.token === verifyToken

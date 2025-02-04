@@ -2,7 +2,6 @@ export interface WhatsAppUserConfig {
   phoneNumberId: string;
   appId: string;
   accessToken: string;
-  verifyToken: string;
   displayName: string;
   businessId: string;
   status: 'active' | 'pending' | 'inactive';
@@ -11,12 +10,14 @@ export interface WhatsAppUserConfig {
 export interface WhatsAppConfig {
   apiVersion: string;
   apiUrl: string;
+  verifyToken: string;
 }
 
 // Configuration globale de l'API WhatsApp
 export const whatsappConfig: WhatsAppConfig = {
-  apiVersion: 'v18.0',
-  apiUrl: 'https://graph.facebook.com/v18.0'
+  apiVersion: process.env.VITE_WHATSAPP_API_VERSION || 'v18.0',
+  apiUrl: 'https://graph.facebook.com',
+  verifyToken: process.env.WHATSAPP_VERIFY_TOKEN || 'airhost_whatsapp_webhook_123'
 };
 
 // Constantes pour la validation
@@ -45,9 +46,7 @@ export function validateUserWhatsAppConfig(config: Partial<WhatsAppUserConfig>):
     errors.push('Access Token invalide');
   }
 
-  if (!config.verifyToken || config.verifyToken.length < WHATSAPP_CONFIG_CONSTRAINTS.VERIFY_TOKEN_MIN_LENGTH) {
-    errors.push('Verify Token invalide');
-  }
+
 
   if (!config.displayName || config.displayName.length < WHATSAPP_CONFIG_CONSTRAINTS.DISPLAY_NAME_MIN_LENGTH) {
     errors.push('Nom d\'affichage invalide');
