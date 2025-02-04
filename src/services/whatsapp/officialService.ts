@@ -26,21 +26,32 @@ export class OfficialWhatsAppService implements IWhatsAppService {
         lastMessageTimestamp: content.metadata?.lastMessageTimestamp
       });
 
-      const useTemplate = !this.isWithin24Hours(content.metadata?.lastMessageTimestamp || null);
-      console.log('⏰ Vérification fenêtre 24h:', {
-        useTemplate,
+      // Déterminer si on doit utiliser un template
+      const isTemplate = content.type === 'template';
+      const isOutsideWindow = !this.isWithin24Hours(content.metadata?.lastMessageTimestamp || null);
+      
+      console.log('⏰ Vérification message:', {
+        isTemplate,
+        isOutsideWindow,
+        messageType: content.type,
         lastMessageTimestamp: content.metadata?.lastMessageTimestamp,
         now: new Date()
       });
 
-      // Validation des métadonnées pour les templates
-      if (useTemplate && !content.metadata?.template) {
+      // Si on est hors fenêtre de 24h, on doit utiliser un template
+      if (isOutsideWindow && !isTemplate) {
+        console.error('❌ Template requis hors fenêtre de 24h');
+        throw new Error('Un template est requis pour les messages hors fenêtre de 24h');
+      }
+
+      // Si c'est un template, vérifier qu'il est spécifié
+      if (isTemplate && !content.metadata?.template) {
         console.error('❌ Template non défini dans les métadonnées');
         throw new Error('Template WhatsApp non spécifié');
       }
 
       let payload;
-      if (useTemplate) {
+      if (isTemplate) {
         const templateName = content.metadata?.template || 'bienvenue';
         const templateLanguage = templateName === 'hello_world' ? 'en_US' : 'fr';
         
