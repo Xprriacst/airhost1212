@@ -104,31 +104,50 @@ export class WebhookHandler {
   }
 
   private async handleMessage(message: WhatsAppMessage, entry: WebhookEntry): Promise<void> {
-    if (message.type !== 'text' || !message.text) {
-      console.log(`Type de message non supporté: ${message.type}`);
-      return;
-    }
-
-    const userId = await this.conversationService.getUserIdByPhoneNumberId(entry.id);
-    if (!userId) {
-      console.error(`Aucun utilisateur trouvé pour le phoneNumberId: ${entry.id}`);
-      return;
-    }
-
-    const messageData = {
-      guestPhone: formatPhoneNumber(message.from),
-      message: message.text.body,
-      platform: 'whatsapp',
-      waMessageId: message.id,
-      timestamp: new Date(parseInt(message.timestamp) * 1000).toISOString(),
-      userId: userId
-    };
-
     try {
+      // Validation du type de message
+      if (message.type !== 'text' || !message.text) {
+        console.warn(`Type de message non supporté: ${message.type}`);
+        return;
+      }
+
+      // Validation du numéro de téléphone
+      const formattedPhone = formatPhoneNumber(message.from);
+      if (!formattedPhone) {
+        console.error(`Numéro de téléphone invalide: ${message.from}`);
+        return;
+      }
+
+      // Récupération de l'utilisateur
+      const userId = await this.conversationService.getUserIdByPhoneNumberId(entry.id);
+      if (!userId) {
+        console.error(`Aucun utilisateur trouvé pour le phoneNumberId: ${entry.id}`);
+        return;
+      }
+
+      // Validation du timestamp
+      const timestamp = parseInt(message.timestamp);
+      if (isNaN(timestamp)) {
+        console.error(`Timestamp invalide: ${message.timestamp}`);
+        return;
+      }
+
+      const messageData = {
+        guestPhone: formattedPhone,
+        message: message.text.body.trim(),
+        platform: 'whatsapp',
+        waMessageId: message.id,
+        timestamp: new Date(timestamp * 1000).toISOString(),
+        userId: userId
+      };
+
       await this.conversationService.createOrUpdateConversation(messageData);
       console.log('✅ Message traité avec succès:', message.id);
     } catch (error) {
-      console.error('❌ Erreur lors du traitement du message:', error);
+      console.error('❌ Erreur lors du traitement du message:', {
+        messageId: message.id,
+        error: error instanceof Error ? error.message : 'Erreur inconnue'
+      });
       throw error;
     }
   }

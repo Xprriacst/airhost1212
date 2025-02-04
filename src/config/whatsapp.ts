@@ -15,9 +15,9 @@ export interface WhatsAppConfig {
 
 // Configuration globale de l'API WhatsApp
 export const whatsappConfig: WhatsAppConfig = {
-  apiVersion: process.env.VITE_WHATSAPP_API_VERSION || 'v18.0',
+  apiVersion: import.meta.env.VITE_WHATSAPP_API_VERSION || 'v18.0',
   apiUrl: 'https://graph.facebook.com',
-  verifyToken: process.env.WHATSAPP_VERIFY_TOKEN || 'airhost_whatsapp_webhook_123'
+  verifyToken: import.meta.env.VITE_WHATSAPP_VERIFY_TOKEN || 'airhost_whatsapp_webhook_123'
 };
 
 // Constantes pour la validation
