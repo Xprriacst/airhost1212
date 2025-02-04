@@ -102,18 +102,11 @@ export default function Chat() {
           throw new Error('Utilisateur non authentifié');
         }
 
-        const messageObject: Message = {
-          id: `${Date.now()}`,
-          text: newMessage,
-          timestamp: new Date().toISOString(),
-          sender: 'host',
-          type: 'text',
-          status: 'pending',
-          metadata: {
-            platform: 'whatsapp',
-            template: 'bienvenue',
-            lastMessageTimestamp: conversation.lastMessageTimestamp || null
-          }
+        // Utiliser le message déjà créé
+        const messageObject = {
+          ...newMessage,
+          id: newMessage.id,  // Garder l'ID unique déjà généré
+          timestamp: new Date().toISOString(),  // Format ISO pour Airtable
         };
         await conversationService.sendMessage(userId, conversation, messageObject);
         console.log('✅ Message envoyé via WhatsApp avec succès');
