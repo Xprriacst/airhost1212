@@ -34,14 +34,17 @@ export interface WhatsAppConfig extends WhatsAppServiceConfig {
   apiUrl: string;
 }
 
+export interface MessageMetadata {
+  lastMessageTimestamp?: Date;
+  template?: 'hello_world' | 'bienvenue';
+  [key: string]: unknown;
+}
+
 export interface MessageContent {
   type: MessageType;
   text?: string;
   media_url?: string;
-  metadata?: {
-    lastMessageTimestamp?: Date;
-    [key: string]: unknown;
-  };
+  metadata?: MessageMetadata;
 }
 
 export interface WhatsAppMessage {

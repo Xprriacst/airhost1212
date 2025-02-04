@@ -17,22 +17,33 @@ export class OfficialWhatsAppService implements IWhatsAppService {
 
   async sendMessage(to: string, content: MessageContent): Promise<string> {
     try {
-      console.log('📤 Envoi de message WhatsApp (API officielle):', {
+      console.log('📤 Début envoi message WhatsApp (API officielle):', {
         to,
         content,
         phoneNumberId: this.config.phoneNumberId,
-        apiUrl: this.config.apiUrl
+        apiUrl: this.config.apiUrl,
+        hasTemplate: Boolean(content.metadata?.template),
+        lastMessageTimestamp: content.metadata?.lastMessageTimestamp
       });
 
-      // Si nous n'avons pas de timestamp du dernier message ou si nous sommes hors de la fenêtre de 24h,
-      // nous devons utiliser un template
       const useTemplate = !this.isWithin24Hours(content.metadata?.lastMessageTimestamp || null);
+      console.log('⏰ Vérification fenêtre 24h:', {
+        useTemplate,
+        lastMessageTimestamp: content.metadata?.lastMessageTimestamp,
+        now: new Date()
+      });
 
       let payload;
       if (useTemplate) {
-        // Choix du template en fonction du contenu ou du contexte
         const templateName = content.metadata?.template || 'bienvenue';
         const templateLanguage = templateName === 'hello_world' ? 'en_US' : 'fr';
+        
+        console.log('🔧 Configuration template:', {
+          templateName,
+          templateLanguage,
+          hasMetadata: Boolean(content.metadata),
+          metadata: content.metadata
+        });
         
         payload = {
           messaging_product: 'whatsapp',

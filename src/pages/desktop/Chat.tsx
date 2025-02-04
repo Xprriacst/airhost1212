@@ -55,13 +55,41 @@ export default function Chat() {
     }
   };
 
+  const handleTemplateSelection = (templateName: string) => {
+    console.log('📝 Template sélectionné dans Chat:', {
+      templateName,
+      conversationId,
+      guestPhone: conversation?.guestPhone
+    });
+    
+    setSelectedTemplate(templateName);
+    
+    // Envoi automatique du template
+    handleSendMessage('').catch(error => {
+      console.error('❌ Erreur lors de l\'envoi du template:', error);
+    });
+  };
+
   // Fonction d'envoi de message via WhatsApp
   const handleSendMessage = async (text: string) => {
     console.log('🎯 handleSendMessage called with:', {
       text,
+      selectedTemplate,
       conversationId,
       conversation
     });
+
+    if (!conversation || !conversation.propertyId || !conversation.guestPhone) {
+      const error = new Error('Données de conversation manquantes');
+      console.error('❌ Impossible d\'envoyer le message:', {
+        hasConversation: Boolean(conversation),
+        hasPropertyId: conversation?.propertyId,
+        hasGuestPhone: conversation?.guestPhone,
+        conversationDetails: conversation,
+        error
+      });
+      throw error;
+    }
 
     if (!text.trim() || !conversation || !conversation.propertyId || !conversation.guestPhone) {
       console.warn('❌ Impossible d\'envoyer le message:', {
@@ -207,12 +235,7 @@ export default function Chat() {
 
       <div className="flex items-center p-4 border-t gap-2">
         <WhatsAppTemplateSelector
-          onSelectTemplate={(templateName) => {
-            setSelectedTemplate(templateName);
-            // Pour les templates, on envoie un message avec le nom du template
-            handleSendMessage(`Template: ${templateName}`);
-            setSelectedTemplate(null);
-          }}
+          onSelectTemplate={handleTemplateSelection}
         />
         <textarea
           value={newMessage}

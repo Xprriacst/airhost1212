@@ -65,15 +65,17 @@ var OfficialWhatsAppService = /** @class */ (function () {
                         useTemplate = !this.isWithin24Hours(((_a = content.metadata) === null || _a === void 0 ? void 0 : _a.lastMessageTimestamp) || null);
                         payload = void 0;
                         if (useTemplate) {
+                            const templateName = content.metadata?.template || 'hello_world';
+                            const templateLanguage = templateName === 'hello_world' ? 'en_US' : 'fr';
                             payload = {
                                 messaging_product: 'whatsapp',
                                 recipient_type: 'individual',
                                 to: to,
                                 type: 'template',
                                 template: {
-                                    name: 'hello_world',
+                                    name: templateName,
                                     language: {
-                                        code: 'en_US'
+                                        code: templateLanguage
                                     }
                                 }
                             };

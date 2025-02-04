@@ -9,8 +9,8 @@ export function WhatsAppTemplateSelector({ onSelectTemplate }: WhatsAppTemplateS
   const [isOpen, setIsOpen] = useState(false);
 
   const templates = [
-    { id: 'hello_world', name: 'Hello World', description: 'Template de test' },
-    // Ajoutez d'autres templates ici
+    { id: 'hello_world', name: 'Hello World', description: 'Template de test (en anglais)', language: 'en_US' },
+    { id: 'bienvenue', name: 'Bienvenue', description: 'Message de bienvenue (en français)', language: 'fr' },
   ];
 
   return (
@@ -32,6 +32,11 @@ export function WhatsAppTemplateSelector({ onSelectTemplate }: WhatsAppTemplateS
               <button
                 key={template.id}
                 onClick={() => {
+                  console.log('🎯 Template sélectionné:', {
+                    templateId: template.id,
+                    templateName: template.name,
+                    language: template.language
+                  });
                   onSelectTemplate(template.id);
                   setIsOpen(false);
                 }}
