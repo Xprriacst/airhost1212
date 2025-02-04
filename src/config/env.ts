@@ -31,9 +31,9 @@ export const env = {
     model: 'gpt-4',
   },
   whatsapp: {
-    // Pas de préfixe VITE_ pour les variables WhatsApp
-    verifyToken: getEnvVar('WHATSAPP_VERIFY_TOKEN', false),
-    apiVersion: getEnvVar('WHATSAPP_API_VERSION', false),
+    // Utilisation du préfixe VITE_ pour les variables WhatsApp frontend
+    verifyToken: getEnvVar('WHATSAPP_VERIFY_TOKEN', true),
+    apiVersion: getEnvVar('WHATSAPP_API_VERSION', true),
   },
 };
 
