@@ -132,18 +132,17 @@ export default function Chat() {
           throw new Error('Utilisateur non authentifié');
         }
 
-        // Utiliser le message déjà créé avec son template
-        const messageToSend = {
-          ...newMessage,
-          id: newMessage.id,
-          timestamp: new Date().toISOString(),
-          text: text || `Template: ${selectedTemplate}`,  // Utiliser le texte ou indiquer qu'il s'agit d'un template
+        // Construction du payload pour le template
+        const messagePayload = {
+          content: "", // Vide pour les templates
           metadata: {
-            ...newMessage.metadata,
-            template: selectedTemplate
+            template: selectedTemplate,
+            language: "fr", // Par défaut en français
+            lastMessageTimestamp: Date.now()
           }
         };
-        await conversationService.sendMessage(userId, conversation, messageToSend);
+        console.log('📦 Payload template:', messagePayload);
+        await conversationService.sendMessage(userId, conversation, messagePayload);
         console.log('✅ Message envoyé via WhatsApp avec succès');
       } catch (whatsappError) {
         console.error('❌ Échec de l\'envoi du message via WhatsApp:', whatsappError);

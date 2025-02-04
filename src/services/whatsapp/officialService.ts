@@ -33,6 +33,12 @@ export class OfficialWhatsAppService implements IWhatsAppService {
         now: new Date()
       });
 
+      // Validation des métadonnées pour les templates
+      if (useTemplate && !content.metadata?.template) {
+        console.error('❌ Template non défini dans les métadonnées');
+        throw new Error('Template WhatsApp non spécifié');
+      }
+
       let payload;
       if (useTemplate) {
         const templateName = content.metadata?.template || 'bienvenue';
