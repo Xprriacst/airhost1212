@@ -36,25 +36,23 @@ export class OfficialWhatsAppService implements IWhatsAppService {
         
         payload = {
           messaging_product: 'whatsapp',
-          recipient_type: 'individual',
           to,
           type: 'template',
           template: {
             name: templateName,
             language: {
               code: templateLanguage
-            }
+            },
+            components: [] // Ajout du champ components même vide pour respecter le format
           }
         };
         console.log(`📤 Utilisation du template '${templateName}' car hors fenêtre de 24h`);
       } else {
         payload = {
           messaging_product: 'whatsapp',
-          recipient_type: 'individual',
           to,
           type: 'text',
           text: { 
-            preview_url: false,
             body: content.text
           }
         };
