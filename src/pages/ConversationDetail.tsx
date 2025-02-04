@@ -173,13 +173,20 @@ export default function ConversationDetail() {
       // Envoi du message via le service de conversation
       await conversationService.sendMessage(user.id, conversation, message);
       
-      // Mise à jour du statut en 'sent'
+      // Mise à jour du statut en 'sent' et synchronisation avec Airtable
+      const updatedMessages = conversation.messages.map(msg => 
+        msg.id === message.id ? { ...msg, status: 'sent' } : msg
+      );
+      
+      // Mise à jour locale
       setConversation(prev => {
         if (!prev) return prev;
-        const updatedMessages = prev.messages.map(msg => 
-          msg.id === message.id ? { ...msg, status: 'sent' } : msg
-        );
         return { ...prev, messages: updatedMessages };
+      });
+      
+      // Mise à jour dans Airtable
+      await conversationService.updateConversation(conversation.id, {
+        Messages: JSON.stringify(updatedMessages)
       });
     } catch (error) {
       console.error('Erreur lors de l\'envoi du message:', error);

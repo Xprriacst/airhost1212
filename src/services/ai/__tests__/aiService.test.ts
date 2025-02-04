@@ -4,8 +4,8 @@ import type { BookingContext, AIConfig } from '../types';
 import { aiService } from '../aiService';
 
 // Mock OpenAI
-jest.mock('openai', () => {
-  const mockCreate = jest.fn();
+vi.mock('openai', () => {
+  const mockCreate = vi.fn();
 
   return {
     __esModule: true,
@@ -23,14 +23,14 @@ describe('aiService', () => {
   const mockProperty: Property = {
     id: 'test-property',
     name: 'Test Property',
-    aiInstructions: [{
+    aiInstructions: JSON.stringify([{
       id: 'instr1',
       propertyId: 'test-property',
       type: 'general',
       content: 'Instructions test pour l\'IA',
       isActive: true,
       priority: 1
-    }]
+    }])
   };
 
   const mockMessage: Message = {

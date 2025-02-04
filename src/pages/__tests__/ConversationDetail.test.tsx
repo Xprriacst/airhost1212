@@ -1,4 +1,3 @@
-/** @jest-environment jsdom */
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { BrowserRouter, useParams, useNavigate } from 'react-router-dom';
 import ConversationDetail from '../ConversationDetail';
@@ -8,9 +7,9 @@ import { aiService } from '../../services/ai/aiService';
 import userEvent from '@testing-library/user-event';
 
 // Mocks
-jest.mock('react-router-dom', () => ({
-  ...jest.requireActual('react-router-dom'),
-  useParams: jest.fn(),
+vi.mock('react-router-dom', () => ({
+  ...vi.importActual('react-router-dom'),
+  useParams: vi.fn(),
   useNavigate: jest.fn()
 }));
 

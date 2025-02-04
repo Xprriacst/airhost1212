@@ -24,10 +24,10 @@ describe('ChatInterface', () => {
     },
   ];
 
-  const mockOnSendMessage = jest.fn();
+  const mockOnSendMessage = vi.fn();
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('renders property information', () => {

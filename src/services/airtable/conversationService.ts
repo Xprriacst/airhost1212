@@ -206,7 +206,20 @@ const detectEmergencyTags = (message: string): EmergencyTag[] => {
   }, []);
 };
 
+const sendMessage = async (userId: string, conversation: Conversation, message: Message): Promise<void> => {
+  try {
+    const updatedMessages = [...conversation.messages, message];
+    await updateConversation(conversation.id, { 
+      Messages: JSON.stringify(updatedMessages)
+    });
+  } catch (error) {
+    console.error('❌ Erreur lors de l\'envoi du message:', error);
+    throw error;
+  }
+};
+
 export const conversationService = {
+  sendMessage,
   async fetchAllConversations(): Promise<Conversation[]> {
     try {
       if (!base) throw new Error('Airtable is not configured');
