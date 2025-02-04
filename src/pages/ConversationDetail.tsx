@@ -50,25 +50,59 @@ export default function ConversationDetail() {
 
   const handleSendTemplate = async (templateName: string) => {
     if (!conversation || !user) return;
-    
-    setSelectedTemplate(templateName);
-    await handleSendMessage();
-    setSelectedTemplate(null);
 
     try {
-      const updatedMessages = [...conversation.messages, messageToSend];
+      // Construction du message à envoyer
+      const messageToSend = {
+        id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        content: '',
+        metadata: {
+          template: templateName,
+          language: templateName === 'hello_world' ? 'en_US' : 'fr',
+          lastMessageTimestamp: conversation.messages.length > 0 
+            ? conversation.messages[conversation.messages.length - 1].timestamp 
+            : null
+        }
+      };
+
+      // Création du message pour l'affichage local
+      const newMessage: Message = {
+        id: messageToSend.id,
+        text: messageToSend.content,
+        timestamp: new Date(),
+        sender: 'host',
+        type: 'template',
+        status: 'pending',
+        metadata: messageToSend.metadata
+      };
+
+      console.log('📦 Envoi du template:', {
+        templateName,
+        messageToSend,
+        newMessage
+      });
+
+      // Envoi du message via WhatsApp
+      await conversationService.sendMessage(user.id, conversation, messageToSend);
+
+      // Mise à jour des messages localement
+      const updatedMessages = [...conversation.messages, newMessage];
       
+      // Mise à jour dans Airtable
       await conversationService.updateConversation(user.id, conversation.id, {
         ...conversation,
         messages: updatedMessages,
       });
 
+      // Mise à jour du state local
       setConversation((prev) => {
         if (!prev) return null;
         return { ...prev, messages: updatedMessages };
       });
+
+      console.log('✅ Template envoyé avec succès');
     } catch (error) {
-      console.error('Erreur lors de l\'envoi du template:', error);
+      console.error('❌ Erreur lors de l\'envoi du template:', error);
       loadConversation();
     }
   };
