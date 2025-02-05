@@ -99,7 +99,7 @@ class ConversationService {
       console.log('✅ Service WhatsApp initialisé');
 
       // Vérifier et formater le numéro de téléphone
-      let phoneNumber = conversation.guestPhone || conversation.phone_number;
+      let phoneNumber = conversation.guestPhone || conversation.phone_number || conversation['Guest phone number'];
       if (!phoneNumber) {
         throw new Error('Numéro de téléphone du destinataire manquant');
       }
