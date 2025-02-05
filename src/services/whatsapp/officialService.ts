@@ -52,8 +52,8 @@ export class OfficialWhatsAppService implements IWhatsAppService {
       console.log('📤 Début envoi message WhatsApp (API officielle):', {
         to,
         content,
-        phoneNumberId: this.config.phoneNumberId,
-        apiUrl: this.config.apiUrl,
+        phoneNumberId: config.phoneNumberId,
+        baseUrl: this.baseUrl,
         hasTemplate: Boolean(content.metadata?.template),
         lastMessageTimestamp: content.metadata?.lastMessageTimestamp
       });
@@ -113,7 +113,7 @@ export class OfficialWhatsAppService implements IWhatsAppService {
           to,
           type: 'text',
           text: { 
-            body: content.content
+            body: content.content || content.text || ''
           }
         };
         console.log('📤 Message standard dans la fenêtre de 24h');
@@ -131,7 +131,7 @@ export class OfficialWhatsAppService implements IWhatsAppService {
 
       const apiVersion = 'v21.0'; // Version fixe de l'API
       const baseUrl = 'https://graph.facebook.com';
-      const response = await fetch(`${this.baseUrl}/${config.phoneNumberId}/messages`, {
+      const response = await fetch(`${baseUrl}/${apiVersion}/${config.phoneNumberId}/messages`, {
         method: 'POST',
         headers,
         body: JSON.stringify(payload),
@@ -167,9 +167,10 @@ export class OfficialWhatsAppService implements IWhatsAppService {
 
   async getMessageStatus(messageId: string): Promise<MessageStatus> {
     try {
-      const response = await fetch(`${this.config.apiUrl}/${messageId}`, {
+      const config = await this.getWhatsAppConfig();
+      const response = await fetch(`${this.baseUrl}/${messageId}`, {
         headers: {
-          'Authorization': `Bearer ${this.config.accessToken}`,
+          'Authorization': `Bearer ${config.accessToken}`,
         },
       });
 
@@ -187,10 +188,11 @@ export class OfficialWhatsAppService implements IWhatsAppService {
 
   async markMessageAsRead(messageId: string): Promise<void> {
     try {
-      await fetch(`${this.config.apiUrl}/${messageId}/mark_as_read`, {
+      const config = await this.getWhatsAppConfig();
+      await fetch(`${this.baseUrl}/${messageId}/mark_as_read`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${this.config.accessToken}`,
+          'Authorization': `Bearer ${config.accessToken}`,
         },
       });
     } catch (error) {

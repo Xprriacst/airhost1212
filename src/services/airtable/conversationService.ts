@@ -371,7 +371,8 @@ export const conversationService = {
           // Valider et nettoyer chaque message
           messages = messages.filter(msg => {
             const isValid = msg && typeof msg === 'object' && 
-              (typeof msg.text === 'string' || typeof msg.content === 'string') &&
+              (typeof msg.text === 'string' || typeof msg.content === 'string' || 
+               (msg.type === 'template' && msg.metadata?.template)) &&
               typeof msg.sender === 'string';
             
             if (!isValid) {
@@ -380,7 +381,7 @@ export const conversationService = {
             return isValid;
           }).map(msg => ({
             id: msg.id || `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-            text: msg.text || msg.content || '',
+            text: msg.text || msg.content || (msg.type === 'template' ? `Template: ${msg.metadata?.template}` : ''),
             timestamp: msg.timestamp ? new Date(msg.timestamp) : new Date(),
             sender: (msg.sender || '').toLowerCase() === 'host' ? 'host' : 'guest',
             type: msg.type || 'text',

@@ -99,8 +99,17 @@ class ConversationService {
       console.log('✅ Service WhatsApp initialisé');
 
       // Vérifier et formater le numéro de téléphone
+      console.log('🔍 Recherche du numéro de téléphone dans la conversation:', {
+        conversationId: conversation.id,
+        guestPhone: conversation.guestPhone,
+        phone_number: conversation.phone_number,
+        guest_phone_number: conversation['Guest phone number'],
+        all_fields: JSON.stringify(conversation)
+      });
+
       let phoneNumber = conversation.guestPhone || conversation.phone_number || conversation['Guest phone number'];
       if (!phoneNumber) {
+        console.error('❌ Aucun numéro de téléphone trouvé dans les champs:', JSON.stringify(conversation));
         throw new Error('Numéro de téléphone du destinataire manquant');
       }
 
