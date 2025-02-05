@@ -123,6 +123,9 @@ const mapAirtableToConversation = (record: any): Conversation => {
     } else if (typeof properties === 'string') {
       propertyId = properties;
     }
+    
+    // S'assurer que properties est toujours un tableau
+    const propertiesArray = Array.isArray(properties) ? properties : [propertyId];
 
     // Gérer les messages
     let messagesStr = fields.Messages;
@@ -157,7 +160,7 @@ const mapAirtableToConversation = (record: any): Conversation => {
     return {
       id: record.id || '',
       propertyId,
-      Properties: Array.isArray(properties) ? properties : [propertyId],
+      Properties: propertiesArray,
       'Guest Name': fields['Guest Name'] || fields['GuestName'] || '',
       'Guest Email': fields['Guest Email'] || fields['GuestEmail'] || '',
       'Guest phone number': fields['Guest phone number'] || fields['GuestPhoneNumber'] || fields['GuestPhone'] || fields['guestPhone'] || '',
