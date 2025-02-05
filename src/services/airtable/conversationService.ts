@@ -25,6 +25,10 @@ const parseMessages = (rawMessages: any): Message[] => {
           if (!isValid) {
             console.warn('⚠️ Message invalide ignoré:', msg);
           }
+          // Pour les templates, le contenu peut être vide
+          if (msg.type === 'template' && !msg.text && !msg.content) {
+            return isValid;
+          }
           return isValid;
         })
         .map(msg => ({
