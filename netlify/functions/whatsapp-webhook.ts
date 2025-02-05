@@ -1,7 +1,8 @@
 import { Handler } from '@netlify/functions';
-import { whatsappBusinessAccountService } from '../../src/services/whatsapp/businessAccountService';
-import { config } from './config';
+import Airtable from 'airtable';
 import crypto from 'crypto';
+
+const base = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY }).base(process.env.AIRTABLE_BASE_ID);
 
 interface WhatsAppWebhookPayload {
   object: string;
@@ -67,8 +68,29 @@ export const handler: Handler = async (event, context) => {
       const token = event.queryStringParameters?.['hub.verify_token'];
       const challenge = event.queryStringParameters?.['hub.challenge'];
 
+      // Récupérer la configuration WhatsApp depuis Airtable
+      const records = await base('Users').select({
+        filterByFormula: "NOT({whatsapp_business_config} = '')"  // Sélectionne les utilisateurs avec une config WhatsApp
+      }).firstPage();
+
+      let verifyToken = '';
+      for (const record of records) {
+        const configStr = record.get('whatsapp_business_config') as string;
+        if (configStr) {
+          try {
+            const config = JSON.parse(configStr);
+            if (config.verify_token) {
+              verifyToken = config.verify_token;
+              break;
+            }
+          } catch (error) {
+            console.error('Erreur lors du parsing de la config WhatsApp:', error);
+          }
+        }
+      }
+
       // Vérifier que le token correspond à celui configuré
-      if (mode === 'subscribe' && token === config.whatsapp.verifyToken) {
+      if (mode === 'subscribe' && token === verifyToken) {
         return {
           statusCode: 200,
           body: challenge || '',
