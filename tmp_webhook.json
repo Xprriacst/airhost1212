@@ -1,0 +1,25 @@
+{
+  "object": "whatsapp_business_account",
+  "entry": [{
+    "id": "477925252079395",
+    "changes": [{
+      "value": {
+        "messaging_product": "whatsapp",
+        "metadata": {
+          "display_phone_number": "33617370484",
+          "phone_number_id": "477925252079395"
+        },
+        "messages": [{
+          "from": "33617370484",
+          "id": "wamid.test123",
+          "timestamp": "1707156000",
+          "text": {
+            "body": "Bonjour, je suis bien arrivé !"
+          },
+          "type": "text"
+        }]
+      },
+      "field": "messages"
+    }]
+  }]
+}
