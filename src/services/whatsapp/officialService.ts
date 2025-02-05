@@ -1,11 +1,40 @@
 import { MessageContent, MessageStatus, WhatsAppConfig } from '../../types/whatsapp';
 import { IWhatsAppService, WebhookPayload } from './types';
+import { userService } from '../airtable/userService';
 
 export class OfficialWhatsAppService implements IWhatsAppService {
   private config: WhatsAppConfig;
+  private userId: string;
 
-  constructor(config: WhatsAppConfig) {
-    this.config = config;
+  constructor(userId: string) {
+    this.userId = userId;
+    // La configuration sera chargée lors de l'initialisation du service
+    this.config = {
+      provider: 'official',
+      appId: '',
+      accessToken: '',
+      apiVersion: 'v21.0',
+      phoneNumberId: '',
+      apiUrl: 'https://graph.facebook.com/v21.0'
+    };
+  }
+
+  private async loadConfig(): Promise<void> {
+    try {
+      const userConfig = await userService.getWhatsAppConfig(this.userId);
+      if (!userConfig) {
+        throw new Error('Configuration WhatsApp non trouvée pour l\'utilisateur');
+      }
+      this.config = {
+        ...this.config,
+        appId: userConfig.appId,
+        accessToken: userConfig.accessToken,
+        phoneNumberId: userConfig.phoneNumberId
+      };
+    } catch (error) {
+      console.error('Erreur lors du chargement de la configuration WhatsApp:', error);
+      throw error;
+    }
   }
 
   private isWithin24Hours(lastMessageTimestamp: Date | null): boolean {
@@ -17,6 +46,8 @@ export class OfficialWhatsAppService implements IWhatsAppService {
 
   async sendMessage(to: string, content: MessageContent): Promise<string> {
     try {
+      // Charger la configuration avant l'envoi
+      await this.loadConfig();
       console.log('📤 Début envoi message WhatsApp (API officielle):', {
         to,
         content,
