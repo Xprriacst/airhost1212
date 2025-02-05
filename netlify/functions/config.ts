@@ -6,12 +6,12 @@ export const getEnvVar = (key: string): string => {
 
 export const config = {
   airtable: {
-    apiKey: getEnvVar('VITE_AIRTABLE_API_KEY'),
-    baseId: getEnvVar('VITE_AIRTABLE_BASE_ID'),
+    apiKey: getEnvVar('AIRTABLE_API_KEY'),
+    baseId: getEnvVar('AIRTABLE_BASE_ID'),
   },
   whatsapp: {
-    verifyToken: getEnvVar('VITE_WHATSAPP_VERIFY_TOKEN'),
-    apiVersion: getEnvVar('VITE_WHATSAPP_API_VERSION'),
+    verifyToken: getEnvVar('WHATSAPP_VERIFY_TOKEN'),
+    apiVersion: getEnvVar('WHATSAPP_API_VERSION'),
     appSecret: getEnvVar('WHATSAPP_APP_SECRET'),
   },
 };
