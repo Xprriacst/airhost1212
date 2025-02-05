@@ -41,6 +41,7 @@ export interface Conversation {
   'Guest Name'?: string;
   'Guest Email'?: string;
   'Guest phone number'?: string;
+  guestPhone?: string;
   Messages?: string;
   messages: Message[];
   'Check-in Date'?: string;

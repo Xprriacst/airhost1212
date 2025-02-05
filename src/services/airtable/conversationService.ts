@@ -157,6 +157,7 @@ const mapAirtableToConversation = (record: any): Conversation => {
       'Guest Name': fields['Guest Name'] || fields['GuestName'] || '',
       'Guest Email': fields['Guest Email'] || fields['GuestEmail'] || '',
       'Guest phone number': fields['Guest phone number'] || fields['GuestPhoneNumber'] || fields['GuestPhone'] || fields['guestPhone'] || '',
+      guestPhone: fields['Guest phone number'] || fields['GuestPhoneNumber'] || fields['GuestPhone'] || fields['guestPhone'] || '',
       Messages: messagesStr,
       messages,
       'Check-in Date': fields['Check-in Date'] || fields['CheckInDate'] || '',
