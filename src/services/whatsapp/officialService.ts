@@ -1,38 +1,39 @@
 import { MessageContent, MessageStatus, WhatsAppConfig } from '../../types/whatsapp';
 import { IWhatsAppService, WebhookPayload } from './types';
 import { userService } from '../airtable/userService';
+import { base } from '../airtable/config';
 
 export class OfficialWhatsAppService implements IWhatsAppService {
-  private config: WhatsAppConfig;
   private userId: string;
+  private baseUrl = 'https://graph.facebook.com/v21.0';
+  private phoneNumberId = '477925252079395';
 
   constructor(userId: string) {
     this.userId = userId;
-    // La configuration sera chargée lors de l'initialisation du service
-    this.config = {
-      provider: 'official',
-      appId: '',
-      accessToken: '',
-      apiVersion: 'v21.0',
-      phoneNumberId: '',
-      apiUrl: 'https://graph.facebook.com/v21.0'
-    };
   }
 
-  private async loadConfig(): Promise<void> {
+  private async getWhatsAppConfig(): Promise<{
+    accessToken: string;
+    phoneNumberId: string;
+  }> {
     try {
-      const userConfig = await userService.getWhatsAppConfig(this.userId);
-      if (!userConfig) {
-        throw new Error('Configuration WhatsApp non trouvée pour l\'utilisateur');
+      const record = await base('Users').find(this.userId);
+      if (!record) {
+        throw new Error('Utilisateur non trouvé');
       }
-      this.config = {
-        ...this.config,
-        appId: userConfig.appId,
-        accessToken: userConfig.accessToken,
-        phoneNumberId: userConfig.phoneNumberId
+
+      const configStr = record.get('whatsapp_business_config') as string;
+      if (!configStr) {
+        throw new Error('Configuration WhatsApp non trouvée');
+      }
+
+      const config = JSON.parse(configStr);
+      return {
+        accessToken: config.access_token,
+        phoneNumberId: config.phone_number_id
       };
     } catch (error) {
-      console.error('Erreur lors du chargement de la configuration WhatsApp:', error);
+      console.error('Erreur lors de la récupération de la configuration WhatsApp:', error);
       throw error;
     }
   }
@@ -46,8 +47,8 @@ export class OfficialWhatsAppService implements IWhatsAppService {
 
   async sendMessage(to: string, content: MessageContent): Promise<string> {
     try {
-      // Charger la configuration avant l'envoi
-      await this.loadConfig();
+      // Récupérer la configuration WhatsApp à jour
+      const config = await this.getWhatsAppConfig();
       console.log('📤 Début envoi message WhatsApp (API officielle):', {
         to,
         content,
@@ -120,7 +121,7 @@ export class OfficialWhatsAppService implements IWhatsAppService {
       console.log('[DEBUG] Payload complet :', JSON.stringify(payload, null, 2));
       
       const headers = {
-        Authorization: `Bearer ${this.config.accessToken}`,
+        Authorization: `Bearer ${config.accessToken}`,
         'Content-Type': 'application/json'
       };
       console.log('[DEBUG] En-têtes d\'autorisation :', headers);
@@ -130,7 +131,7 @@ export class OfficialWhatsAppService implements IWhatsAppService {
 
       const apiVersion = 'v21.0'; // Version fixe de l'API
       const baseUrl = 'https://graph.facebook.com';
-      const response = await fetch(`${baseUrl}/${apiVersion}/${this.config.phoneNumberId}/messages`, {
+      const response = await fetch(`${this.baseUrl}/${config.phoneNumberId}/messages`, {
         method: 'POST',
         headers,
         body: JSON.stringify(payload),
