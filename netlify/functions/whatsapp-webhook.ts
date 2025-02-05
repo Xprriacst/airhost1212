@@ -2,7 +2,7 @@ import { Handler } from '@netlify/functions';
 import Airtable from 'airtable';
 import crypto from 'crypto';
 
-const base = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY }).base(process.env.AIRTABLE_BASE_ID);
+const base = new Airtable({ apiKey: process.env.VITE_AIRTABLE_API_KEY }).base(process.env.VITE_AIRTABLE_BASE_ID);
 
 interface WhatsAppWebhookPayload {
   object: string;
