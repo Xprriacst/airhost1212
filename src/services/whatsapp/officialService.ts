@@ -344,8 +344,8 @@ async function getConversationsByUserId(userId: string) {
   return records.map(record => ({
     id: record.id,
     guest: {
-      phone: record.get('Guest Phone'),
-      name: record.get('Guest Name')
+      phone: record.get('Guest Phone') || record.get('guestPhone'),
+      name: record.get('Guest Name') || record.get('guestName')
     },
     property: {
       id: record.get('Property ID'),
