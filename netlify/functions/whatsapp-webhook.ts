@@ -1,6 +1,7 @@
 import { Handler } from '@netlify/functions';
 import Airtable from 'airtable';
 import crypto from 'crypto';
+import { OfficialWhatsAppService } from '../../src/services/whatsapp/officialService';
 
 const base = new Airtable({ apiKey: process.env.VITE_AIRTABLE_API_KEY }).base(process.env.VITE_AIRTABLE_BASE_ID);
 
@@ -121,20 +122,43 @@ export const handler: Handler = async (event, context) => {
         for (const change of entry.changes) {
           const value = change.value;
 
-          // Récupérer le compte WhatsApp associé au numéro
-          const phoneNumber = value.metadata.display_phone_number;
-          const account = await whatsappBusinessAccountService.getAccountByPhoneNumber(phoneNumber);
-
-          if (!account) {
-            console.error(`Aucun compte trouvé pour le numéro ${phoneNumber}`);
-            continue;
-          }
-
           // Traiter les messages
           if (value.messages && value.messages.length > 0) {
             for (const message of value.messages) {
-              // TODO: Implémenter le traitement des messages
               console.log('Message reçu:', message);
+              
+              // Rechercher la conversation correspondante dans Airtable
+              const records = await base('Conversations')
+                .select({
+                  filterByFormula: `{guest_phone} = '${message.from}'`
+                })
+                .firstPage();
+
+              if (records.length > 0) {
+                const conversation = records[0];
+                const messages = JSON.parse(conversation.get('Messages') || '[]');
+                
+                // Ajouter le nouveau message
+                messages.push({
+                  id: message.id,
+                  type: message.type,
+                  content: message.text?.body || '',
+                  timestamp: new Date(parseInt(message.timestamp) * 1000).toISOString(),
+                  direction: 'received',
+                  status: 'delivered',
+                  waMessageId: message.id
+                });
+
+                // Mettre à jour la conversation dans Airtable
+                await base('Conversations').update(conversation.id, {
+                  Messages: JSON.stringify(messages),
+                  LastMessageTimestamp: new Date().toISOString()
+                });
+
+                console.log('Message enregistré dans Airtable');
+              } else {
+                console.log(`Aucune conversation trouvée pour le numéro ${message.from}`);
+              }
             }
           }
 
