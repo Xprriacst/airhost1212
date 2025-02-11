@@ -117,8 +117,8 @@ export default function Chat() {
       type: selectedTemplate ? 'template' : 'text',
       status: 'pending',
       metadata: {
-        template: selectedTemplate?.id,
-        language: selectedTemplate?.language,
+        template: selectedTemplate?.id || '',
+        language: selectedTemplate?.language || '',
         lastMessageTimestamp: messages.length > 0 ? messages[messages.length - 1].timestamp : null
       }
     };
