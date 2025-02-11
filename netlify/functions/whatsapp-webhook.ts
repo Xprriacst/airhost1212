@@ -172,33 +172,6 @@ export const handler: Handler = async (event, context) => {
       })
     };
   }
-  try {
-    // 1. Vérification du mode hub.challenge pour la validation du webhook
-    if (event.httpMethod === 'GET') {
-      const mode = event.queryStringParameters?.['hub.mode'];
-      const token = event.queryStringParameters?.['hub.verify_token'];
-      const challenge = event.queryStringParameters?.['hub.challenge'];
-
-      // Récupérer la configuration WhatsApp depuis Airtable
-      const records = await base('Users').select({
-        filterByFormula: "NOT({whatsapp_business_config} = '')"  // Sélectionne les utilisateurs avec une config WhatsApp
-      }).firstPage();
-
-      let verifyToken = '';
-      for (const record of records) {
-        const configStr = record.get('whatsapp_business_config') as string;
-        if (configStr) {
-          try {
-            const config = JSON.parse(configStr);
-            if (config.verify_token) {
-              verifyToken = config.verify_token;
-              break;
-            }
-          } catch (error) {
-            console.error('Erreur lors du parsing de la config WhatsApp:', error);
-          }
-        }
-      }
 
       // Vérifier que le token correspond à celui configuré
       if (mode === 'subscribe' && token === verifyToken) {
