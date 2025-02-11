@@ -199,27 +199,50 @@ export class OfficialWhatsAppService implements IWhatsAppService {
       console.log('📱 Message ID:', messageId);
       
       // Mise à jour du statut dans Airtable
-      if (messageId && content.metadata?.conversationId) {
-        try {
-          const conversation = await base('Conversations').find(content.metadata.conversationId);
-          if (conversation) {
-            const messages = JSON.parse(conversation.get('Messages') || '[]');
-            const updatedMessages = messages.map(msg => {
-              if (msg.type === 'template' && msg.status === 'pending') {
-                return { ...msg, status: 'sent', waMessageId: messageId };
-              }
-              return msg;
-            });
-            
-            await base('Conversations').update(content.metadata.conversationId, {
-              Messages: JSON.stringify(updatedMessages)
-            });
-            console.log('✅ Statut du message mis à jour dans Airtable');
-          }
-        } catch (error) {
-          console.error('❌ Erreur lors de la mise à jour du statut dans Airtable:', error);
-        }
+      const userId = content.metadata.userId; // Nouveau champ metadata
+      const conversations = await getConversationsByUserId(userId);
+      if (conversations.length === 0) {
+        throw new Error(`Aucune conversation trouvée pour l'utilisateur ${userId}`);
       }
+      const conversation = conversations[0];
+      if (!conversation?.guest?.phone || !conversation.property?.id) {
+        throw new Error(`Données de conversation incomplètes pour ${userId}: ${JSON.stringify(conversation)}`);
+      }
+
+      const config = await getWhatsAppConfigByPropertyId(conversation.property.id);
+      const phoneNumber = conversation.guest.phone;
+      // Ajouter la gestion d'erreur ici
+      if (!config) {
+        throw new Error(`Configuration WhatsApp introuvable pour la propriété ${conversation.property.id}`);
+      }
+
+      console.log('Envoi template WhatsApp', {
+        template: content.metadata.template,
+        to: phoneNumber,
+        configId: config.id
+      });
+
+      // Validation du numéro
+      if (!/^\+[1-9]\d{1,14}$/.test(phoneNumber)) {
+        throw new Error(`Format de numéro invalide: ${phoneNumber}`);
+      }
+
+      if (!config.accessToken || !config.phoneNumberId) {
+        throw new Error('Configuration WhatsApp incomplète - token ou phoneNumberId manquant');
+      }
+
+      const messages = JSON.parse(conversation.get('Messages') || '[]');
+      const updatedMessages = messages.map(msg => {
+        if (msg.type === 'template' && msg.status === 'pending') {
+          return { ...msg, status: 'sent', waMessageId: messageId };
+        }
+        return msg;
+      });
+      
+      await base('Conversations').update(conversation.id, {
+        Messages: JSON.stringify(updatedMessages)
+      });
+      console.log('✅ Statut du message mis à jour dans Airtable');
       
       return messageId || '';
       // ====== FIN DEUXIÈME MODIFICATION ======
@@ -281,4 +304,64 @@ export class OfficialWhatsAppService implements IWhatsAppService {
     };
     return statusMap[apiStatus] || 'sent';
   }
+}
+
+// Fonctions supplémentaires pour la récupération des conversations et des configurations WhatsApp
+async function getConversationById(conversationId: string) {
+  const base = await getAirtableBase();
+  const record = await base('Conversations').find(conversationId);
+  
+  if (!record.get('Guest Phone') || !record.get('Property ID')) {
+    await base('Erreurs').create({
+      'Conversation ID': conversationId,
+      'Type': 'Champs manquants',
+      'Date': new Date().toISOString()
+    });
+    throw new Error('Champs obligatoires manquants dans la conversation');
+  }
+  
+  return {
+    id: record.id,
+    guest: {
+      phone: record.get('Guest Phone'),
+      name: record.get('Guest Name')
+    },
+    property: {
+      id: record.get('Property ID'),
+      name: record.get('Property Name')
+    },
+    get: (field: string) => record.get(field)
+  };
+}
+
+async function getConversationsByUserId(userId: string) {
+  const base = await getAirtableBase();
+  const records = await base('Conversations')
+    .select({ filterByFormula: `{User ID} = '${userId}'` })
+    .firstPage();
+  return records.map(record => ({
+    id: record.id,
+    guest: {
+      phone: record.get('Guest Phone'),
+      name: record.get('Guest Name')
+    },
+    property: {
+      id: record.get('Property ID'),
+      name: record.get('Property Name')
+    },
+    get: (field: string) => record.get(field)
+  }));
+}
+
+async function getWhatsAppConfigByPropertyId(propertyId: string) {
+  const base = await getAirtableBase();
+  const records = await base('WhatsApp Configs')
+    .select({ filterByFormula: `{Property ID} = '${propertyId}'` })
+    .firstPage();
+  return records[0]?.fields;
+}
+
+async function getAirtableBase() {
+  // Implémentation de la récupération de la base Airtable
+  // ...
 }
