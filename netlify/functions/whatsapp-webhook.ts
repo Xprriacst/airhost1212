@@ -127,7 +127,8 @@ export const handler: Handler = async (event, context) => {
                   waMessageId: message.id
                 });
                 await base('Conversations').update(conversation.id, {
-                  Messages: JSON.stringify(messages)
+                  Messages: JSON.stringify(messages),
+                  'Date/heure de la dernière modification': new Date().toISOString()
                 });
                 console.log('✅ Message enregistré dans Airtable');
               } else {
@@ -142,7 +143,8 @@ export const handler: Handler = async (event, context) => {
                     direction: 'received',
                     status: 'delivered',
                     waMessageId: message.id
-                  }])
+                  }]),
+                  'Date/heure de la dernière modification': new Date().toISOString()
                 });
                 console.log('✅ Nouvelle conversation créée:', newConversation.getId());
               }
