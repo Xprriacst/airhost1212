@@ -124,9 +124,16 @@ class ConversationService {
       console.log('📱 Envoi au numéro formaté:', phoneNumber);
 
       // 3. Envoyer le message
+      console.log('📤 Préparation du message à envoyer:', {
+        type: message.type,
+        text: message.text,
+        metadata: message.metadata
+      });
+
       const messageId = await whatsappService.sendMessage(phoneNumber, {
-        type: 'text',
-        text: message.text
+        type: message.type,
+        text: message.text,
+        metadata: message.metadata
       });
       console.log('✅ Message envoyé avec succès, ID:', messageId);
 
