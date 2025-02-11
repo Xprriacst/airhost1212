@@ -132,7 +132,21 @@ export const handler: Handler = async (event, context) => {
                 });
                 console.log('✅ Message enregistré dans Airtable');
               } else {
-                console.log(`ℹ️ Aucune conversation trouvée pour le numéro ${message.from}`);
+                console.log(`ℹ️ Création d'une nouvelle conversation pour le numéro ${message.from}`);
+                const newConversation = await base('Conversations').create({
+                  'Guest phone number': message.from,
+                  'Messages': JSON.stringify([{
+                    id: message.id,
+                    type: message.type,
+                    content: message.text?.body || '',
+                    timestamp: new Date(parseInt(message.timestamp) * 1000).toISOString(),
+                    direction: 'received',
+                    status: 'delivered',
+                    waMessageId: message.id
+                  }]),
+                  'LastMessageTimestamp': new Date().toISOString()
+                });
+                console.log('✅ Nouvelle conversation créée:', newConversation.getId());
               }
             }
           }
