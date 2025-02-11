@@ -18,14 +18,31 @@ export class OfficialWhatsAppService implements IWhatsAppService {
   }> {
     try {
       console.log('🔍 Recherche de la configuration WhatsApp pour userId:', this.userId);
-      const record = await base('Users').find(this.userId);
-      console.log('📄 Record utilisateur trouvé:', {
-        id: record?.id,
-        fields: record?.fields,
-      });
+
+      // ====== PREMIÈRE MODIFICATION (REMPLACEMENT) ======
+      // Ancien code :
+      //    const record = await base('Users').find(this.userId);
+      //    console.log('📄 Record utilisateur trouvé:', {
+      //      id: record?.id,
+      //      fields: record?.fields,
+      //    });
+      //    if (!record) {
+      //      throw new Error('Utilisateur non trouvé');
+      //    }
+
+      // Nouveau code :
+      const records = await base('User Properties')
+        .select({
+          maxRecords: 1,
+          fields: ['whatsapp_business_config']
+        })
+        .firstPage();
+
+      const record = records[0];
       if (!record) {
-        throw new Error('Utilisateur non trouvé');
+        throw new Error('Configuration WhatsApp non trouvée');
       }
+      // ====== FIN PREMIÈRE MODIFICATION ======
 
       const configStr = record.get('whatsapp_business_config') as string;
       console.log('📦 Configuration WhatsApp brute:', configStr);
@@ -58,12 +75,6 @@ export class OfficialWhatsAppService implements IWhatsAppService {
   }
 
   async sendMessage(to: string, content: MessageContent): Promise<string> {
-    console.log('🚀 Début sendMessage avec:', {
-      to,
-      content,
-      isTemplate: content.type === 'template',
-      metadata: content.metadata
-    });
     try {
       // Récupérer la configuration WhatsApp à jour
       const config = await this.getWhatsAppConfig();
@@ -176,10 +187,43 @@ export class OfficialWhatsAppService implements IWhatsAppService {
       const data = JSON.parse(responseText);
       console.log('✅ Réponse parsée:', data);
       
+      // ====== DEUXIÈME MODIFICATION (REMPLACEMENT) ======
+      // Ancien code :
+      //    const messageId = data.messages?.[0]?.id;
+      //    console.log('📱 Message ID:', messageId);
+      //    
+      //    return messageId || '';
+
+      // Nouveau code :
       const messageId = data.messages?.[0]?.id;
       console.log('📱 Message ID:', messageId);
       
+      // Mise à jour du statut dans Airtable
+      if (messageId && content.metadata?.conversationId) {
+        try {
+          const conversation = await base('Conversations').find(content.metadata.conversationId);
+          if (conversation) {
+            const messages = JSON.parse(conversation.get('Messages') || '[]');
+            const updatedMessages = messages.map(msg => {
+              if (msg.type === 'template' && msg.status === 'pending') {
+                return { ...msg, status: 'sent', waMessageId: messageId };
+              }
+              return msg;
+            });
+            
+            await base('Conversations').update(content.metadata.conversationId, {
+              Messages: JSON.stringify(updatedMessages)
+            });
+            console.log('✅ Statut du message mis à jour dans Airtable');
+          }
+        } catch (error) {
+          console.error('❌ Erreur lors de la mise à jour du statut dans Airtable:', error);
+        }
+      }
+      
       return messageId || '';
+      // ====== FIN DEUXIÈME MODIFICATION ======
+      
     } catch (error) {
       console.error('Erreur lors de l\'envoi via l\'API WhatsApp:', error);
       throw error;
