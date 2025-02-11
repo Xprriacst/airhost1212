@@ -28,7 +28,9 @@ const parseMessages = (rawMessages: any): Message[] => {
           }
           // Pour les templates, le contenu peut être vide
           if (msg.type === 'template') {
-            return true;
+            const isValid = Boolean(msg.metadata?.template && typeof msg.metadata.template === 'string');
+            console.log('✅ Validation template:', isValid ? 'Valide' : 'Invalide', msg.metadata);
+            return isValid;
           }
           // Pour les autres types, on vérifie le contenu
           return Boolean(msg.text || msg.content);
