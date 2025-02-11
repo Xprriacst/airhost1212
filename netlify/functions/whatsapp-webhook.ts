@@ -74,6 +74,8 @@ const verifyWebhookSignature = (
 };
 
 export const handler: Handler = async (event, context) => {
+  console.log('🔍 Début du traitement du webhook');
+
   try {
     // Gestion de la validation du webhook (GET)
     if (event.httpMethod === 'GET') {
@@ -104,7 +106,7 @@ export const handler: Handler = async (event, context) => {
           if (value.messages && value.messages.length > 0) {
             for (const message of value.messages) {
               console.log('📱 Traitement du message:', message);
-              const filterFormula = `{guest_phone} = '${message.from}'`;
+              const filterFormula = `{Phone} = '${message.from}'`;
               console.log('🔍 Recherche avec filtre:', filterFormula);
 
               const records = await base('Conversations')
