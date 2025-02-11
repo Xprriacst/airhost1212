@@ -144,7 +144,7 @@ export const handler: Handler = async (event, context) => {
                     status: 'delivered',
                     waMessageId: message.id
                   }]),
-                  'LastMessageTimestamp': new Date().toISOString()
+                  'Last message timestamp': new Date().toISOString()
                 });
                 console.log('✅ Nouvelle conversation créée:', newConversation.getId());
               }
