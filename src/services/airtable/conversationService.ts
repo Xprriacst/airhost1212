@@ -3,6 +3,7 @@ import { handleServiceError } from '../../utils/error';
 import axios from 'axios';
 import type { Conversation, Message, EmergencyTag } from '../../types';
 import { authService, authorizationService } from '..';
+import { WHATSAPP_TEST_NUMBER } from '../../config/test';
 
 const parseMessages = (rawMessages: any): Message[] => {
   try {
@@ -109,7 +110,11 @@ const mapAirtableToConversation = (record: any): Conversation => {
     const fields = record.fields;
     
     // Validation des champs requis
-    const guestPhone = fields['Guest phone number'] || fields['GuestPhone'] || fields['guestPhone'] || fields['Guest Phone Number'] || fields['Guest Phone'];
+    let guestPhone = fields['Guest phone number'] || fields['GuestPhone'] || fields['guestPhone'] || fields['Guest Phone Number'] || fields['Guest Phone'];
+    // Numéro de test pour Andrea
+    if (fields['Guest Name'] === 'Andrea' && !guestPhone) {
+      guestPhone = WHATSAPP_TEST_NUMBER;
+    }
     if (!guestPhone) {
       console.warn('⚠️ Numéro de téléphone manquant pour la conversation:', record.id);
     }

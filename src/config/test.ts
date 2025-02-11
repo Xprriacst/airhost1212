@@ -1,0 +1,1 @@
+export const WHATSAPP_TEST_NUMBER = "33617370484";
