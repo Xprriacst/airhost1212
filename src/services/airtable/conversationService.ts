@@ -24,12 +24,14 @@ const parseMessages = (rawMessages: any): Message[] => {
           const isValid = msg && typeof msg === 'object';
           if (!isValid) {
             console.warn('⚠️ Message invalide ignoré:', msg);
+            return false;
           }
           // Pour les templates, le contenu peut être vide
-          if (msg.type === 'template' && !msg.text && !msg.content) {
-            return isValid;
+          if (msg.type === 'template') {
+            return true;
           }
-          return isValid;
+          // Pour les autres types, on vérifie le contenu
+          return Boolean(msg.text || msg.content);
         })
         .map(msg => ({
           id: msg.id || `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
@@ -105,7 +107,7 @@ const mapAirtableToConversation = (record: any): Conversation => {
     const fields = record.fields;
     
     // Validation des champs requis
-    const guestPhone = fields['Guest phone number'] || fields['GuestPhone'] || fields['guestPhone'];
+    const guestPhone = fields['Guest phone number'] || fields['GuestPhone'] || fields['guestPhone'] || fields['Guest Phone Number'] || fields['Guest Phone'];
     if (!guestPhone) {
       console.warn('⚠️ Numéro de téléphone manquant pour la conversation:', record.id);
     }
