@@ -3,7 +3,19 @@ import Airtable from 'airtable';
 import crypto from 'crypto';
 import { OfficialWhatsAppService } from '../../src/services/whatsapp/officialService';
 
-const base = new Airtable({ apiKey: process.env.VITE_AIRTABLE_API_KEY }).base(process.env.VITE_AIRTABLE_BASE_ID);
+// Vérification des variables d'environnement requises
+const AIRTABLE_API_KEY = process.env.VITE_AIRTABLE_API_KEY || process.env.AIRTABLE_API_KEY;
+const AIRTABLE_BASE_ID = process.env.VITE_AIRTABLE_BASE_ID || process.env.AIRTABLE_BASE_ID;
+
+if (!AIRTABLE_API_KEY || !AIRTABLE_BASE_ID) {
+  console.error('❌ Variables d\'environnement manquantes:', {
+    hasApiKey: Boolean(AIRTABLE_API_KEY),
+    hasBaseId: Boolean(AIRTABLE_BASE_ID)
+  });
+  throw new Error('Configuration Airtable incomplète');
+}
+
+const base = new Airtable({ apiKey: AIRTABLE_API_KEY }).base(AIRTABLE_BASE_ID);
 
 interface WhatsAppWebhookPayload {
   object: string;
@@ -106,8 +118,15 @@ export const handler: Handler = async (event, context) => {
 
     // 2. Traitement des webhooks entrants
     if (event.httpMethod === 'POST') {
+      console.log('🔍 Headers reçus:', event.headers);
+      console.log('📦 Body reçu:', event.body);
+
       const signature = event.headers['x-hub-signature-256'];
-      const payload = JSON.parse(event.body || '{}') as WhatsAppWebhookPayload;
+      console.log('🔑 Signature:', signature);
+
+      try {
+        const payload = JSON.parse(event.body || '{}') as WhatsAppWebhookPayload;
+        console.log('✅ Payload parsé:', payload);
 
       // TODO: Réactiver la vérification de signature une fois WHATSAPP_APP_SECRET configuré
       // if (!verifyWebhookSignature(signature, event.body || '', process.env.WHATSAPP_APP_SECRET || '')) {
@@ -127,12 +146,19 @@ export const handler: Handler = async (event, context) => {
             for (const message of value.messages) {
               console.log('Message reçu:', message);
               
+              console.log('📱 Traitement du message:', message);
+
               // Rechercher la conversation correspondante dans Airtable
+              const filterFormula = `{guest_phone} = '${message.from}'`;
+              console.log('🔍 Recherche avec filtre:', filterFormula);
+
               const records = await base('Conversations')
                 .select({
-                  filterByFormula: `{guest_phone} = '${message.from}'`
+                  filterByFormula: filterFormula
                 })
                 .firstPage();
+
+              console.log('📚 Conversations trouvées:', records.length);
 
               if (records.length > 0) {
                 const conversation = records[0];
