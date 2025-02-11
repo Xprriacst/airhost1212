@@ -17,10 +17,10 @@ const webhookPayload = {
           "profile": {
             "name": "Andrea"
           },
-          "wa_id": "33617370484"
+          "wa_id": "+33617370484"
         }],
         "messages": [{
-          "from": "33617370484",
+          "from": "+33617370484",
           "id": "wamid.test123",
           "timestamp": Math.floor(Date.now() / 1000),
           "text": {
