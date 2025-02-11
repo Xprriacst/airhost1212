@@ -199,7 +199,9 @@ export class OfficialWhatsAppService implements IWhatsAppService {
       console.log('📱 Message ID:', messageId);
       
       // Mise à jour du statut dans Airtable
-      const userId = content.metadata.userId; // Nouveau champ metadata
+      console.log('🔍 Metadata:', content.metadata);
+      const userId = content.metadata.conversationId; // L'ID utilisateur est stocké ici
+      console.log('🔍 User ID utilisé:', userId);
       const conversations = await getConversationsByUserId(userId);
       if (conversations.length === 0) {
         throw new Error(`Aucune conversation trouvée pour l'utilisateur ${userId}`);
