@@ -106,7 +106,7 @@ export const handler: Handler = async (event, context) => {
           if (value.messages && value.messages.length > 0) {
             for (const message of value.messages) {
               console.log('📱 Traitement du message:', message);
-              const filterFormula = `{phone} = '${message.from}'`;
+              const filterFormula = `"{Guest phone number}" = '${message.from}'`;
               console.log('🔍 Recherche avec filtre:', filterFormula);
 
               const records = await base('Conversations')
