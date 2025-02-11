@@ -10,13 +10,7 @@ export interface AIInstruction {
   priority: number;
 }
 
-export interface User {
-  id: string;
-  email: string;
-  name: string;
-  role: string;
-  createdAt: string;
-}
+export type { User } from './auth';
 
 export interface Property {
   id: string;

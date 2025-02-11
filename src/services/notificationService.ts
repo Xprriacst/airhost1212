@@ -1,5 +1,13 @@
 import { logger } from '../components/DebugLogger';
 
+declare global {
+  interface Window {
+    Notification: typeof Notification;
+    ServiceWorkerRegistration: typeof ServiceWorkerRegistration;
+    ServiceWorker: typeof ServiceWorker;
+  }
+}
+
 const convertVapidKey = (base64String: string) => {
   const padding = '='.repeat((4 - base64String.length % 4) % 4);
   const base64 = (base64String + padding)

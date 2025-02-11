@@ -1,4 +1,5 @@
 /* eslint-disable no-restricted-globals */
+/* global self, caches, clients, Notification */
 console.log('🚀 Service Worker Loading...');
 
 // Configuration
