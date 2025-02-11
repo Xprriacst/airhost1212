@@ -344,12 +344,12 @@ async function getConversationsByUserId(userId: string) {
   return records.map(record => ({
     id: record.id,
     guest: {
-      phone: record.get('Guest Phone') || record.get('guestPhone'),
+      phone: record.get('Guest Phone') || record.get('guestPhone') || record.get('Phone') || record.get('phone'),
       name: record.get('Guest Name') || record.get('guestName')
     },
     property: {
-      id: record.get('Property ID'),
-      name: record.get('Property Name')
+      id: record.get('Property ID') || record.get('propertyId'),
+      name: record.get('Property Name') || record.get('propertyName')
     },
     get: (field: string) => record.get(field)
   }));
