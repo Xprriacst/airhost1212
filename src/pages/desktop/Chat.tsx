@@ -11,7 +11,7 @@ export default function Chat() {
   const { conversationId } = useParams<{ conversationId: string }>();
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
-  const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
+  const [selectedTemplate, setSelectedTemplate] = useState<{ id: string; language: string } | null>(null);
   const [conversation, setConversation] = useState<any>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [suggestedResponse, setSuggestedResponse] = useState('');
@@ -55,14 +55,14 @@ export default function Chat() {
     }
   };
 
-  const handleTemplateSelection = (templateName: string) => {
+  const handleTemplateSelection = (template: { id: string; language: string }) => {
     console.log('📝 Template sélectionné dans Chat:', {
-      templateName,
+      template,
       conversationId,
       guestPhone: conversation?.guestPhone
     });
     
-    setSelectedTemplate(templateName);
+    setSelectedTemplate(template);
     
     // Envoi automatique du template
     handleSendMessage('').catch(error => {
@@ -117,8 +117,8 @@ export default function Chat() {
       type: selectedTemplate ? 'template' : 'text',
       status: 'pending',
       metadata: {
-        template: selectedTemplate,
-        language: selectedTemplate === 'hello_world' ? 'en_US' : 'fr',
+        template: selectedTemplate?.id,
+        language: selectedTemplate?.language,
         lastMessageTimestamp: messages.length > 0 ? messages[messages.length - 1].timestamp : null
       }
     };

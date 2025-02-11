@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { MessageSquare } from 'lucide-react';
 
 interface WhatsAppTemplateSelectorProps {
-  onSelectTemplate: (templateName: string) => void;
+  onSelectTemplate: (template: { id: string; language: string }) => void;
 }
 
 export function WhatsAppTemplateSelector({ onSelectTemplate }: WhatsAppTemplateSelectorProps) {
@@ -37,7 +37,7 @@ export function WhatsAppTemplateSelector({ onSelectTemplate }: WhatsAppTemplateS
                     templateName: template.name,
                     language: template.language
                   });
-                  onSelectTemplate(template.id);
+                  onSelectTemplate({ id: template.id, language: template.language });
                   setIsOpen(false);
                 }}
                 className="w-full text-left px-2 py-1 hover:bg-gray-100 rounded text-sm"

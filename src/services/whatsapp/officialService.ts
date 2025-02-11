@@ -84,8 +84,12 @@ export class OfficialWhatsAppService implements IWhatsAppService {
 
       let payload;
       if (isTemplate) {
-        const templateName = content.metadata?.template || 'bienvenue';
-        const templateLanguage = templateName === 'hello_world' ? 'en_US' : 'fr';
+        if (!content.metadata?.template || !content.metadata?.language) {
+          throw new Error('Template ou langue non spécifiés dans les métadonnées');
+        }
+
+        const templateName = content.metadata.template;
+        const templateLanguage = content.metadata.language;
         
         console.log('🔧 Configuration template:', {
           templateName,
@@ -102,8 +106,7 @@ export class OfficialWhatsAppService implements IWhatsAppService {
             name: templateName,
             language: {
               code: templateLanguage
-            },
-            components: [] // Ajout du champ components même vide pour respecter le format
+            }
           }
         };
         console.log(`📤 Utilisation du template '${templateName}' car hors fenêtre de 24h`);
