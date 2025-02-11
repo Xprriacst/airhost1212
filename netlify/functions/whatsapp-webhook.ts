@@ -75,6 +75,104 @@ const verifyWebhookSignature = (
 
 export const handler: Handler = async (event, context) => {
   try {
+    // Gestion de la validation du webhook (GET)
+    if (event.httpMethod === 'GET') {
+      const mode = event.queryStringParameters?.['hub.mode'];
+      const token = event.queryStringParameters?.['hub.verify_token'];
+      const challenge = event.queryStringParameters?.['hub.challenge'];
+
+      if (mode === 'subscribe' && token === process.env.WHATSAPP_VERIFY_TOKEN) {
+        return { statusCode: 200, body: challenge || '' };
+      }
+      return { statusCode: 403, body: 'Token de vérification invalide' };
+    }
+
+    // Gestion des requêtes POST (réception de webhook)
+    if (event.httpMethod === 'POST') {
+      console.log('🔍 Headers reçus:', event.headers);
+      console.log('📦 Body reçu:', event.body);
+      const signature = event.headers['x-hub-signature-256'];
+      console.log('🔑 Signature:', signature);
+
+      const payload = JSON.parse(event.body || '{}') as WhatsAppWebhookPayload;
+      console.log('✅ Payload parsé:', payload);
+
+      // Traitement des entrées du webhook
+      for (const entry of payload.entry) {
+        for (const change of entry.changes) {
+          const value = change.value;
+          if (value.messages && value.messages.length > 0) {
+            for (const message of value.messages) {
+              console.log('📱 Traitement du message:', message);
+              const filterFormula = `{guest_phone} = '${message.from}'`;
+              console.log('🔍 Recherche avec filtre:', filterFormula);
+
+              const records = await base('Conversations')
+                .select({ filterByFormula: filterFormula })
+                .firstPage();
+              console.log('📚 Conversations trouvées:', records.length);
+
+              if (records.length > 0) {
+                const conversation = records[0];
+                const messages = JSON.parse(conversation.get('Messages') || '[]');
+                messages.push({
+                  id: message.id,
+                  type: message.type,
+                  content: message.text?.body || '',
+                  timestamp: new Date(parseInt(message.timestamp) * 1000).toISOString(),
+                  direction: 'received',
+                  status: 'delivered',
+                  waMessageId: message.id
+                });
+                await base('Conversations').update(conversation.id, {
+                  Messages: JSON.stringify(messages),
+                  LastMessageTimestamp: new Date().toISOString()
+                });
+                console.log('✅ Message enregistré dans Airtable');
+              } else {
+                console.log(`ℹ️ Aucune conversation trouvée pour le numéro ${message.from}`);
+              }
+            }
+          }
+        }
+      }
+      return { statusCode: 200, body: JSON.stringify({ status: 'success' }) };
+    }
+    
+    return { statusCode: 405, body: JSON.stringify({ error: 'Méthode non autorisée' }) };
+    
+  } catch (error) {
+    console.error('❌ Erreur lors du traitement du webhook:', error);
+    console.error('Stack trace:', error.stack);
+    if (error.message.includes('Configuration Airtable incomplète')) {
+      return {
+        statusCode: 500,
+        body: JSON.stringify({
+          error: 'Configuration du serveur incomplète',
+          details: 'Variables d\'environnement Airtable manquantes'
+        })
+      };
+    }
+    if (error instanceof SyntaxError) {
+      console.error('Erreur de parsing JSON:', event.body);
+      return {
+        statusCode: 400,
+        body: JSON.stringify({
+          error: 'Payload invalide',
+          details: error.message
+        })
+      };
+    }
+    return {
+      statusCode: 500,
+      body: JSON.stringify({
+        error: 'Erreur interne du serveur',
+        type: error.name,
+        details: error.message
+      })
+    };
+  }
+  try {
     // 1. Vérification du mode hub.challenge pour la validation du webhook
     if (event.httpMethod === 'GET') {
       const mode = event.queryStringParameters?.['hub.mode'];
