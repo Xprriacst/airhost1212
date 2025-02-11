@@ -17,17 +17,29 @@ export class OfficialWhatsAppService implements IWhatsAppService {
     phoneNumberId: string;
   }> {
     try {
+      console.log('🔍 Recherche de la configuration WhatsApp pour userId:', this.userId);
       const record = await base('Users').find(this.userId);
+      console.log('📄 Record utilisateur trouvé:', {
+        id: record?.id,
+        fields: record?.fields,
+      });
       if (!record) {
         throw new Error('Utilisateur non trouvé');
       }
 
       const configStr = record.get('whatsapp_business_config') as string;
+      console.log('📦 Configuration WhatsApp brute:', configStr);
       if (!configStr) {
         throw new Error('Configuration WhatsApp non trouvée');
       }
 
       const config = JSON.parse(configStr);
+      console.log('✅ Configuration WhatsApp parsée:', {
+        hasAccessToken: Boolean(config.access_token),
+        accessTokenLength: config.access_token?.length,
+        phoneNumberId: config.phone_number_id,
+        allKeys: Object.keys(config)
+      });
       return {
         accessToken: config.access_token,
         phoneNumberId: config.phone_number_id
@@ -46,6 +58,12 @@ export class OfficialWhatsAppService implements IWhatsAppService {
   }
 
   async sendMessage(to: string, content: MessageContent): Promise<string> {
+    console.log('🚀 Début sendMessage avec:', {
+      to,
+      content,
+      isTemplate: content.type === 'template',
+      metadata: content.metadata
+    });
     try {
       // Récupérer la configuration WhatsApp à jour
       const config = await this.getWhatsAppConfig();
