@@ -163,10 +163,14 @@ export class OfficialWhatsAppService implements IWhatsAppService {
 
       const apiVersion = 'v21.0'; // Version fixe de l'API
       const baseUrl = 'https://graph.facebook.com';
+      // Création d'une copie explicite du payload pour éviter toute confusion
+      const messageToSend = { ...payload };
+      console.log('📤 Message à envoyer:', JSON.stringify(messageToSend, null, 2));
+
       const response = await fetch(`${baseUrl}/${apiVersion}/${config.phoneNumberId}/messages`, {
         method: 'POST',
         headers,
-        body: JSON.stringify(payload),
+        body: JSON.stringify(messageToSend),
         signal: controller.signal
       });
 
@@ -186,15 +190,7 @@ export class OfficialWhatsAppService implements IWhatsAppService {
 
       const data = JSON.parse(responseText);
       console.log('✅ Réponse parsée:', data);
-      
-      // ====== DEUXIÈME MODIFICATION (REMPLACEMENT) ======
-      // Ancien code :
-      //    const messageId = data.messages?.[0]?.id;
-      //    console.log('📱 Message ID:', messageId);
-      //    
-      //    return messageId || '';
 
-      // Nouveau code :
       const messageId = data.messages?.[0]?.id;
       console.log('📱 Message ID:', messageId);
       
@@ -211,17 +207,17 @@ export class OfficialWhatsAppService implements IWhatsAppService {
         throw new Error(`Données de conversation incomplètes pour ${userId}: ${JSON.stringify(conversation)}`);
       }
 
-      const config = await getWhatsAppConfigByPropertyId(conversation.property.id);
+      const propertyConfig = await getWhatsAppConfigByPropertyId(conversation.property.id);
       const phoneNumber = conversation.guest.phone;
       // Ajouter la gestion d'erreur ici
-      if (!config) {
+      if (!propertyConfig) {
         throw new Error(`Configuration WhatsApp introuvable pour la propriété ${conversation.property.id}`);
       }
 
       console.log('Envoi template WhatsApp', {
         template: content.metadata.template,
         to: phoneNumber,
-        configId: config.id
+        configId: propertyConfig.id
       });
 
       // Validation du numéro
@@ -229,7 +225,7 @@ export class OfficialWhatsAppService implements IWhatsAppService {
         throw new Error(`Format de numéro invalide: ${phoneNumber}`);
       }
 
-      if (!config.accessToken || !config.phoneNumberId) {
+      if (!propertyConfig.accessToken || !propertyConfig.phoneNumberId) {
         throw new Error('Configuration WhatsApp incomplète - token ou phoneNumberId manquant');
       }
 
@@ -341,6 +337,10 @@ async function getConversationsByUserId(userId: string) {
   const records = await base('Conversations')
     .select({ filterByFormula: `{User ID} = '${userId}'` })
     .firstPage();
+  // Ajout d'un log pour inspecter les clés disponibles
+  records.forEach(record => {
+    console.log(`🔍 Record ${record.id} keys:`, Object.keys(record.fields));
+  });
   return records.map(record => ({
     id: record.id,
     guest: {
