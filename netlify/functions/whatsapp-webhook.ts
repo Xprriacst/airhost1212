@@ -106,7 +106,7 @@ export const handler: Handler = async (event, context) => {
           if (value.messages && value.messages.length > 0) {
             for (const message of value.messages) {
               console.log('📱 Traitement du message:', message);
-              const filterFormula = `{GuestPhoneNumber} = '+${message.from}'`;
+              const filterFormula = `{Guest phone number} = '+${message.from}'`;
               console.log('🔍 Recherche avec filtre:', filterFormula);
 
               const records = await base('Conversations')
@@ -133,7 +133,7 @@ export const handler: Handler = async (event, context) => {
               } else {
                 console.log(`ℹ️ Création d'une nouvelle conversation pour le numéro ${message.from}`);
                 const newConversation = await base('Conversations').create({
-                  'GuestPhoneNumber': message.from,
+                  'Guest phone number': message.from,
                   'Messages': JSON.stringify([{
                     id: message.id,
                     type: message.type,
