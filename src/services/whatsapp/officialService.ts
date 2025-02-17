@@ -74,7 +74,23 @@ export class OfficialWhatsAppService implements IWhatsAppService {
     return diff <= 24 * 60 * 60 * 1000; // 24 heures en millisecondes
   }
 
+  private async validateAccessToken() {
+    if (!this.accessToken || this.accessToken.length < 50) {
+      throw new Error('Token d\'accès WhatsApp non configuré');
+    }
+    
+    try {
+      await axios.get(`${this.baseUrl}/me`, {
+        headers: { Authorization: `Bearer ${this.accessToken}` }
+      });
+    } catch (error) {
+      console.error('[WhatsApp] Erreur de validation du token:', error.response?.data || error.message);
+      throw new Error(`Token invalide : ${error.response?.data?.error?.message || error.message}`);
+    }
+  }
+
   async sendMessage(to: string, content: MessageContent): Promise<string> {
+    await this.validateAccessToken();
     try {
       // Récupérer la configuration WhatsApp à jour
       const config = await this.getWhatsAppConfig();
