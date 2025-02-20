@@ -132,7 +132,7 @@ const AIInstructions: React.FC<AIInstructionsProps> = ({ property }) => {
                 content: e.target.value
               })}
               rows={3}
-              className="w-full rounded-md border-gray-300"
+              className="w-full rounded-md border-gray-300 pl-3"
               placeholder="Entrez les instructions pour l'IA..."
             />
             <div className="mt-2 flex items-center gap-2">
