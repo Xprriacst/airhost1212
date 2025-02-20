@@ -91,14 +91,6 @@ const AIInstructions: React.FC<AIInstructionsProps> = ({ property }) => {
 
       <div className="flex justify-between items-center">
         <h3 className="text-lg font-medium text-gray-900">Instructions pour l'IA</h3>
-        <button
-          type="button"
-          onClick={handleAddInstruction}
-          className="inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200"
-        >
-          <Plus className="w-4 h-4 mr-1" />
-          Ajouter une instruction
-        </button>
       </div>
 
       <div className="space-y-4">
