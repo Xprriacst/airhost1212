@@ -58,7 +58,7 @@ const AIInstructions: React.FC<AIInstructionsProps> = ({ property }) => {
 
     try {
       await propertyService.updateProperty('current', property.id, {
-        aiInstructions: JSON.stringify(instructions)
+        aiInstructions: instructions
       });
       setSuccess('Instructions IA mises à jour avec succès');
     } catch (err) {
