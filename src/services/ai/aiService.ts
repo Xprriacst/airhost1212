@@ -32,7 +32,10 @@ export const aiService = {
     try {
       console.log('Début de la génération de réponse avec:', {
         lastMessage,
-        property: property.name,
+        property: {
+          name: property.name,
+          aiInstructions: property.aiInstructions
+        },
         bookingContext,
         messagesCount: previousMessages.length,
         config
