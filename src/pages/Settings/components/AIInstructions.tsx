@@ -19,8 +19,10 @@ const AIInstructions: React.FC<AIInstructionsProps> = ({ property }) => {
   const [instructions, setInstructions] = useState<AIInstruction[]>(() => {
     try {
       if (!property.aiInstructions) return [];
-      const parsed = JSON.parse(property.aiInstructions);
-      return Array.isArray(parsed) ? parsed : [];
+      if (Array.isArray(property.aiInstructions)) {
+        return property.aiInstructions;
+      }
+      return [];
     } catch (e) {
       console.warn('Failed to parse AI Instructions:', e);
       return [];

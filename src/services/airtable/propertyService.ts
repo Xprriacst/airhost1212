@@ -61,14 +61,19 @@ export const propertyService = {
     try {
       if (!base) throw new Error('Airtable is not configured');
 
-      const record = await base('Properties').create({
+      // Préparer les données pour Airtable
+      const createData: any = {
         Name: propertyData.name,
         Address: propertyData.address,
         Description: propertyData.description,
         Photos: propertyData.photos,
-        'AI Instructions': propertyData.aiInstructions,
         'Auto Pilot': propertyData.autoPilot,
-      });
+      };
+
+      // Sérialiser les instructions AI en JSON si présentes
+      if (propertyData.aiInstructions) {
+        createData['AI Instructions'] = JSON.stringify(propertyData.aiInstructions);
+      }
 
       // Ajouter automatiquement l'accès à la propriété pour l'utilisateur qui l'a créée
       await base('User Properties').create({
@@ -94,14 +99,26 @@ export const propertyService = {
         throw new Error('Unauthorized access to update property');
       }
 
-      const record = await base('Properties').update(propertyId, {
-        Name: propertyData.name,
-        Address: propertyData.address,
-        Description: propertyData.description,
-        Photos: propertyData.photos,
-        'AI Instructions': propertyData.aiInstructions,
-        'Auto Pilot': propertyData.autoPilot,
+      // Préparer les données pour Airtable
+      const updateData: any = {};
+      
+      if (propertyData.name !== undefined) updateData.Name = propertyData.name;
+      if (propertyData.address !== undefined) updateData.Address = propertyData.address;
+      if (propertyData.description !== undefined) updateData.Description = propertyData.description;
+      if (propertyData.photos !== undefined) updateData.Photos = propertyData.photos;
+      if (propertyData.autoPilot !== undefined) updateData['Auto Pilot'] = propertyData.autoPilot;
+      
+      // Sérialiser les instructions AI en JSON si présentes
+      if (propertyData.aiInstructions !== undefined) {
+        updateData['AI Instructions'] = JSON.stringify(propertyData.aiInstructions);
+      }
+
+      console.log('[DEBUG] Mise à jour propriété:', {
+        propertyId,
+        updateData
       });
+
+      const record = await base('Properties').update(propertyId, updateData);
 
       return mapAirtableToProperty(record);
     } catch (error) {
