@@ -14,9 +14,16 @@ const INSTRUCTION_TYPES = [
 ] as const;
 
 const AIInstructions: React.FC<AIInstructionsProps> = ({ property }) => {
-  const [instructions, setInstructions] = useState<AIInstruction[]>(
-    property.aiInstructions || []
-  );
+  const [instructions, setInstructions] = useState<AIInstruction[]>(() => {
+    try {
+      if (!property.aiInstructions) return [];
+      const parsed = JSON.parse(property.aiInstructions);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (e) {
+      console.warn('Failed to parse AI Instructions:', e);
+      return [];
+    }
+  });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -50,8 +57,8 @@ const AIInstructions: React.FC<AIInstructionsProps> = ({ property }) => {
     setSuccess(null);
 
     try {
-      await propertyService.updateProperty(property.id, {
-        aiInstructions: instructions
+      await propertyService.updateProperty('current', property.id, {
+        aiInstructions: JSON.stringify(instructions)
       });
       setSuccess('Instructions IA mises à jour avec succès');
     } catch (err) {
