@@ -9,11 +9,16 @@ const mapAirtableToProperty = (record: any): Property => {
   
   let parsedInstructions = [];
   if (rawInstructions) {
-    try {
-      parsedInstructions = JSON.parse(rawInstructions);
-      console.log('[DEBUG] Instructions AI parsées:', parsedInstructions);
-    } catch (e) {
-      console.warn('[DEBUG] Erreur parsing instructions:', e);
+    if (typeof rawInstructions === 'string') {
+      try {
+        parsedInstructions = JSON.parse(rawInstructions);
+        console.log('[DEBUG] Instructions AI parsées:', parsedInstructions);
+      } catch (e) {
+        console.warn('[DEBUG] Erreur parsing instructions:', e);
+      }
+    } else {
+      parsedInstructions = rawInstructions;
+      console.log('[DEBUG] Instructions AI déjà parsées:', parsedInstructions);
     }
   }
 
@@ -120,9 +125,16 @@ export const propertyService = {
       if (propertyData.photos !== undefined) updateData.Photos = propertyData.photos;
       if (propertyData.autoPilot !== undefined) updateData['Auto Pilot'] = propertyData.autoPilot;
       
-      // Sérialiser les instructions AI en JSON si présentes
+      // Gérer les instructions AI
       if (propertyData.aiInstructions !== undefined) {
-        updateData['AI Instructions'] = JSON.stringify(propertyData.aiInstructions);
+        // Si c'est déjà une chaîne JSON, on l'utilise directement
+        if (typeof propertyData.aiInstructions === 'string') {
+          updateData['AI Instructions'] = propertyData.aiInstructions;
+        } else {
+          // Sinon on sérialise en JSON
+          updateData['AI Instructions'] = JSON.stringify(propertyData.aiInstructions);
+        }
+        console.log('[DEBUG] Mise à jour instructions AI:', updateData['AI Instructions']);
       }
 
       console.log('[DEBUG] Mise à jour propriété:', {
