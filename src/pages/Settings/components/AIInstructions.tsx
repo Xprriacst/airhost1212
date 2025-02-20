@@ -3,6 +3,7 @@ import { Plus, Trash2 } from 'lucide-react';
 import type { Property, AIInstruction } from '../../../types';
 import { propertyService } from '../../../services';
 import { useCurrentUser } from '../../../hooks/useCurrentUser';
+import { useProperties } from '../../../hooks/useProperties';
 
 interface AIInstructionsProps {
   property: Property;
@@ -16,6 +17,7 @@ const INSTRUCTION_TYPES = [
 
 const AIInstructions: React.FC<AIInstructionsProps> = ({ property }) => {
   const { user } = useCurrentUser();
+  const { refetch } = useProperties();
   const [instructions, setInstructions] = useState<AIInstruction[]>([]);
 
   // Mettre à jour les instructions quand la propriété change
@@ -76,6 +78,8 @@ const AIInstructions: React.FC<AIInstructionsProps> = ({ property }) => {
         aiInstructions: instructions
       });
       setSuccess('Instructions IA mises à jour avec succès');
+      // Recharger les propriétés pour mettre à jour l'interface
+      await refetch();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur lors de la mise à jour des instructions');
     } finally {

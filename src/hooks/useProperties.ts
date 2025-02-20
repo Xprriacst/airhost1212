@@ -10,29 +10,30 @@ export const useProperties = () => {
 
   const { user } = useCurrentUser();
 
+  const fetchProperties = async () => {
+    if (!user?.id) {
+      setError('User not authenticated');
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      setError(null);
+      const data = await propertyService.fetchAllProperties(user.id);
+      console.log('[DEBUG] Propriétés rechargées:', data);
+      setProperties(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load properties');
+      console.error('Error fetching properties:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchProperties = async () => {
-      if (!user?.id) {
-        setError('User not authenticated');
-        setIsLoading(false);
-        return;
-      }
-
-      try {
-        setIsLoading(true);
-        setError(null);
-        const data = await propertyService.fetchAllProperties(user.id);
-        setProperties(data);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load properties');
-        console.error('Error fetching properties:', err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
     fetchProperties();
   }, [user?.id]);
 
-  return { properties, isLoading, error };
+  return { properties, isLoading, error, refetch: fetchProperties };
 };
