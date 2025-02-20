@@ -9,7 +9,17 @@ const mapAirtableToProperty = (record: any): Property => ({
   address: record.get('Address') || '',
   description: record.get('Description') || '',
   photos: record.get('Photos') || [],
-  aiInstructions: record.get('AI Instructions') || [],
+  aiInstructions: (() => {
+    const instructions = record.get('AI Instructions');
+    if (!instructions) return [];
+    try {
+      const parsed = JSON.parse(instructions);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (e) {
+      console.warn('Failed to parse AI Instructions:', e);
+      return [];
+    }
+  })(),
   autoPilot: record.get('Auto Pilot') || false,
 });
 

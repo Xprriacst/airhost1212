@@ -16,7 +16,7 @@ export interface Property {
   id: string;
   description?: string;
   photos?: string[];
-  aiInstructions?: string;
+  aiInstructions?: AIInstruction[];
   autoPilot?: boolean;
   conversations?: string[];
 }
