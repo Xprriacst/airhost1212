@@ -15,12 +15,37 @@ export const userPropertyService = {
     try {
       if (!base) throw new Error('Airtable is not configured');
 
+      console.log('[DEBUG] Recherche des propriétés pour l\'utilisateur:', userId);
+
+      // Vérifier d'abord si l'utilisateur existe
+      const users = await base('Users')
+        .select({
+          filterByFormula: `RECORD_ID() = '${userId}'`,
+          fields: ['email', 'name', 'role']
+        })
+        .all();
+
+      console.log('[DEBUG] Utilisateur trouvé:', users.length > 0 ? 'Oui' : 'Non');
+      if (users.length > 0) {
+        console.log('[DEBUG] Email de l\'utilisateur:', users[0].get('email'));
+      }
+
+      // Rechercher les propriétés de l'utilisateur
       const records = await base('User Properties')
         .select({
           filterByFormula: `{User ID} = '${userId}'`,
           fields: ['User ID', 'Property ID', 'Role', 'Date', 'Created By']
         })
         .all();
+
+      console.log('[DEBUG] Nombre de propriétés trouvées:', records.length);
+      records.forEach(record => {
+        console.log('[DEBUG] Propriété:', {
+          userId: record.get('User ID'),
+          propertyId: record.get('Property ID'),
+          role: record.get('Role')
+        });
+      });
 
       return records.map(mapAirtableToUserProperty);
     } catch (error) {

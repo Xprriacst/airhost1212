@@ -7,11 +7,19 @@ class AuthService {
   private currentUser: User | null = null;
 
   getCurrentUser(): User | null {
+    console.log('[DEBUG] Vérification de l\'utilisateur courant');
     if (!this.currentUser) {
+      console.log('[DEBUG] Pas d\'utilisateur en mémoire, vérification du localStorage');
       const storedUser = localStorage.getItem('user');
       if (storedUser) {
+        console.log('[DEBUG] Utilisateur trouvé dans le localStorage');
         this.currentUser = JSON.parse(storedUser);
+        console.log('[DEBUG] ID de l\'utilisateur:', this.currentUser.id);
+      } else {
+        console.log('[DEBUG] Aucun utilisateur dans le localStorage');
       }
+    } else {
+      console.log('[DEBUG] Utilisateur déjà en mémoire, ID:', this.currentUser.id);
     }
     return this.currentUser;
   }
