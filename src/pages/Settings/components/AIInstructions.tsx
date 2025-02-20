@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 import type { Property, AIInstruction } from '../../../types';
 import { propertyService } from '../../../services';
@@ -16,18 +16,26 @@ const INSTRUCTION_TYPES = [
 
 const AIInstructions: React.FC<AIInstructionsProps> = ({ property }) => {
   const { user } = useCurrentUser();
-  const [instructions, setInstructions] = useState<AIInstruction[]>(() => {
+  const [instructions, setInstructions] = useState<AIInstruction[]>([]);
+
+  // Mettre à jour les instructions quand la propriété change
+  useEffect(() => {
     try {
-      if (!property.aiInstructions) return [];
-      if (Array.isArray(property.aiInstructions)) {
-        return property.aiInstructions;
+      if (!property.aiInstructions) {
+        setInstructions([]);
+        return;
       }
-      return [];
+      if (Array.isArray(property.aiInstructions)) {
+        console.log('[DEBUG] Mise à jour des instructions depuis la propriété:', property.aiInstructions);
+        setInstructions(property.aiInstructions);
+        return;
+      }
+      setInstructions([]);
     } catch (e) {
       console.warn('Failed to parse AI Instructions:', e);
-      return [];
+      setInstructions([]);
     }
-  });
+  }, [property.aiInstructions]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
