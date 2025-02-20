@@ -71,7 +71,13 @@ export const propertyService = {
       });
 
       // Ajouter automatiquement l'accès à la propriété pour l'utilisateur qui l'a créée
-      await authorizationService.addPropertyAccess(userId, record.id, 'owner');
+      await base('User Properties').create({
+        'User ID': userId,
+        'Property ID': record.id,
+        'Role': 'owner',
+        'Date': new Date().toISOString(),
+        'Created By': userId
+      });
 
       return mapAirtableToProperty(record);
     } catch (error) {

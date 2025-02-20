@@ -7,11 +7,18 @@ class AuthService {
   private currentUser: User | null = null;
 
   getCurrentUser(): User | null {
+    if (!this.currentUser) {
+      const storedUser = localStorage.getItem('user');
+      if (storedUser) {
+        this.currentUser = JSON.parse(storedUser);
+      }
+    }
     return this.currentUser;
   }
 
   logout(): void {
     this.currentUser = null;
+    localStorage.removeItem('user');
   }
 
   async register(credentials: RegisterCredentials): Promise<User> {
@@ -58,6 +65,7 @@ class AuthService {
 
       console.log('[Auth] Created user with ID:', user.id);
       this.currentUser = user;
+      localStorage.setItem('user', JSON.stringify(user));
       return user;
     } catch (error) {
       console.error('Registration error:', error);
@@ -102,6 +110,7 @@ class AuthService {
 
       console.log('[Auth] User ID:', user.id);
       this.currentUser = user;
+      localStorage.setItem('user', JSON.stringify(user));
       return user;
     } catch (error) {
       console.error('Login error:', error);
