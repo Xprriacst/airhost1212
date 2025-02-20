@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 import type { Property, AIInstruction } from '../../../types';
 import { propertyService } from '../../../services';
+import { useCurrentUser } from '../../../hooks/useCurrentUser';
 
 interface AIInstructionsProps {
   property: Property;
@@ -14,6 +15,7 @@ const INSTRUCTION_TYPES = [
 ] as const;
 
 const AIInstructions: React.FC<AIInstructionsProps> = ({ property }) => {
+  const { user } = useCurrentUser();
   const [instructions, setInstructions] = useState<AIInstruction[]>(() => {
     try {
       if (!property.aiInstructions) return [];
@@ -57,7 +59,10 @@ const AIInstructions: React.FC<AIInstructionsProps> = ({ property }) => {
     setSuccess(null);
 
     try {
-      await propertyService.updateProperty('current', property.id, {
+      if (!user?.id) {
+        throw new Error('User not authenticated');
+      }
+      await propertyService.updateProperty(user.id, property.id, {
         aiInstructions: instructions
       });
       setSuccess('Instructions IA mises à jour avec succès');
