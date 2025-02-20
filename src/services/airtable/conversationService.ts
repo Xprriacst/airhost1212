@@ -7,34 +7,29 @@ import { WHATSAPP_TEST_NUMBER } from '../../config/test';
 
 const parseMessages = (rawMessages: any): Message[] => {
   try {
+    // Logging initial pour debug
     console.log('🔍 Analyse des messages bruts:', {
       type: typeof rawMessages,
       value: rawMessages
     });
 
+    // Cas 1: Pas de messages ou undefined/null
     if (!rawMessages) {
       console.log('ℹ️ Aucun message trouvé, retour tableau vide');
       return [];
     }
     
-    // Si c'est déjà un tableau, on traite directement les messages
+    // Cas 2: Déjà un tableau
     if (Array.isArray(rawMessages)) {
       console.log(`📦 Traitement d'un tableau de ${rawMessages.length} messages`);
+      // Filtrage et transformation sécurisée
       return rawMessages
         .filter(msg => {
-          const isValid = msg && typeof msg === 'object';
-          if (!isValid) {
+          if (!msg || typeof msg !== 'object') {
             console.warn('⚠️ Message invalide ignoré:', msg);
             return false;
           }
-          // Pour les templates, le contenu peut être vide
-          if (msg.type === 'template') {
-            const isValid = Boolean(msg.metadata?.template && typeof msg.metadata.template === 'string');
-            console.log('✅ Validation template:', isValid ? 'Valide' : 'Invalide', msg.metadata);
-            return isValid;
-          }
-          // Pour les autres types, on vérifie le contenu
-          return Boolean(msg.text || msg.content);
+          return true;
         })
         .map(msg => ({
           id: msg.id || `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
@@ -48,17 +43,16 @@ const parseMessages = (rawMessages: any): Message[] => {
         .sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
     }
     
-    // Si c'est une chaîne, on essaie de la parser
+    // Cas 3: Chaîne de caractères
     if (typeof rawMessages === 'string') {
+      const cleanedString = rawMessages.trim();
+      if (!cleanedString) {
+        console.log('ℹ️ Chaîne vide, retour tableau vide');
+        return [];
+      }
+      
       try {
-        // Nettoyage de la chaîne avant parsing
-        const cleanedString = rawMessages.trim();
-        if (!cleanedString) {
-          console.log('ℹ️ Chaîne vide, retour tableau vide');
-          return [];
-        }
-        
-        // Si la chaîne commence par '[', c'est probablement un tableau JSON
+        // Tentative de parse JSON si la chaîne ressemble à du JSON
         if (cleanedString.startsWith('[')) {
           console.log('📝 Tentative de parsing JSON tableau');
           const parsed = JSON.parse(cleanedString);
@@ -67,6 +61,7 @@ const parseMessages = (rawMessages: any): Message[] => {
           }
         }
         
+        // Sinon traiter comme un message unique
         console.log('📝 Traitement comme message unique');
         return [{
           id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
@@ -83,6 +78,7 @@ const parseMessages = (rawMessages: any): Message[] => {
       }
     }
 
+    // Cas 4: Type non géré
     console.warn('⚠️ Format de messages non reconnu:', typeof rawMessages);
     return [];
   } catch (error) {
