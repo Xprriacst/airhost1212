@@ -3,25 +3,30 @@ import { Property, User } from '../../types';
 import { authorizationService } from '../authorizationService';
 import { handleServiceError } from '../../utils/error';
 
-const mapAirtableToProperty = (record: any): Property => ({
+const mapAirtableToProperty = (record: any): Property => {
+  const rawInstructions = record.get('AI Instructions');
+  console.log('[DEBUG] Instructions AI brutes:', rawInstructions);
+  
+  let parsedInstructions = [];
+  if (rawInstructions) {
+    try {
+      parsedInstructions = JSON.parse(rawInstructions);
+      console.log('[DEBUG] Instructions AI parsées:', parsedInstructions);
+    } catch (e) {
+      console.warn('[DEBUG] Erreur parsing instructions:', e);
+    }
+  }
+
+  return {
   id: record.id,
   name: record.get('Name') || '',
   address: record.get('Address') || '',
   description: record.get('Description') || '',
   photos: record.get('Photos') || [],
-  aiInstructions: (() => {
-    const instructions = record.get('AI Instructions');
-    if (!instructions) return [];
-    try {
-      const parsed = JSON.parse(instructions);
-      return Array.isArray(parsed) ? parsed : [];
-    } catch (e) {
-      console.warn('Failed to parse AI Instructions:', e);
-      return [];
-    }
-  })(),
+  aiInstructions: parsedInstructions,
   autoPilot: record.get('Auto Pilot') || false,
-});
+  };
+};
 
 export const propertyService = {
   async fetchAllProperties(userId: string): Promise<Property[]> {
@@ -51,6 +56,13 @@ export const propertyService = {
       }
 
       const record = await base('Properties').find(propertyId);
+      
+      console.log('[DEBUG] Données Airtable brutes:', {
+        id: record.id,
+        name: record.get('Name'),
+        aiInstructions: record.get('AI Instructions')
+      });
+      
       return mapAirtableToProperty(record);
     } catch (error) {
       throw handleServiceError(error);
