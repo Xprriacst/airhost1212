@@ -135,7 +135,7 @@ const AIInstructions: React.FC<AIInstructionsProps> = ({ property }) => {
               onChange={(e) => handleUpdateInstruction(instruction.id, {
                 content: e.target.value
               })}
-              rows={3}
+              rows={15}
               className="w-full rounded-md border-gray-300 pl-3"
               placeholder="Entrez les instructions pour l'IA..."
             />
